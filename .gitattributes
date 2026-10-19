@@ -1,1 +1,4 @@
 * text=auto eol=lf
+
+# Recorded evidence hashes refer to exact bytes, including line endings.
+output/**/*.json -text
