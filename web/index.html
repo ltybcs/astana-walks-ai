@@ -2,11 +2,19 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Подберите прогулку по Астане: места рядом, время на дорогу и источники для каждой остановки.">
+  <meta name="theme-color" content="#f5f3ed">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <title>Astana Walks — прогулки по Астане</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
+  <script src="/pwa.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#planner-form">Перейти к подбору прогулки</a>
@@ -15,13 +23,14 @@
       <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 25V7h18M7 25 25 7M16 25h9v-9"/></svg>
       astana walks<span class="brand-caption">город пешком</span>
     </a>
-    <nav aria-label="О проекте"><span class="city-label">Астана, Казахстан</span><a class="about-link" href="#how">О маршрутах <span aria-hidden="true">↗</span></a></nav>
+    <nav aria-label="О проекте"><button type="button" id="install-app" class="install-button" hidden>На главный экран</button><span class="city-label">Астана, Казахстан</span><a class="about-link" href="#how">О маршрутах <span aria-hidden="true">↗</span></a></nav>
   </header>
   <main>
     <section class="intro" aria-labelledby="page-title">
-      <div><p class="eyebrow">ГОРОДСКОЙ ПУТЕВОДИТЕЛЬ</p><h1 id="page-title">Астана.<br><em>Выйдем погулять?</em></h1></div>
-      <p class="intro-description">Знакомые улицы, новые места.<br>Выберите отправную точку и время —<br class="desktop-break"> найдём, куда сходить рядом.</p>
+      <div><p class="eyebrow">ГОРОДСКОЙ ПУТЕВОДИТЕЛЬ</p><h1 id="page-title">Куда пойдём <br><em>сегодня?</em></h1></div>
+      <p class="intro-description">Места рядом и время на возвращение. <br>Выберите старт — остальное подберём.</p>
     </section>
+    <p id="connection-status" class="connection-status" role="status" hidden></p>
     <div class="workspace">
       <section class="planner" aria-labelledby="planner-title">
         <div class="section-heading"><span class="step">01</span><h2 id="planner-title">Планы на прогулку</h2></div>
@@ -41,7 +50,7 @@
       <section class="explorer" aria-labelledby="explorer-title">
         <div class="map-heading"><div><p class="eyebrow">СХЕМА РАЙОНА</p><h2 id="explorer-title">Рядом с вами</h2></div><span class="map-badge" id="dataset-badge">Загрузка данных…</span></div>
         <div class="map-panel"><svg id="city-map" viewBox="0 0 720 320" role="img" aria-label="Схема расположения мест и выбранных рекомендаций"></svg><div class="map-caption"><span><i class="legend-dot" aria-hidden="true"></i> Начало и конец прогулки</span><span>Схема по координатам · не навигация</span></div></div>
-        <div class="results-header"><div class="section-heading"><span class="step">02</span><h2>Ваш маршрут</h2></div><span id="result-mode">ПОИСК ПО POI</span></div>
+        <div class="results-header" id="route-results"><div class="section-heading"><span class="step">02</span><h2>Ваш маршрут</h2></div><span id="result-mode">ПОИСК ПО POI</span></div>
         <div id="status" role="status" aria-live="polite" class="status-message">Укажите, что вам интересно. Здесь появятся до трёх остановок и время на прогулку с возвращением.</div>
         <div id="plan-summary" class="plan-summary" hidden></div>
         <p id="generation-note" class="generation-note" hidden></p>
@@ -58,6 +67,13 @@
       </div>
     </details>
   </main>
+  <dialog id="install-dialog" aria-labelledby="install-title">
+    <div class="install-dialog-heading"><h2 id="install-title">Прогулки — на главном экране</h2><button type="button" id="close-install" aria-label="Закрыть инструкцию">×</button></div>
+    <p>Открывайте Astana Walks как приложение: со своей иконкой и в отдельном окне.</p>
+    <h3>Android</h3><p>В меню браузера выберите «Установить приложение» или «Добавить на главный экран». Если браузер предложит установку, подтвердите её.</p>
+    <h3>iPhone</h3><p>Откройте сайт в Safari. Нажмите «Поделиться», затем «На экран “Домой”». Если есть переключатель «Открывать как веб-приложение», оставьте его включённым.</p>
+    <p id="pwa-status" role="status">Проверяем возможность открытия без сети…</p>
+  </dialog>
   <footer><span class="footer-project">Astana Walks <span>— Build with AI / Smart City</span></span><a id="data-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">Данные © OpenStreetMap contributors · ODbL</a></footer>
 </body>
 </html>
