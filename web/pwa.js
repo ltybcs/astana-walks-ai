@@ -23,7 +23,6 @@
   window.addEventListener("beforeinstallprompt", event => {
     event.preventDefault();
     installPrompt = event;
-    installButton.textContent = "Установить";
     installButton.hidden = false;
   });
   installButton.addEventListener("click", async () => {
