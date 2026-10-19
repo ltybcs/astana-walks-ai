@@ -17,7 +17,15 @@ from .retrieval import ROOT, Retriever
 
 
 MAX_REQUEST_BYTES = 16_384
-STATIC_FILES = {"/": "/index.html", "/index.html": "/index.html", "/app.js": "/app.js", "/styles.css": "/styles.css", "/favicon.svg": "/favicon.svg"}
+STATIC_FILES = {
+    "/": "/index.html",
+    **{path: path for path in (
+        "/index.html", "/app.js", "/styles.css", "/favicon.svg",
+        "/pwa.js", "/sw.js", "/manifest.webmanifest",
+        "/icons/icon-192.png", "/icons/icon-512.png",
+        "/icons/maskable-512.png", "/icons/apple-touch-icon.png",
+    )},
+}
 
 
 def static_target(path: str) -> str | None:
@@ -59,6 +67,8 @@ def validate_request(payload: object) -> dict:
 class Handler(SimpleHTTPRequestHandler):
     server_version = "AstanaWalks/1.0"
     sys_version = ""
+    extensions_map = {**SimpleHTTPRequestHandler.extensions_map,
+                      ".webmanifest": "application/manifest+json"}
 
     def __init__(self, *args, retriever: Retriever, **kwargs):
         self.retriever = retriever
