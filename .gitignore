@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+tmp/
+.DS_Store
+data/poi.osm.json
+*.log
