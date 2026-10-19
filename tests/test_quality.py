@@ -6,7 +6,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from app.generation import recommend
+from app.generation import _finish_sentence, recommend
 from app.llm import LLMConfig, narrate, russian_context, validate_narration, validate_narration_with_reason
 from app.retrieval import Retriever, detect_intent
 from tests.test_retrieval import ORIGIN, index, poi
@@ -89,6 +89,38 @@ class NarrationQualityTests(unittest.TestCase):
 
     def test_normal_free_russian_text_is_accepted(self):
         self.assertIsNotNone(validate_narration(self.good, self.facts))
+
+    def test_observed_family_park_cannot_invent_a_playground(self):
+        self.facts["p"]["name"] = "Парк Астана"
+        self.good["recommendations"][0]["why"] = "Парк Астана соответствует категории 'парк или сад' и находится в день недели, подходит для прогулки с ребёнком."
+        self.good["recommendations"][0]["action"] = "Идея: осмотреть зоны с детской площадкой и зелёной зоной для отдыха."
+        self.assertEqual(validate_narration_with_reason(self.good, self.facts)[1], "unsupported_playground_claim")
+
+    def test_playground_requires_source_category_or_description_and_names_are_literal(self):
+        self.good["recommendations"][0]["action"] = "Идея: осмотреть детскую площадку после проверки доступа."
+        self.facts["p"]["category"] = "playground"
+        self.assertIsNotNone(validate_narration(self.good, self.facts))
+        self.facts["p"]["category"] = "park"
+        self.facts["p"]["description"] = "Источник прямо указывает детскую площадку на территории."
+        self.assertIsNotNone(validate_narration(self.good, self.facts))
+        self.facts["p"]["description"] = "Детская площадка не подтверждена."
+        self.assertIsNone(validate_narration(self.good, self.facts))
+        self.good["recommendations"][0]["action"] = "Идея: уточните наличие детской площадки перед выходом."
+        self.assertIsNotNone(validate_narration(self.good, self.facts))
+        self.facts["p"]["name"] = "Детская площадка"
+        self.good["recommendations"][0]["action"] = "Идея: осмотреть место «Детская площадка» после проверки доступа."
+        self.assertIsNotNone(validate_narration(self.good, self.facts))
+
+    def test_interactive_equipment_is_not_implied_by_park_or_playground(self):
+        self.good["recommendations"][0]["action"] = "Идея: осмотреть интерактивные экспонаты во время прогулки."
+        self.assertEqual(validate_narration_with_reason(self.good, self.facts)[1], "unsupported_interactive_equipment_claim")
+        self.facts["p"]["description"] = "Источник указывает интерактивные экспонаты."
+        self.assertIsNotNone(validate_narration(self.good, self.facts))
+
+    def test_deterministic_access_reminder_starts_a_new_sentence(self):
+        self.assertEqual(_finish_sentence("Идея: наблюдать за природой"), "Идея: наблюдать за природой.")
+        self.assertEqual(_finish_sentence("Идея: осмотреть парк."), "Идея: осмотреть парк.")
+        self.assertEqual(_finish_sentence("Идея: осмотреть парк!"), "Идея: осмотреть парк!")
 
     def test_context_translates_machine_labels_without_copying_route_numbers(self):
         context = russian_context(self.facts, {"outdoor": True, "time_of_day": "day"})

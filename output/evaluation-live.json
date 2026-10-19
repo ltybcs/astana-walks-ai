@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-19T19:45:50+00:00",
+  "generated_at": "2026-10-19T19:58:54+00:00",
   "dataset": {
     "name": "Astana POI / OpenStreetMap",
     "is_demo": false,
@@ -40,11 +40,9 @@
       "warnings": [
         "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
       ],
-      "llm_status": "validated_after_repair",
-      "llm_attempts": 2,
-      "llm_rejections": [
-        "unsupported_view_claim"
-      ]
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": []
     },
     {
       "name": "Тихий кофе и розетка",
@@ -108,9 +106,11 @@
         "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
         "Возрастные ограничения, безопасность, туалеты и условия для ребёнка не подтверждены; проверьте их заранее."
       ],
-      "llm_status": "validated",
-      "llm_attempts": 1,
-      "llm_rejections": []
+      "llm_status": "validated_after_repair",
+      "llm_attempts": 2,
+      "llm_rejections": [
+        "unsupported_playground_claim"
+      ]
     },
     {
       "name": "Два часа у туриста",
@@ -143,9 +143,11 @@
       "warnings": [
         "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
       ],
-      "llm_status": "validated",
-      "llm_attempts": 1,
-      "llm_rejections": []
+      "llm_status": "validated_after_repair",
+      "llm_attempts": 2,
+      "llm_rejections": [
+        "numeric_claim"
+      ]
     },
     {
       "name": "Ночная активность",
@@ -186,8 +188,8 @@
     "scenarios_total": 5,
     "scenarios_passed": 5,
     "tests": {
-      "run": 79,
-      "passed": 79,
+      "run": 86,
+      "passed": 86,
       "failed": 0,
       "errors": 0,
       "skipped": 0,
@@ -199,12 +201,37 @@
       "eligible_scenarios": 4,
       "validated_scenarios": 4,
       "fallback_scenarios": 0,
-      "total_attempts": 5
+      "total_attempts": 6
     }
   },
   "limitations": [
     "Проверяются сценарные ограничения и источники, а не полное качество городских рекомендаций.",
     "Пустой ответ при неподтверждённой розетке или режиме 24/7 — честное воздержание.",
     "Нет полевой проверки POI, дорожного графа и гарантии семантической достоверности свободного текста."
+  ],
+  "additional_checks": [
+    {
+      "name": "Дополнительный фактический семейный пресет",
+      "query": "Гуляю с ребёнком, ищу детскую площадку или парк",
+      "start": {
+        "lat": 51.1546,
+        "lon": 71.4252
+      },
+      "minutes": 60,
+      "result_count": 1,
+      "total_minutes": 34,
+      "mode": "llm-grounded",
+      "llm_status": "validated_after_repair",
+      "llm_attempts": 2,
+      "llm_rejections": [
+        "unsupported_location_claim"
+      ],
+      "checks": {
+        "budget": true,
+        "category_only": true,
+        "sources": true
+      },
+      "pass": true
+    }
   ]
 }

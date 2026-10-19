@@ -138,6 +138,23 @@ def _text_rejection(text: object, facts: dict) -> str | None:
         "wheelchair": r"коляс\w*|безбарьер\w*|wheelchair|accessible",
     }
     uncertainty = r"не\s+(?:подтвержд\w*|провер\w*|извест\w*)|неизвест\w*|провер\w*|уточн\w*|unknown|unverified|confirm|check"
+    # A park category does not establish a playground or interactive equipment.
+    # Proper names were removed above; explicit uncertainty is safe to retain.
+    infrastructure = {
+        "playground": r"детск\w*\s+площадк\w*|игров\w*\s+(?:площадк\w*|зон\w*|комплекс\w*)",
+        "interactive_equipment": r"качел\w*|песочниц\w*|карусел\w*|игров\w*\s+горк\w*|интерактивн\w*\s+(?:зон\w*|площадк\w*|экспонат\w*|стенд\w*|оборудован\w*)",
+    }
+    source_description = facts.get("description", "").lower().replace("ё", "е")
+    for kind, pattern in infrastructure.items():
+        if kind == "playground" and facts.get("category") == "playground":
+            continue
+        evidence = any(re.search(pattern, sentence) and not re.search(uncertainty + r"|\bнет\b|отсутств\w*|\bбез\b", sentence) for sentence in re.split(r"[.!?;\n]+", source_description))
+        if evidence:
+            continue
+        existence_uncertainty = r"не\s+(?:подтвержд\w*|извест\w*)|неизвест\w*|(?:провер\w*|уточн\w*)[^.!?]{0,40}(?:налич\w*|есть\s+ли)"
+        for sentence in re.split(r"[.!?;\n]+", value):
+            if re.search(pattern, sentence) and not re.search(existence_uncertainty, sentence):
+                return "unsupported_" + kind + "_claim"
     for feature, pattern in protected.items():
         if facts.get("features", {}).get(feature) == "yes":
             continue
@@ -234,7 +251,7 @@ def narrate(selected: list[dict], intent: dict, *, facts_by_id: dict[str, dict],
                     "СТРОГО НЕ ПОВТОРЯЙ числа (включая написанные словами), время в пути, длительность посещения, расстояния или часы работы: всё это отдельно выводит интерфейс. "
                     "Продукт ТОЛЬКО ПЕШЕХОДНЫЙ. Никогда не упоминай велосипед, машину, такси, автобус, самокат или любой другой транспорт и не пересказывай способы передвижения. "
                     "WHY объясняет СВЯЗЬ категории с интересом пользователя, а НЕ ОПИСЫВАЕТ реальное место. ACTION предлагает внешний осмотр или короткую остановку, НЕ ОБЕЩАЕТ услуги. "
-                    "Не добавляй географию, устройство территории, покрытие и оборудование. Действие — предложение, пометь 'Идея:'; вход внутрь всегда условен после проверки часов и доступа. "
+                    "Не добавляй географию, устройство территории, покрытие и оборудование. Категория парк НЕ ПОДТВЕРЖДАЕТ наличие детской площадки или интерактивного оборудования; не обещай их без прямого указания источника. Действие — предложение, пометь 'Идея:'; вход внутрь всегда условен после проверки часов и доступа. "
                     "Используй простой русский язык без рекламных эпитетов и необычных сравнений. Не обещай тишину или фактический доступ. "
                     "Не вставляй URL, HTML или Markdown. why — ОДНО короткое предложение о соответствии категории запросу; action — ОДНА конкретная идея. Каждое поле 15–400 символов. Верни ТОЛЬКО JSON по схеме: "
                     + json.dumps(schema, ensure_ascii=False)

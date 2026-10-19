@@ -57,6 +57,13 @@ def _opening_note(poi: dict) -> str:
     return "Часы и доступ сейчас не подтверждены; проверьте перед посещением."
 
 
+def _finish_sentence(text: str) -> str:
+    text = text.strip()
+    if text.rstrip('\"\'»”').endswith((".", "!", "?", "…")):
+        return text
+    return text.rstrip(",:;") + "."
+
+
 def recommend(retriever: Retriever, query: str, minutes: int, origin: dict, time_of_day: str = "day", *, use_llm: bool = True) -> dict:
     result = retriever.retrieve(query, origin, minutes, time_of_day)
     recommendations = []
@@ -103,7 +110,7 @@ def recommend(retriever: Retriever, query: str, minutes: int, origin: dict, time
             item.update(by_id[item["id"]])
             if not item["action"].startswith("Идея:"):
                 item["action"] = "Идея: " + item["action"]
-            item["action"] += " Перед выходом проверьте доступ и часы по источнику."
+            item["action"] = _finish_sentence(item["action"]) + " Перед выходом проверьте доступ и часы по источнику."
             item["explanation_source"] = "llm-grounded"
         mode = "llm-grounded/demo" if retriever.dataset.get("is_demo", False) else "llm-grounded"
     elif llm_status not in {"not_configured", "disabled", "no_candidates"} and recommendations:

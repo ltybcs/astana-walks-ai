@@ -31,7 +31,7 @@ python scripts/run_demo.py --data data/poi.astana.json --local-llm
 python -m unittest discover -s tests -v
 ```
 
-## Работа вдвоём
+## Работа команды
 
 [COORDINATION.md](COORDINATION.md) — общий файл задач, владельцев, API-контракта, проверок и передачи. [AGENTS.md](AGENTS.md) задаёт правила работы Codex, [docs/HANDOFF.md](docs/HANDOFF.md) содержит инструкцию для второго независимого Codex.
 
@@ -103,10 +103,10 @@ python scripts/collect_2gis.py --input tmp/2gis-response.json --output data/poi.
 app/                  HTTP API, retrieval, grounded generation
 web/                  Русский интерфейс, схема POI, рекомендации
 scripts/collect_osm.py Автоматизированный сбор POI
-data/                 Учебный набор и описание происхождения данных
+data/                 Реальные POI, сырой snapshot и отдельный учебный набор
 tests/                Проверки ограничений и корректности
 docs/                 Концепция, сценарии, ограничения, передача
-COORDINATION.md       Координация двух Codex
+COORDINATION.md       Общие задачи, владельцы, проверки и передача трём Codex
 ```
 
 ## Статус хакатонной сдачи
