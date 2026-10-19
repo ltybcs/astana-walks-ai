@@ -199,6 +199,20 @@ def assemble(args):
     llm.setdefault("provider", "Не подключён")
     llm.setdefault("model", "Не подключена")
     llm["live_verified"] = bool(llm.get("live_verified") and evaluation.get("live_llm_used"))
+    narration_source=config.get("narration_evidence","output/live-explanations.json")
+    narration_path=Path(narration_source)
+    if not narration_path.is_absolute():narration_path=ROOT/narration_path
+    narration=None
+    if llm["live_verified"]:
+        if evaluation.get("manual_review",{}).get("quality_pass") is not True:
+            raise ValueError("Live LLM build requires evaluation manual_review.quality_pass=true.")
+        if not narration_path.is_file():
+            raise ValueError("Live LLM build requires the recorded narration file.")
+        narration=read_json(narration_path)
+        if narration.get("manual_review",{}).get("quality_pass") is not True:
+            raise ValueError("Live LLM build requires narration manual_review.quality_pass=true.")
+        if narration.get("dataset",{}).get("sha256")!=sha256(dataset_path):
+            raise ValueError("Narration evidence used a different POI snapshot.")
     llm_run=evaluation.get("summary",{}).get("llm")
     llm["evidence"]=(f'Actual report: {relative(evaluation_path)}. '
         f'{evaluation["summary"]["scenarios_passed"]}/{evaluation["summary"]["scenarios_total"]} main scenarios, '
@@ -213,15 +227,7 @@ def assemble(args):
     if not recs:
         raise ValueError("Featured EXPO scenario has no recommendations. Select verified evidence first.")
     generated_why=None
-    narration_source=config.get("narration_evidence","output/live-explanations.json")
-    narration_path=Path(narration_source)
-    if not narration_path.is_absolute():narration_path=ROOT/narration_path
-    if llm["live_verified"] and narration_path.is_file():
-        narration=read_json(narration_path)
-        if narration.get("manual_review",{}).get("quality_pass") is False:
-            raise ValueError("Recorded narration failed manual prose review. Resolve the issue and record fresh evidence before final build.")
-        if narration.get("dataset",{}).get("sha256")!=sha256(dataset_path):
-            raise ValueError("Narration evidence used a different POI snapshot.")
+    if narration is not None:
         narr_recs=narration["scenarios"][0]["recommendations"]
         if [r["id"] for r in narr_recs]!=[r["id"] for r in recs]:
             raise ValueError("Narration evidence and featured plan differ.")
