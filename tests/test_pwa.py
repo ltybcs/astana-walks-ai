@@ -84,6 +84,15 @@ class PWATests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    @unittest.skipUnless(shutil.which("node"), "Node.js is optional; browser QA also checks installation")
+    def test_native_and_manual_installation_paths_keep_one_honest_label(self):
+        root = Path(__file__).resolve().parents[1]
+        result = subprocess.run(
+            [shutil.which("node"), str(root / "tests/pwa_install_check.cjs")],
+            cwd=root, capture_output=True, text=True, encoding="utf-8", timeout=15,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
