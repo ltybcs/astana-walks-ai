@@ -90,6 +90,25 @@ class NarrationQualityTests(unittest.TestCase):
     def test_normal_free_russian_text_is_accepted(self):
         self.assertIsNotNone(validate_narration(self.good, self.facts))
 
+    def test_observed_qwen_numeric_fields_cannot_be_reinterpreted_as_bike_time(self):
+        self.facts["p"].update({"name": "NU Park", "distance_m": 775, "walk_minutes": 11, "visit_minutes": 20})
+        self.good["recommendations"][0]["why"] = "Парк NU Park находится в 775 метрах от вас, с возможностью посетить в 11 минут на foot и 20 минут на bike."
+        self.assertIsNone(validate_narration(self.good, self.facts))
+
+    def test_route_numbers_and_nonwalking_transport_are_rejected_even_when_values_exist(self):
+        for text in ("Парк расположен в 300 метрах от вас.", "До парка пять минут пешком.", "Можно доехать на велосипеде.", "Идея: приехать на машине и осмотреть парк.", "Идея: взять самокат для прогулки.", "Можно пойти пешком или вызвать такси.", "Идея: немного погулять на bike."):
+            payload = deepcopy(self.good)
+            payload["recommendations"][0]["why"] = text
+            with self.subTest(text=text):
+                self.assertIsNone(validate_narration(payload, self.facts))
+
+    def test_literal_source_name_can_contain_latin_letters_and_digits(self):
+        self.facts["p"]["name"] = "NU Park 20"
+        self.good["recommendations"][0]["why"] = "NU Park 20 подходит для короткой прогулки на свежем воздухе."
+        self.assertIsNotNone(validate_narration(self.good, self.facts))
+        self.good["recommendations"][0]["action"] = "Идея: осмотреть NU Park 20 после проверки доступа и часов работы."
+        self.assertIsNotNone(validate_narration(self.good, self.facts))
+
     def test_hallucinated_protected_facts_fall_back(self):
         for text in ("Здесь всегда тихо и уютно.", "Здесь есть розетки для зарядки.", "Парк открыт сейчас и работает.", "Вход стоит 500 тенге для всех.", "Рейтинг парка — самый высокий.", "Доступно для колясок без ограничений.", "Здесь безопасно ночью для детей.", "Дойти можно за 99 минут.", "Смотрите https://invented.example/location", "В парке сегодня проходит концерт.", "Есть туалеты и бесплатный Wi-Fi."):
             value = deepcopy(self.good)
@@ -128,6 +147,11 @@ class NarrationQualityTests(unittest.TestCase):
         self.assertNotIn("query-secret", serialized)
         self.assertNotIn("label-secret", serialized)
         self.assertNotIn(str(ORIGIN["lat"]), serialized)
+        context = json.loads(body["messages"][1]["content"])["retrieved_poi_facts"]["p"]
+        self.assertNotIn("walk_minutes", context)
+        self.assertNotIn("visit_minutes", context)
+        self.assertNotIn("distance_m", context)
+        self.assertNotIn("opening_hours", context)
         self.assertEqual(response["mode"], "llm-grounded")
 
     @patch.dict("os.environ", {"LLM_MODEL": "test", "LLM_API_KEY": "fake"}, clear=True)

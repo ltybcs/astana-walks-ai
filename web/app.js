@@ -151,6 +151,8 @@ async function initialize(){
     const provider=/2gis|2гис/i.test(dataset.name||"")?"2ГИС":/openstreetmap|osm/i.test(dataset.name||"")?"OpenStreetMap":"Реальные POI";
     $("dataset-badge").textContent=isDemo?"Учебные POI · "+places.length+" мест":provider+" · "+places.length+" мест";
     $("dataset-badge").title=dataset.collected_at?"Собрано "+new Date(dataset.collected_at).toLocaleDateString("ru-RU")+" · "+(dataset.attribution||""):"Учебные и непроверенные сведения";drawMap();
+    if(dataset.attribution)$("data-attribution").textContent=dataset.attribution+" · "+(dataset.license||"Условия источника");
+    const licenseLink=safeLink(dataset.license_url);if(licenseLink)$("data-attribution").href=licenseLink;
   }catch{$("dataset-badge").textContent="Нет связи с сервером";$("status").classList.add("error");$("status").textContent="Запустите сервер: python -m app.server. Затем обновите страницу.";}
 }
 initialize();
