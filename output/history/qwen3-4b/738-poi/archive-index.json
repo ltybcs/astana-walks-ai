@@ -1,0 +1,298 @@
+{
+  "schema_version": 1,
+  "archived_at": "2026-10-19T21:27:38+00:00",
+  "purpose": "Historical approved 4B / 738-POI baseline before expanded POI and real map changes",
+  "baseline": {
+    "places_count": 738,
+    "real_data": true,
+    "tests_passed": 87,
+    "main_scenarios_passed": 5,
+    "accepted_recommendations_read": 7,
+    "manual_review_quality_pass": true,
+    "model": "Qwen3-4B-Instruct-2507 Q4_K_M (Unsloth)",
+    "dataset_sha256": "eb5ebd1a3bd13bbae5ce5005a663a3ac0a0dbcb94b9dabfaa4d774f9610bee08"
+  },
+  "verification": {
+    "copies_byte_identical": true,
+    "source_bytes_unchanged_during_copy": true,
+    "method": "Path.read_bytes / Path.write_bytes, SHA-256 verified for each copy; no normalization or transcoding"
+  },
+  "files": [
+    {
+      "original_path": "data/poi.astana.json",
+      "archived_path": "data/poi.astana.json",
+      "bytes": 709099,
+      "sha256": "eb5ebd1a3bd13bbae5ce5005a663a3ac0a0dbcb94b9dabfaa4d774f9610bee08"
+    },
+    {
+      "original_path": "docs/submission-config.json",
+      "archived_path": "docs/submission-config.json",
+      "bytes": 1079,
+      "sha256": "b0f299690e22d1abbbdff638af138ef5c061dbee1f3c2a5859c20e903ccc8dda"
+    },
+    {
+      "original_path": "output/demo-mobile-install.jpg",
+      "archived_path": "output/demo-mobile-install.jpg",
+      "bytes": 47735,
+      "sha256": "d0a21a6802d3364597c366b86edf52f28c3c48ef769c216157b6278d88682544"
+    },
+    {
+      "original_path": "output/demo-mobile.jpg",
+      "archived_path": "output/demo-mobile.jpg",
+      "bytes": 37341,
+      "sha256": "719945a0524ed8324a1b1922f4d7f65c8799cad8c2e5230cdc0547108c71a421"
+    },
+    {
+      "original_path": "output/demo-ui.jpg",
+      "archived_path": "output/demo-ui.jpg",
+      "bytes": 66866,
+      "sha256": "0a854b342e062ee2c9f00f1db2fd13acbdd3dbcdc80494d060a518116347adb0"
+    },
+    {
+      "original_path": "output/evaluation-live.json",
+      "archived_path": "output/evaluation-live.json",
+      "bytes": 12875,
+      "sha256": "30defa0f6f81f13c16cf744ced599f32faf7b4d7517150d3c5127d576c14428e"
+    },
+    {
+      "original_path": "output/evaluation.json",
+      "archived_path": "output/evaluation.json",
+      "bytes": 12875,
+      "sha256": "30defa0f6f81f13c16cf744ced599f32faf7b4d7517150d3c5127d576c14428e"
+    },
+    {
+      "original_path": "output/https-check.json",
+      "archived_path": "output/https-check.json",
+      "bytes": 1905,
+      "sha256": "9bca8ed95281fad70a654eea05dad062001540b3290dfd7b8bec4e51b04e6333"
+    },
+    {
+      "original_path": "output/live-explanations.json",
+      "archived_path": "output/live-explanations.json",
+      "bytes": 12073,
+      "sha256": "e377045a31321ebfbcca0ee4f5591edd1f0069563619ff84c4b7638c40804041"
+    },
+    {
+      "original_path": "output/llm-evidence/manifest.json",
+      "archived_path": "output/llm-evidence/manifest.json",
+      "bytes": 7340,
+      "sha256": "f8c86e1f43d983bc798ff906e761f9982a5de6fa81a30014f78402b97557579f"
+    },
+    {
+      "original_path": "output/llm-evidence/model-manifest.json",
+      "archived_path": "output/llm-evidence/model-manifest.json",
+      "bytes": 719,
+      "sha256": "fd2a4c276e09d1fcfc3ba62a98eab4498eef5a2c27168ad4c606567e68e60119"
+    },
+    {
+      "original_path": "output/llm-evidence/request-1.json",
+      "archived_path": "output/llm-evidence/request-1.json",
+      "bytes": 5680,
+      "sha256": "c8f273176e4f14545cb5db82db8094a07e1d363fc23e0388646c6bfd5be970d3"
+    },
+    {
+      "original_path": "output/llm-evidence/request-2.json",
+      "archived_path": "output/llm-evidence/request-2.json",
+      "bytes": 5810,
+      "sha256": "a28c3d88343aa89b604c2fea40b31f5d0eb0c352f6d14453c8f54960ef41b091"
+    },
+    {
+      "original_path": "output/llm-evidence/request-3.json",
+      "archived_path": "output/llm-evidence/request-3.json",
+      "bytes": 6957,
+      "sha256": "96cf1b9500163d5993eb60295c4cc4de5e4ea034d34e60e2db3a3c5b888e9d73"
+    },
+    {
+      "original_path": "output/llm-evidence/request-4.json",
+      "archived_path": "output/llm-evidence/request-4.json",
+      "bytes": 5683,
+      "sha256": "29d3933c004bf1add5f94e9bd4740219c80c8ec0bfd0dca157f71859ea488982"
+    },
+    {
+      "original_path": "output/llm-evidence/request-5.json",
+      "archived_path": "output/llm-evidence/request-5.json",
+      "bytes": 5880,
+      "sha256": "be0c1d153b2cb9ce40b39701a5a0301627427777817c12ffdab46134e190f6bf"
+    },
+    {
+      "original_path": "output/llm-evidence/response-1.json",
+      "archived_path": "output/llm-evidence/response-1.json",
+      "bytes": 1005,
+      "sha256": "3a3a657e75a51fd7a517912a68d4f818c17b9b16bc646d05853c2c4b2f60f935"
+    },
+    {
+      "original_path": "output/llm-evidence/response-2.json",
+      "archived_path": "output/llm-evidence/response-2.json",
+      "bytes": 1111,
+      "sha256": "33b62409a67e248e1764d9ab2dd07e52db657ed8cd22f2ba8eba95623951ddae"
+    },
+    {
+      "original_path": "output/llm-evidence/response-3.json",
+      "archived_path": "output/llm-evidence/response-3.json",
+      "bytes": 1787,
+      "sha256": "5972943f20597024132011d8ff0a86310dc054e31413d28e69c5fce58bfc02d5"
+    },
+    {
+      "original_path": "output/llm-evidence/response-4.json",
+      "archived_path": "output/llm-evidence/response-4.json",
+      "bytes": 1059,
+      "sha256": "52bb2dacfe239ce241e27d8e4996c98c1a0334ff075ee3606f618dbbd0047dbb"
+    },
+    {
+      "original_path": "output/llm-evidence/response-5.json",
+      "archived_path": "output/llm-evidence/response-5.json",
+      "bytes": 1087,
+      "sha256": "aa20553a30673cd7b3923591ef51d47a6034bd09010ea2836e1f7eb65181e560"
+    },
+    {
+      "original_path": "output/package-check.json",
+      "archived_path": "output/package-check.json",
+      "bytes": 20590,
+      "sha256": "43a9f59810bf11e45f4742296d49dbfab7028c56cb61edc05e8bc7d62db647cb"
+    },
+    {
+      "original_path": "output/pdf/astana-walks-presentation.pdf",
+      "archived_path": "output/pdf/astana-walks-presentation.pdf",
+      "bytes": 1802637,
+      "sha256": "2d80df329ce3199546ec4bdbe323be28e784abed2dabeb57e32985810f896e8e"
+    },
+    {
+      "original_path": "output/pdf/astana-walks-scenarios.pdf",
+      "archived_path": "output/pdf/astana-walks-scenarios.pdf",
+      "bytes": 105361,
+      "sha256": "6dee8594d6df4dc0b954918b04aa41facd247c144fd4234d184e5330d190b522"
+    },
+    {
+      "original_path": "output/phone-check.json",
+      "archived_path": "output/phone-check.json",
+      "bytes": 797,
+      "sha256": "97d1a14995316c328f9fe1ed44d60869553beda816a2fac3b464fa3e5f1c7503"
+    },
+    {
+      "original_path": "output/portable-check.json",
+      "archived_path": "output/portable-check.json",
+      "bytes": 8193,
+      "sha256": "2946a422bc0b7f20b8da913c81a95fbe42bd427cb8b7068a0a9ba5ccce1f1f5d"
+    },
+    {
+      "original_path": "output/presentations/astana-walks.pptx",
+      "archived_path": "output/presentations/astana-walks.pptx",
+      "bytes": 144906,
+      "sha256": "c4f93bb1eef5d2debee0af7493568f764866d2d43c060cc7a8ef698c90bac324"
+    },
+    {
+      "original_path": "output/presentations/validation.json",
+      "archived_path": "output/presentations/validation.json",
+      "bytes": 3805,
+      "sha256": "9242605fdcb6dd1225820f55f3078a4f4c7b1a82b7032fd53a4d4abc83a27ffc"
+    },
+    {
+      "original_path": "output/speaker-script.md",
+      "archived_path": "output/speaker-script.md",
+      "bytes": 9944,
+      "sha256": "9511f805b730a2fdcbfcc528be9cbd0288bbf24097ae61972ee401592b2dd545"
+    },
+    {
+      "original_path": "output/submission-facts.json",
+      "archived_path": "output/submission-facts.json",
+      "bytes": 14295,
+      "sha256": "c63724c1116f17b6d8cf310bc75d698b8a6dcfd483467d92578ad67003d80c94"
+    },
+    {
+      "original_path": "output/ui-check.json",
+      "archived_path": "output/ui-check.json",
+      "bytes": 3358,
+      "sha256": "7d97a040a062f947aaa135aebe1ed815e141dbd2be2ce29fd5dfb0e983dc3c37"
+    },
+    {
+      "original_path": "output/video/final/PUBLISHING.txt",
+      "archived_path": "output/video/final/PUBLISHING.txt",
+      "bytes": 2966,
+      "sha256": "4ed110501a2e9efe33a34f891638c321e5adec9fb955a0dde9230a3c573c28b0"
+    },
+    {
+      "original_path": "output/video/final/README.md",
+      "archived_path": "output/video/final/README.md",
+      "bytes": 4553,
+      "sha256": "e55bd39298f691176e88c2a22ba644ec66c473af4c6cfcd1d5d9c9b47cbf1ae0"
+    },
+    {
+      "original_path": "output/video/final/astana-walks-demo.mp4",
+      "archived_path": "output/video/final/astana-walks-demo.mp4",
+      "bytes": 4491633,
+      "sha256": "b158b781f6b7a4f128a60b564eb3e3fb41281a77479e6e937e6907bfe187db0e"
+    },
+    {
+      "original_path": "output/video/final/astana-walks-live-pass.mp4",
+      "archived_path": "output/video/final/astana-walks-live-pass.mp4",
+      "bytes": 4008248,
+      "sha256": "9c201ca9db632c912b2d467c4bf3bcb2614142be7c0af244edc9471c47cae2db"
+    },
+    {
+      "original_path": "output/video/final/manifest.json",
+      "archived_path": "output/video/final/manifest.json",
+      "bytes": 12936,
+      "sha256": "746e8000cdeb164de2431f619f1d50fb9ce7b49b31c3e8e0101a7f183d005bdd"
+    },
+    {
+      "original_path": "output/video/final/observed-responses.json",
+      "archived_path": "output/video/final/observed-responses.json",
+      "bytes": 10933,
+      "sha256": "5741af21de17a85afee0f1a4c14391f46f6534e1293d8c2c710015fc1b183005"
+    },
+    {
+      "original_path": "output/video/final/preview-coffee.jpg",
+      "archived_path": "output/video/final/preview-coffee.jpg",
+      "bytes": 68499,
+      "sha256": "f650a58129c448a226b2b25e094618d6a2a0b6a3cdd2a200c6cac28f677a662c"
+    },
+    {
+      "original_path": "output/video/final/preview-family.jpg",
+      "archived_path": "output/video/final/preview-family.jpg",
+      "bytes": 75168,
+      "sha256": "24e7c35e4285d7f504880eb1c9b099050b2166791aed78623998cf2dbe700fb4"
+    },
+    {
+      "original_path": "output/video/final/preview-featured.jpg",
+      "archived_path": "output/video/final/preview-featured.jpg",
+      "bytes": 72471,
+      "sha256": "7de81a86b5756e99bb9a1b31aac0d7c22fbf337a4390cce06258ea8a06c563a0"
+    },
+    {
+      "original_path": "output/video/final/preview-install.jpg",
+      "archived_path": "output/video/final/preview-install.jpg",
+      "bytes": 86855,
+      "sha256": "6b70872fe8764752fcbc4a138f515a563cd22ae70ee9c63a43529b056fc33bf9"
+    },
+    {
+      "original_path": "output/video/final/preview-night.jpg",
+      "archived_path": "output/video/final/preview-night.jpg",
+      "bytes": 71359,
+      "sha256": "77208dac6257ca7dfbc3d56a767a7735146114ed369fcf520ba4e0c0a7cc58b8"
+    },
+    {
+      "original_path": "output/video/final/preview-privacy.jpg",
+      "archived_path": "output/video/final/preview-privacy.jpg",
+      "bytes": 72418,
+      "sha256": "5b9c8f84fc89e93b0ece1a72d96b05f672348273b3efb0e8174ed627c0527142"
+    },
+    {
+      "original_path": "output/video/final/preview-tourist.jpg",
+      "archived_path": "output/video/final/preview-tourist.jpg",
+      "bytes": 72987,
+      "sha256": "2c01310fc2ddc0c039cba7c819931a5ed35c7d914761d5600d07d65320325fd7"
+    },
+    {
+      "original_path": "tmp/pr12-review-receipt.json",
+      "archived_path": "tmp/pr12-review-receipt.json",
+      "bytes": 10159,
+      "sha256": "3f0ca88cea2822fe478447cff2c392cf7b8fbc40a8b3c912100c6a4766cbe2cb"
+    },
+    {
+      "original_path": "tmp/submission/presentation-validation.json",
+      "archived_path": "tmp/submission/presentation-validation.json",
+      "bytes": 3805,
+      "sha256": "9242605fdcb6dd1225820f55f3078a4f4c7b1a82b7032fd53a4d4abc83a27ffc"
+    }
+  ]
+}

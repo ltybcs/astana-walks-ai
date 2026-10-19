@@ -2,3 +2,4 @@
 
 # Recorded evidence hashes refer to exact bytes, including line endings.
 output/**/*.json -text
+output/history/qwen3-4b/738-poi/** -text
