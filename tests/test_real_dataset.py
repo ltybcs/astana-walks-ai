@@ -44,3 +44,9 @@ class RealDatasetQualityTests(unittest.TestCase):
         self.assertFalse(report["live_llm_used"])
         self.assertEqual(report["scenarios"][1]["result_count"], 0)
         self.assertIsNotNone(report["scenarios"][1]["clarification"])
+
+    def test_radkurzior_family_park_request_does_not_include_bon_coffee(self):
+        response = recommend(self.retriever, "С ребёнком, площадка или парк", 60, {"lat": 51.1546, "lon": 71.4252}, use_llm=False)
+        self.assertTrue(response["recommendations"])
+        self.assertTrue(all(item["category"] in {"park", "playground"} for item in response["recommendations"]))
+        self.assertLessEqual(response["plan"]["total_minutes"], 60)

@@ -1,0 +1,9 @@
+{
+  "llm": {
+    "provider": "llama.cpp b11739 (CPU, loopback)",
+    "model": "Qwen3-1.7B-Q8_0 / astana-local",
+    "live_verified": true,
+    "evidence": "Actual Qwen3-1.7B-Q8_0 via llama.cpp b11739: 5/5 scenarios, 79/79 tests, 4/4 eligible scenarios llm-grounded, 5 provider calls including one bounded repair. Final accepted explanations manually reviewed. See output/evaluation-live.json and output/live-explanations.json."
+  },
+  "video_url": null
+}

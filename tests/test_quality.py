@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from app.generation import recommend
-from app.llm import LLMConfig, validate_narration
+from app.llm import LLMConfig, narrate, russian_context, validate_narration, validate_narration_with_reason
 from app.retrieval import Retriever, detect_intent
 from tests.test_retrieval import ORIGIN, index, poi
 
@@ -90,6 +90,12 @@ class NarrationQualityTests(unittest.TestCase):
     def test_normal_free_russian_text_is_accepted(self):
         self.assertIsNotNone(validate_narration(self.good, self.facts))
 
+    def test_context_translates_machine_labels_without_copying_route_numbers(self):
+        context = russian_context(self.facts, {"outdoor": True, "time_of_day": "day"})
+        self.assertEqual(context["retrieved_poi_facts"]["p"]["category"], "парк или сад")
+        self.assertEqual(context["retrieved_poi_facts"]["p"]["features"]["тишина"], "неизвестно")
+        self.assertNotIn("walk_minutes", context["retrieved_poi_facts"]["p"])
+
     def test_observed_qwen_numeric_fields_cannot_be_reinterpreted_as_bike_time(self):
         self.facts["p"].update({"name": "NU Park", "distance_m": 775, "walk_minutes": 11, "visit_minutes": 20})
         self.good["recommendations"][0]["why"] = "Парк NU Park находится в 775 метрах от вас, с возможностью посетить в 11 минут на foot и 20 минут на bike."
@@ -119,6 +125,49 @@ class NarrationQualityTests(unittest.TestCase):
     def test_uncertainty_is_accepted_without_claiming_quietness(self):
         self.good["recommendations"][0]["why"] = "Парк подходит для прогулки; тишина не подтверждена источником."
         self.assertIsNotNone(validate_narration(self.good, self.facts))
+
+    def test_observed_unsupported_surface_and_location_have_specific_reasons(self):
+        for text, reason in (("Парк подходит для отдыха с плавными дорожками.", "unsupported_surface_claim"), ("Памятник находится в центре Астаны.", "unsupported_location_claim"), ("Парк обеспечивает доступ для пешеходов.", "unsupported_access_claim"), ("Идея: осмотреть зоны с видом на город и отдыхать в зеленых зонах.", "unsupported_view_claim")):
+            payload = deepcopy(self.good)
+            payload["recommendations"][0]["why"] = text
+            with self.subTest(text=text):
+                self.assertEqual(validate_narration_with_reason(payload, self.facts)[1], reason)
+
+    @patch.dict("os.environ", {"LLM_MODEL": "test", "LLM_API_KEY": "fake", "LLM_TIMEOUT_SECONDS": "120"}, clear=True)
+    def test_one_repair_keeps_guard_and_shares_the_total_deadline(self):
+        unsafe = deepcopy(self.good)
+        unsafe["recommendations"][0]["why"] = "Парк позволяет насладиться тишиной и спокойствием."
+        clock = [0.0]
+        bodies = []
+        timeouts = []
+        def provider(request, timeout):
+            bodies.append(json.loads(request.data))
+            timeouts.append(timeout)
+            content = unsafe if len(bodies) == 1 else self.good
+            clock[0] = 80.0 if len(bodies) == 1 else 90.0
+            return io.BytesIO(json.dumps({"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(content)}}]}).encode())
+        diagnostics = {}
+        with patch("app.llm.monotonic", side_effect=lambda: clock[0]), patch("app.llm.open_url", side_effect=provider):
+            result, status = narrate([{"id": "p"}], {}, facts_by_id=self.facts, diagnostics=diagnostics)
+        self.assertIsNotNone(result)
+        self.assertEqual(status, "validated_after_repair")
+        self.assertEqual(diagnostics, {"attempts": 2, "rejections": ["unsupported_quiet_claim"]})
+        self.assertEqual(timeouts, [120, 40])
+        self.assertIn("unsupported_quiet_claim", bodies[1]["messages"][-1]["content"])
+        self.assertFalse(any(message["role"] == "assistant" for message in bodies[1]["messages"]))
+
+    @patch.dict("os.environ", {"LLM_MODEL": "test", "LLM_API_KEY": "fake"}, clear=True)
+    def test_two_invalid_responses_fall_back_without_extra_attempts(self):
+        unsafe = deepcopy(self.good)
+        unsafe["recommendations"][0]["why"] = "Можно доехать на велосипеде до парка."
+        envelope = json.dumps({"choices": [{"message": {"content": json.dumps(unsafe)}}]}).encode()
+        diagnostics = {}
+        with patch("app.llm.open_url", side_effect=lambda *_: io.BytesIO(envelope)) as mock:
+            result, status = narrate([{"id": "p"}], {}, facts_by_id=self.facts, diagnostics=diagnostics)
+        self.assertIsNone(result)
+        self.assertEqual(status, "validation_failed")
+        self.assertEqual(mock.call_count, 2)
+        self.assertEqual(diagnostics["rejections"], ["unsupported_transport", "unsupported_transport"])
 
     def test_wrong_ids_citations_and_fact_keys_are_rejected(self):
         for key, value in (("id", "other"), ("citations", ["other"]), ("fact_keys", ["invented"]), ("walk_minutes", -1)):

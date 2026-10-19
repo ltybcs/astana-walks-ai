@@ -59,6 +59,8 @@ def evaluate(retriever: Retriever, *, use_llm: bool = False) -> dict:
             "clarification": response.get("clarification"),
             "poi_ids": ids, "warnings": response["warnings"],
             "llm_status": response["diagnostics"]["llm_status"],
+            "llm_attempts": response["diagnostics"]["llm_attempts"],
+            "llm_rejections": response["diagnostics"]["llm_rejections"],
         })
     data_path = None
     if retriever.data_path:
@@ -69,7 +71,7 @@ def evaluate(retriever: Retriever, *, use_llm: bool = False) -> dict:
         "live_llm_requested": use_llm,
         "live_llm_used": any(item["mode"].startswith("llm-grounded") for item in results),
         "scenarios": results,
-        "summary": {"scenarios_total": len(results), "scenarios_passed": sum(item["pass"] for item in results), "tests": None},
+        "summary": {"scenarios_total": len(results), "scenarios_passed": sum(item["pass"] for item in results), "tests": None, "llm": {"eligible_scenarios": sum(item["result_count"] > 0 for item in results), "validated_scenarios": sum(item["mode"].startswith("llm-grounded") for item in results), "fallback_scenarios": sum(item["result_count"] > 0 and not item["mode"].startswith("llm-grounded") for item in results), "total_attempts": sum(item["llm_attempts"] for item in results)}},
         "limitations": ["Проверяются сценарные ограничения и источники, а не полное качество городских рекомендаций.", "Пустой ответ при неподтверждённой розетке или режиме 24/7 — честное воздержание.", "Нет полевой проверки POI, дорожного графа и гарантии семантической достоверности свободного текста."],
     }
 
