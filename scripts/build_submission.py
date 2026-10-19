@@ -72,6 +72,8 @@ def speech(f):
     phone = f.get("pwa", {}).get("phone_installation", {})
     phone_text = (" Установку предыдущей версии на Android с Chrome и запуск по иконке пользователь подтвердил ранее. "
                   "Новые функции и работу без сети на физическом телефоне отдельно не проверяли.") if phone.get("user_reported") else ""
+    video_text = (f'Принят локальный MP4 длительностью {f["video"]["duration_label"]}: реальные состояния мобильного интерфейса, '
+                  "с отдельной подписанной вставкой прежней инструкции установки. ") if f.get("video",{}).get("current_mp4") else ""
     return [
         "Здравствуйте. Astana Walks помогает жителю или гостю Астаны выбрать короткую прогулку. "
         "Мы решаем первую задачу НИЦ Smart City: учитываем старт, интересы и свободное время, "
@@ -123,6 +125,7 @@ def speech(f):
         "позиции потребуют явной маркировки.",
         "Для передачи подготовлены исходники, данные с происхождением, сценарии, ограничения "
         "и материалы запуска. Прежний снимок сохранён отдельно от расширенной версии. "
+        + video_text +
         "YouTube-публикацию пользователь решил выполнить самостоятельно позже, поэтому ссылка "
         "не подменяется вымышленным адресом. Временный сайт зависит от включённого компьютера "
         "и туннеля. Проект остаётся прототипом: путь приблизителен, полевой проверки и гарантии "
@@ -303,7 +306,28 @@ def assemble(args):
         if not video_path.is_absolute():video_path=ROOT/video_path
         if not video_path.is_file() or video.get("current_dataset_sha256")!=sha256(dataset_path):
             raise ValueError("Current video must exist and be approved for the current dataset SHA-256.")
-        video.update(current_mp4=relative(video_path),sha256=sha256(video_path))
+        video_hash=sha256(video_path)
+        manifest_path=Path(video.get("manifest",str(video_path.parent/"manifest.json")))
+        if not manifest_path.is_absolute():manifest_path=ROOT/manifest_path
+        review_path=Path(video.get("review_receipt",""))
+        if not review_path.is_absolute():review_path=ROOT/review_path
+        if not manifest_path.is_file() or not review_path.is_file():
+            raise ValueError("Current video requires its manifest and independent approval receipt.")
+        manifest=read_json(manifest_path)
+        review=read_json(review_path)
+        if manifest.get("dataset_sha256")!=sha256(dataset_path):
+            raise ValueError("Video manifest used a different POI snapshot.")
+        media=next((entry for entry in manifest.get("files",[]) if entry.get("file")==video_path.name),{})
+        if media.get("sha256")!=video_hash:
+            raise ValueError("Current video bytes differ from the recorded manifest.")
+        checks=review.get("checks",[])
+        if not checks or not all(c.get("pass") is True for c in checks) or review.get("blockers") or review.get("checks_passed")!=review.get("checks_total") or review.get("checks_total")!=len(checks) or not any(c.get("sha256")==video_hash for c in checks):
+            raise ValueError("Current video lacks a successful review of its exact bytes.")
+        decode=next((entry for entry in review.get("decodes",[]) if entry.get("file")==video_path.name),{})
+        duration=float(media.get("probe",{}).get("format",{}).get("duration",0))
+        if decode.get("full_decode_pass") is not True or decode.get("probe_pass") is not True or not duration or abs(duration-float(decode.get("duration_seconds",0)))>0.01:
+            raise ValueError("Current video requires a matching successful decode/probe record.")
+        video.update(current_mp4=relative(video_path),sha256=video_hash,manifest=relative(manifest_path),manifest_sha256=sha256(manifest_path),review_receipt=relative(review_path),review_sha256=sha256(review_path),review_checks={"passed":review["checks_passed"],"total":review["checks_total"]},duration_seconds=duration,duration_label=f'{int(duration//60)}:{duration%60:05.2f}'.replace(".",","),capture_method=manifest.get("capture_method"),physical_phone_capture=manifest.get("physical_phone_capture"),source_candidate=manifest.get("source_candidate"))
     local_tz = timezone(timedelta(hours=5))
     collected = datetime.fromisoformat(meta["collected_at"].replace("Z", "+00:00")).astimezone(local_tz)
     rows = []
@@ -460,11 +484,13 @@ def document_pdf(f, out):
     if phone_evidence.get("source"):
         story.append(p("Установка со слов пользователя: "+safe(phone_evidence["source"])+". SHA-256: "+phone_evidence["sha256"],"small"))
     story += [p("Источник набора данных","h2"),p(safe(f["dataset"]["path"])),p("SHA-256 набора: "+f["dataset"]["sha256"],"small")]
-    story += [p("Дополнительные автоматические проверки","h2"),p("Валидация JSON и координат, строгие фильтры, неизвестные свойства, пустая выдача, ошибки LLM и защитная проверка статических путей. Итоговые числа относятся к приложенному отчёту, а не к предполагаемой городской полноте данных.")]
+    story += [p("Автотесты охватывают JSON и координаты, строгие фильтры, неизвестные свойства, пустую выдачу, ошибки LLM и защиту статических путей. Числа относятся к приложенному отчёту, а не к полноте городского каталога.","small")]
     story += [p("Перед внешним размещением","h2"),p("Нужны производственный HTTP-сервер, ограничения нагрузки, HTTPS, эксплуатационные проверки и проверка свежести данных. Текущий сервер предназначен для локального демо. Не публикуйте .env, ключи и журналы с запросами или точными координатами.")]
     story += [p("Материалы для жюри","h2"),p("Редактируемая презентация PowerPoint, PDF слайдов, этот документ, сценарий выступления и видеодемонстрация. Ссылки на итоговую публикацию должны проверяться отдельно с правами получателя.")]
     if f.get("video",{}).get("current_mp4"):
-        story.append(p("Актуальный локальный ролик: "+safe(f["video"]["current_mp4"])+". Пользователь загрузит его на YouTube самостоятельно; локальный файл не заменяет публикацию.","small"))
+        video=f["video"]
+        story.append(p("Принят локальный MP4: "+safe(video["current_mp4"])+f' ({video["duration_label"]}). Основной проход - выборка снимков вкладки, не полноэкранная запись; последние 24 с - отдельно подписанная инструкция установки прежней версии. Пользователь загрузит ролик на YouTube позже.',"small"))
+        story.append(p(f'Независимое ревью: {safe(video["review_receipt"])} ({video["review_checks"]["passed"]}/{video["review_checks"]["total"]}). Видео - отдельная UI-демонстрация, не формальный LLM-протокол.',"small"))
     elif f.get("video",{}).get("previous_snapshot_video"):
         story.append(p("Ролик версии с 738 POI сохранён как история. Актуальный тейк в конфиге этой сборки не указан; YouTube-ссылка остаётся пустой.","small"))
     def page(c,doc):

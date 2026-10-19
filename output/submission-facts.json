@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-20T03:12:28+05:00",
+  "generated_at": "2026-10-20T03:33:37+05:00",
   "repository": "https://github.com/ltybcs/astana-walks-ai",
   "video_url": null,
   "screenshot_relative": "output/demo-ui.jpg",
@@ -413,9 +413,23 @@
   },
   "video": {
     "publication": "user_upload_later",
-    "current_mp4": null,
-    "current_dataset_sha256": null,
-    "previous_snapshot_video": "output/history/qwen3-4b/738-poi/output/video/final/astana-walks-demo.mp4"
+    "current_mp4": "output/video/final/astana-walks-demo.mp4",
+    "current_dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+    "manifest": "output/video/final/manifest.json",
+    "review_receipt": "output/video/final-review.json",
+    "previous_snapshot_video": "output/history/qwen3-4b/738-poi/output/video/final/astana-walks-demo.mp4",
+    "sha256": "7106a06c4122f8d9eceb9158aa80ab4a37e4495e35fa6d71b84a29e141b515b8",
+    "manifest_sha256": "fdb3ba1861aad20062c53a57bc966559a21efca3f58ba9b64b87b2022e7085da",
+    "review_sha256": "0162cf3eedfacd13f84cf303e8cd3cca06e9c778a3581d11a00522f1b85f9346",
+    "review_checks": {
+      "passed": 49,
+      "total": 49
+    },
+    "duration_seconds": 250.64,
+    "duration_label": "4:10,64",
+    "capture_method": "One sequential real Chrome tab UI pass, target2fps screenshots. Actual observation timestamps are retained; gaps repeat the last observed frame at real elapsed time. Not a native full-frame screen recording. No desktop or browser chrome captured.",
+    "physical_phone_capture": false,
+    "source_candidate": "8932474"
   },
   "ui_example": {
     "source": "output/ui-check.json",

@@ -167,11 +167,11 @@ function excerpt(value,limit=120) {
 }
 {
  const s=slide("Материалы проекта",true);
- text(s,`Карта, мобильный прототип и PWA\nАвтосбор и снимки данных\nСценарии, презентация и инструкции\n${facts.video_url?"Видео: ссылка YouTube в материалах":"Видео: пользователь загрузит позже"}`,72,192,1110,253,39,C.ink,true);
+ text(s,`Карта, мобильный прототип и PWA\nАвтосбор и снимки данных\nСценарии, презентация и инструкции\n${facts.video_url?"Видео: ссылка YouTube в материалах":facts.video?.current_mp4?"MP4 готов; YouTube пользователь загрузит позже":"Видео: пользователь загрузит позже"}`,72,192,1110,253,39,C.ink,true);
  const temporary=Boolean(facts.pwa?.demo_url);
  text(s,"Ограничения: приблизительный путь, неполные POI,\nнет текущих событий и проверки безопасности"+(facts.pwa?.enabled?"\nОфлайн: оболочка PWA. Подбор требует сервера":"")+(temporary?"\nДемо зависит от включённых ПК и туннеля":""),72,temporary?472:facts.pwa?.enabled?488:499,1110,temporary?144:facts.pwa?.enabled?126:90,27,C.gray);
  text(s,temporary?`Временно: ${facts.pwa.demo_url.replace(/^https:\/\//,"").replace(/\/$/,"")}`:"github.com/ltybcs/astana-walks-ai",72,630,1060,44,27,C.ink);
- note(s,facts.speech[9],[facts.repository,facts.pwa?.demo_url||"",facts.pwa?.https_evidence||"",facts.video_url||"Пользователь выбрал самостоятельную загрузку позже; публикация YouTube не подтверждена.",`Снимок материалов: ${facts.generated_at}`]);
+ note(s,facts.speech[9],[facts.repository,facts.pwa?.demo_url||"",facts.pwa?.https_evidence||"",facts.video?.current_mp4||"",facts.video?.review_receipt||"",facts.video?.capture_method||"",facts.video_url||"Пользователь выбрал самостоятельную загрузку позже; публикация YouTube не подтверждена.",`Снимок материалов: ${facts.generated_at}`]);
 }
 
 for(const [i,s] of deck.slides.items.entries()) {

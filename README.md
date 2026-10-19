@@ -4,7 +4,7 @@
 
 Выберите старт, интересы и запас времени. Приложение подбирает до трёх реальных мест, объясняет выбор и предлагает занятие. Время включает возвращение к старту. Карточки содержат источники и предупреждения о неизвестных свойствах.
 
-Текущая версия интегрируется в [PR #5](https://github.com/ltybcs/astana-walks-ai/pull/5), ветка [`codex/completion-local`](https://github.com/ltybcs/astana-walks-ai/tree/codex/completion-local). [Временное HTTPS-демо](https://entire-burn-cricket-ashley.trycloudflare.com/) работает, пока включены ПК, приложение и туннель. Фактический режим ответа виден в интерфейсе; при ошибке или отклонении текста LLM используется обозначенный extractive fallback.
+Готовые исходники и материалы находятся в [`main`](https://github.com/ltybcs/astana-walks-ai/tree/main); история интеграции — [PR #5](https://github.com/ltybcs/astana-walks-ai/pull/5). [Временное HTTPS-демо](https://entire-burn-cricket-ashley.trycloudflare.com/) работает, пока включены ПК, приложение и туннель. Фактический режим ответа виден в интерфейсе; при ошибке или отклонении текста LLM используется обозначенный extractive fallback.
 
 | Возможность | Что реализовано |
 | --- | --- |
@@ -24,7 +24,6 @@
 ```sh
 git clone https://github.com/ltybcs/astana-walks-ai.git
 cd astana-walks-ai
-git switch codex/completion-local
 python -m app.server --data data/poi.astana.json
 ```
 
@@ -129,6 +128,8 @@ docker run --rm -p 127.0.0.1:8000:8000 astana-walks
 - [Презентация PDF](output/pdf/astana-walks-presentation.pdf), [PPTX](output/presentations/astana-walks.pptx), [сценарии PDF](output/pdf/astana-walks-scenarios.pdf), [речь](output/speaker-script.md).
 - [Итоговое видео](output/video/final/astana-walks-demo.mp4) и сведения о записи — в `output/video/final/`.
 - [RAG](docs/CONCEPT.md), [демонстрация](docs/DEMO_SCRIPT.md), [правила](AGENTS.md), [подключение Codex](docs/HANDOFF.md).
+
+Подготовлены и просмотрены 10 слайдов, документ на 6 страниц и речь на 6:45. Новый ролик с настоящей картой длится 4:10,64, без звука: пять UI-сценариев, фактическое ожидание и отдельная подписанная инструкция установки. Независимое ревью видео прошло 49/49; MP4 и его контрольная сумма — в `output/video/final/`, квитанция — `output/video/final-review.json`.
 
 Пользователь загрузит MP4 на YouTube самостоятельно и пришлёт ссылку позже. До этого `video_url` остаётся `null`; локальный ролик не выдаётся за выполненную публикацию. Закрытая ссылка GitHub сама по себе не предоставляет жюри доступ.
 

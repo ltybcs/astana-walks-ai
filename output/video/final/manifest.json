@@ -618,7 +618,9 @@
       "Architecture and strict-night UI fixtures differ from canonical evaluator fixtures.",
       "3visible LLM results do not establish a provider-attempt count or future semantic reliability."
     ],
-    "independent_A_encoded_footage_review": "pending",
+    "independent_A_encoded_footage_review": "approved: root and independent final_review reader; 49/49 checks, no blockers",
+    "independent_review_receipt": "output/video/final-review.json",
+    "independent_review_pr_head": "b2462065e4d470b4c06f38ee82e87a2e9b96c4bf",
     "external_publication": "not performed; user will upload to YouTube later"
   },
   "verification": {

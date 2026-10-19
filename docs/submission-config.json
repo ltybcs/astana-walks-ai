@@ -25,8 +25,10 @@
   },
   "video": {
     "publication": "user_upload_later",
-    "current_mp4": null,
-    "current_dataset_sha256": null,
+    "current_mp4": "output/video/final/astana-walks-demo.mp4",
+    "current_dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+    "manifest": "output/video/final/manifest.json",
+    "review_receipt": "output/video/final-review.json",
     "previous_snapshot_video": "output/history/qwen3-4b/738-poi/output/video/final/astana-walks-demo.mp4"
   },
   "pwa": {
