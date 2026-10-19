@@ -107,6 +107,8 @@ class CollectionTests(unittest.TestCase):
         secret = "dummy-sensitive-key"
         errors = [URLError("https://example.com/?key=" + secret), HTTPError("https://example.com/?key=" + secret, 403, secret, {}, None)]
         for error in errors:
+            if isinstance(error, HTTPError):
+                self.addCleanup(error.close)
             with patch("scripts.collect_2gis.build_opener") as factory:
                 factory.return_value.open.side_effect = error
                 with self.assertRaises(CollectionError) as caught:
@@ -120,7 +122,7 @@ class CollectionTests(unittest.TestCase):
     def test_replay_is_loadable_and_marked_source_data_not_demo(self):
         with tempfile.TemporaryDirectory() as root:
             source, output = Path(root) / "api.json", Path(root) / "poi.json"
-            source.write_text(json.dumps(envelope([item()])))
+            source.write_text(json.dumps(envelope([item()])), encoding="utf-8")
             self.assertEqual(main(["--input", str(source), "--output", str(output)]), 0)
             retriever = Retriever(output)
             self.assertFalse(retriever.dataset["is_demo"])
@@ -131,14 +133,14 @@ class CollectionTests(unittest.TestCase):
     def test_missing_key_empty_or_corrupt_inputs_preserve_existing_dataset(self):
         with tempfile.TemporaryDirectory() as root:
             output, source = Path(root) / "existing.json", Path(root) / "api.json"
-            output.write_text("existing data")
+            output.write_text("existing data", encoding="utf-8")
             with patch.dict("os.environ", {"DGIS_API_KEY": ""}), patch("sys.stderr", new_callable=io.StringIO):
                 self.assertEqual(main(["--output", str(output)]), 1)
             for content in ("not JSON", json.dumps(envelope([])), json.dumps({"meta": {"code": 403}})):
-                source.write_text(content)
+                source.write_text(content, encoding="utf-8")
                 with patch("sys.stderr", new_callable=io.StringIO):
                     self.assertEqual(main(["--input", str(source), "--output", str(output)]), 1)
-                self.assertEqual(output.read_text(), "existing data")
+                self.assertEqual(output.read_text(encoding="utf-8"), "existing data")
 
     def test_network_pagination_is_bounded_and_stops_on_short_page(self):
         with tempfile.TemporaryDirectory() as root:
@@ -146,7 +148,7 @@ class CollectionTests(unittest.TestCase):
             with patch.dict("os.environ", {"DGIS_API_KEY": "dummy-key"}), patch("scripts.collect_2gis.fetch_page", return_value=envelope([item()])) as fetch:
                 self.assertEqual(main(["--query", "Кофейни", "--pages", "3", "--output", str(output)]), 0)
                 self.assertEqual(fetch.call_count, 1)
-                self.assertNotIn("dummy-key", output.read_text())
+                self.assertNotIn("dummy-key", output.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
