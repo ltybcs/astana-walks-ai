@@ -110,7 +110,9 @@ def speech(f):
     if f.get("pwa",{}).get("enabled"):
         result[2]+=" Интерфейс ориентирован на телефон, его можно установить как PWA. Для установки на реальном телефоне нужен HTTPS. Офлайн доступна только оболочка. Подбор требует сервера, ответы API в кэш не попадают."
         if f["pwa"].get("phone_installation",{}).get("user_reported"):
-            result[2]+=" Пользователь подтвердил установку на телефон и запуск по иконке. Работу без сети на этом устройстве мы не проверяли."
+            phone=f["pwa"]["phone_installation"]
+            platform=", ".join(value for value in [phone.get("os"),phone.get("browser")] if value)
+            result[2]+=f' Пользователь подтвердил установку на телефон{(" ("+platform+")") if platform else ""} и запуск по иконке. Работу без сети на этом устройстве мы не проверяли.'
         if f["pwa"].get("demo_url"):
             result[8]+=" Временный HTTPS-сайт доступен, пока работают наш компьютер и туннель."
     return result
@@ -162,7 +164,7 @@ def assemble(args):
         if str(phone_check["url"]).rstrip("/")!=str(pwa.get("demo_url","")).rstrip("/"):
             raise ValueError("Temporary demo URL differs from phone report.")
         reported=datetime.fromisoformat(phone_check["recorded_at"].replace("Z","+00:00")).astimezone(timezone(timedelta(hours=5)))
-        pwa["phone_installation"]={"user_reported":True,"reported_on":reported.date().isoformat(),"installed":True,"opened_from_icon":True,"os":phone_check.get("device_os"),"device_model":phone_check.get("device_model"),"offline_tested":phone_check.get("offline_on_physical_phone") in (True,"passed","failed"),"source":relative(phone_path),"sha256":sha256(phone_path)}
+        pwa["phone_installation"]={"user_reported":True,"reported_on":reported.date().isoformat(),"installed":True,"opened_from_icon":True,"os":phone_check.get("device_os"),"browser":phone_check.get("browser"),"device_model":phone_check.get("device_model"),"offline_tested":phone_check.get("offline_on_physical_phone") in (True,"passed","failed"),"source":relative(phone_path),"sha256":sha256(phone_path)}
     crop=config.get("screenshot_crop",{"left":0,"top":0,"right":0,"bottom":0})
     if set(crop)!={"left","top","right","bottom"} or any(type(v) not in (int,float) or not 0<=v<1 for v in crop.values()) or crop["left"]+crop["right"]>=1 or crop["top"]+crop["bottom"]>=1:
         raise ValueError("screenshot_crop must give four valid normalized edge fractions.")
@@ -322,7 +324,9 @@ def document_pdf(f, out):
     if f.get("pwa",{}).get("enabled"):
         story += [p("Телефон, PWA и офлайн","h2"),p("Мобильная PWA сохраняет статическую оболочку. Подбор требует backend; запросы и ответы API не кэшируются. Для телефона нужен HTTPS, а localhost подходит только для разработки на том же устройстве.")]
         if f["pwa"].get("phone_installation",{}).get("user_reported"):
-            story.append(p("Пользователь подтвердил установку по HTTPS и запуск по иконке на настоящем телефоне. ОС и модель не указаны. Работа без сети на телефоне не проверена.","small"))
+            phone=f["pwa"]["phone_installation"]
+            platform=", ".join(value for value in [phone.get("os"),phone.get("browser")] if value)
+            story.append(p("Пользователь подтвердил установку по HTTPS и запуск по иконке на настоящем телефоне"+safe((" ("+platform+")") if platform else "")+". Модель устройства не указана. Работа без сети на телефоне не проверена. Другие браузеры в это подтверждение не входят.","small"))
         else:
             story.append(p("Установка на физический телефон не подтверждена.","small"))
         if f["pwa"].get("demo_url"):
@@ -343,6 +347,8 @@ def document_pdf(f, out):
     table=Table(data,colWidths=[139,346],hAlign="LEFT")
     table.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),HexColor(TEAL)),("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),10),("RIGHTPADDING",(0,0),(-1,-1),10),("TOPPADDING",(0,0),(-1,-1),10),("BOTTOMPADDING",(0,0),(-1,-1),10),("LINEBELOW",(0,1),(-1,-1),0.4,HexColor("#CCD5CC"))]))
     story += [table,p("Модель и данные запроса","h2"),p(f["llm"]["privacy_note"]+" При необходимости API-ключ доступен только backend через окружение. Для внешнего провайдера и хостинга нужно отдельно проверить условия обработки и хранения.")]
+    if f.get("pwa",{}).get("demo_url"):
+        story.append(p("Во временном HTTPS-демо сетевые запросы проходят через Cloudflare Quick Tunnel к локальному backend; локальная модель остаётся на ПК.","small"))
     story += [p("Коммерческие рекомендации","h2"),p("Спрос и бизнес-модель пока не проверены. Предполагаемый пилот: отели и туристические стойки. Любая будущая платная позиция должна иметь явную маркировку, не подменяя релевантность скрытым продвижением.")]
     story += [PageBreak(),p("Повторение проверки","h1"),p("Команды выполняются из корня проекта. Для запуска прототипа сторонние Python-пакеты не нужны. Финальная сборка материалов требует ReportLab, Pillow, pypdf и @oai/artifact-tool.")]
     llm_flag=" --llm" if f["llm"]["live_verified"] else ""
