@@ -32,6 +32,10 @@ class RetrievalQualityTests(unittest.TestCase):
         response = recommend(index(poi("park"), poi("coffee", category="cafe"), poi("mall", category="mall")), "Кофе и парк", 100, ORIGIN, use_llm=False)
         self.assertEqual({item["category"] for item in response["recommendations"]}, {"park", "cafe"})
 
+    def test_explicit_park_and_architecture_can_both_be_in_the_plan(self):
+        response = recommend(index(poi("park"), poi("memorial", category="monument")), "Парк и архитектура", 100, ORIGIN, use_llm=False)
+        self.assertEqual({item["category"] for item in response["recommendations"]}, {"park", "monument"})
+
     def test_plain_walk_does_not_fill_itinerary_with_malls_or_cafes(self):
         response = recommend(index(poi("mall", category="mall"), poi("coffee", category="cafe"), poi("park")), "Прогулка возле Mega", 100, ORIGIN, use_llm=False)
         self.assertEqual([item["id"] for item in response["recommendations"]], ["park"])

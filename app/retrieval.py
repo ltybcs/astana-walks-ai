@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DATA = ROOT / "data" / "poi.sample.json"
+DEFAULT_DATA = ROOT / "data" / "poi.astana.json"
 WALK_METRES_PER_MINUTE = 75
 PATH_FACTOR = 1.3
 CATEGORY_TEXT = {
@@ -107,6 +107,7 @@ def detect_intent(query: str, time_of_day: str = "day") -> dict[str, Any]:
         "strict_quiet": _wanted(query, r"тих\w*|quiet|тыныш") and bool(re.search(r"(?:только|обязательно|only|must).{0,20}(?:тих|quiet|тыныш)", query)),
         "child": _wanted(query, r"ребен\w*|деть\w*|дети|детск\w*|семь[яеюи]\w*|семейн\w*|family|child\w*|kids|бала\w*|отбасы"),
         "tourist": _wanted(query, r"турист\w*|достопримеч\w*|архитект\w*|tourist|sightsee\w*"),
+        "architecture": _wanted(query, r"архитект\w*|architecture|сәулет\w*"),
         "night": time_of_day == "night" or _wanted(query, r"ноч\w*|night|түн\w*"),
         "accessible": _wanted(query, r"коляс\w*|безбарьер\w*|wheelchair|accessible|арбамен"),
         "outdoor": _wanted(query, r"прогул\w*|погуля\w*|гуля\w*|walk\w*|серуен\w*|воздух"),
@@ -127,6 +128,32 @@ def feature(poi: dict[str, Any], name: str) -> str:
     return str(value).lower()
 
 
+def _place_keys(poi: dict) -> set[str]:
+    """Use source aliases, never guess cross-language identities by location."""
+    keys = set()
+    for name in [poi["name"]] + poi.get("aliases", []):
+        compact = "".join(re.findall(r"[\w]+", name.lower().replace("ё", "е")))
+        keys.add(compact)
+        # Geographic suffixes in an alias do not define a different venue.
+        if compact.endswith("astana") and len(compact) > 10:
+            keys.add(compact[:-6])
+        if compact.endswith("астана") and len(compact) > 10:
+            keys.add(compact[:-6])
+    return keys - {""}
+
+
+def architecture_evidence(poi: dict) -> bool:
+    if poi["category"] in {"monument", "museum", "theatre"}:
+        return True
+    if poi["category"] != "attraction":
+        return False
+    tags = poi.get("source_tags", {})
+    if tags.get("historic") in {"monument", "memorial", "castle", "building"}:
+        return True
+    source_names = " ".join([poi["name"]] + poi.get("aliases", [])).lower()
+    return bool(re.search(r"\b(?:мост\w*|bridge|арк[а-я]*|arch|дворец\w*|palace|башн\w*|tower|сфер\w*|sphere)\b", source_names))
+
+
 class Retriever:
     def __init__(self, data_path: str | Path | None = None, *, data: dict | None = None):
         self.data_path = None
@@ -139,6 +166,7 @@ class Retriever:
         self._validate_data(data)
         self.dataset = data.get("dataset", {})
         self.places = data["places"]
+        self.duplicate_of = self._physical_duplicates()
         self.documents = []
         for poi in self.places:
             text = " ".join([
@@ -150,6 +178,37 @@ class Retriever:
         self.lengths = [sum(doc.values()) for doc in self.documents]
         self.average_length = sum(self.lengths) / max(1, len(self.lengths))
         self.frequencies = Counter(term for doc in self.documents for term in doc)
+
+    def _physical_duplicates(self) -> dict[str, str]:
+        parents = list(range(len(self.places)))
+        def find(index):
+            while parents[index] != index:
+                parents[index] = parents[parents[index]]
+                index = parents[index]
+            return index
+        buckets = {}
+        for index, poi in enumerate(self.places):
+            for key in _place_keys(poi):
+                bucket = buckets.setdefault((poi["category"], key), [])
+                for other in bucket:
+                    if distance_m(poi, self.places[other]) < 80:
+                        parents[find(index)] = find(other)
+                bucket.append(index)
+        groups = {}
+        for index in range(len(self.places)):
+            groups.setdefault(find(index), []).append(index)
+        duplicates = {}
+        for indices in groups.values():
+            def evidence_quality(index):
+                poi = self.places[index]
+                tags = poi.get("source_tags", {})
+                evidence = bool(poi.get("opening_hours")) + sum(feature(poi, key) != "unknown" for key in ("socket", "quiet", "wheelchair")) + sum(bool(tags.get(key)) for key in ("addr:street", "addr:housenumber"))
+                return evidence, str(poi.get("source_updated_at") or ""), poi["id"]
+            canonical = max(indices, key=evidence_quality)
+            for index in indices:
+                if index != canonical:
+                    duplicates[self.places[index]["id"]] = self.places[canonical]["id"]
+        return duplicates
 
     @staticmethod
     def _validate_data(data: object) -> None:
@@ -207,14 +266,18 @@ class Retriever:
         filtered = Counter()
         terms = tokens(query)
         preferred = set(intent["preferred_categories"])
+        allowed_requested = preferred | {"monument", "theatre", "museum", "attraction"} if preferred and intent["architecture"] else preferred
         outdoor_categories = {"park", "playground", "promenade", "monument", "attraction", "viewpoint", "theatre"}
-        tourist_categories = outdoor_categories | {"museum"}
+        tourist_categories = (outdoor_categories - {"playground"}) | {"museum"}
         for index, poi in enumerate(self.places):
             category = poi["category"]
+            if poi["id"] in self.duplicate_of:
+                filtered["duplicate_source"] += 1
+                continue
             if category in intent["excluded_categories"]:
                 filtered["excluded_category"] += 1
                 continue
-            if preferred and category not in preferred:
+            if allowed_requested and category not in allowed_requested:
                 filtered["category"] += 1
                 continue
             if not preferred and intent["outdoor"] and not intent["tourist"] and category not in outdoor_categories:
@@ -239,6 +302,9 @@ class Retriever:
                 continue
             if intent["tourist"] and not preferred and category not in tourist_categories:
                 continue
+            if intent["architecture"] and category not in preferred and not architecture_evidence(poi):
+                filtered["architecture_evidence"] += 1
+                continue
             visit = int(poi.get("visit_minutes") or DEFAULT_VISIT.get(category, 20))
             walking = walk_minutes(origin, poi)
             # Visit duration is a proposed activity, not an opening-hours fact.
@@ -254,7 +320,10 @@ class Retriever:
             if intent["quiet"] and feature(poi, "quiet") == "yes":
                 preference += 2.0
             # Distance contributes smoothly; semantics dominate among nearby POI.
-            score = lexical + preference + 1 / (1 + walking / 15)
+            # Category expansion is not source-specific knowledge. Bound BM25
+            # so a rare generic category cannot outweigh a much closer match.
+            semantic = 2 * lexical / (1 + lexical)
+            score = semantic + preference + 2 / (1 + walking / 12)
             candidates.append({"poi": poi, "score": score, "lexical_score": lexical, "visit_minutes": visit})
         relevant_intent = any(intent[key] for key in ("coffee", "socket", "quiet", "child", "tourist", "night", "accessible", "outdoor", "general_suggestion")) or bool(preferred)
         if candidates and not relevant_intent and not any(item["lexical_score"] > 0 for item in candidates):
@@ -270,7 +339,7 @@ class Retriever:
         while remaining and len(selected) < 3:
             def diversity_score(item):
                 same_category = sum(other["poi"]["category"] == item["poi"]["category"] for other in selected)
-                penalty = 1 if len(preferred) == 1 else 1 + 0.8 * same_category
+                penalty = 1 if len(allowed_requested) == 1 else 1 + 0.8 * same_category
                 return item["score"] / penalty
             remaining.sort(key=lambda item: (-diversity_score(item), item["poi"]["id"]))
             candidate = remaining.pop(0)
@@ -309,4 +378,4 @@ class Retriever:
             "returns_to_origin": True,
             "method": "haversine × 1.3; 75 м/мин; без дорожного графа",
         }
-        return {"selected": selected, "intent": intent, "filtered": dict(filtered), "plan": plan, "retrieved_count": len(candidates), "ranking_policy": "BM25 + walking distance + request context; diversity; no paid boosts"}
+        return {"selected": selected, "intent": intent, "filtered": dict(filtered), "plan": plan, "retrieved_count": len(candidates), "ranking_policy": "bounded BM25 + walking distance + request context; diversity; alias/proximity deduplication 80m; no paid boosts"}

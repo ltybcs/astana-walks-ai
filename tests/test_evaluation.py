@@ -1,12 +1,12 @@
 import unittest
 
 from app.evaluate import evaluate
-from app.retrieval import Retriever
+from app.retrieval import ROOT, Retriever
 
 
 class ScenarioEvaluationTests(unittest.TestCase):
     def test_five_required_scenarios_and_honest_abstention(self):
-        report = evaluate(Retriever(), use_llm=False)
+        report = evaluate(Retriever(ROOT / "data" / "poi.sample.json"), use_llm=False)
         self.assertEqual(report["summary"]["scenarios_total"], 5)
         self.assertEqual(report["summary"]["scenarios_passed"], 5)
         self.assertFalse(report["live_llm_used"])

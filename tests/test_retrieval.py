@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from app.generation import recommend
-from app.retrieval import Retriever, walk_minutes
+from app.retrieval import ROOT, Retriever, walk_minutes
 from app.server import static_target, validate_request
 from scripts.collect_osm import build_query, normalize_elements
 
@@ -87,7 +87,7 @@ class RetrievalTests(unittest.TestCase):
         self.assertEqual(response["mode"], "extractive")
 
     def test_sample_is_labeled_demo_and_budget_examples_work(self):
-        retriever = Retriever()
+        retriever = Retriever(ROOT / "data" / "poi.sample.json")
         for minutes in (30, 60, 120):
             response = recommend(retriever, "прогулка возле Mega", minutes, ORIGIN, use_llm=False)
             self.assertTrue(response["recommendations"])

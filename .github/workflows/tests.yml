@@ -14,3 +14,22 @@ jobs:
           python-version: '3.11'
       - name: Run tests
         run: python -m unittest discover -s tests -v
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build local demo container
+        run: docker build -t astana-walks:ci .
+      - name: Check container API and static UI
+        run: |
+          docker run --rm -d --name astana-walks -p 127.0.0.1:8000:8000 astana-walks:ci
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8000/api/health; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8000/api/health
+          curl --fail --silent http://127.0.0.1:8000/ --output /tmp/astana-walks.html
+          test -s /tmp/astana-walks.html
+      - name: Stop container
+        if: always()
+        run: docker stop astana-walks || true

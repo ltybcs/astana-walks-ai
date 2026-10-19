@@ -14,7 +14,7 @@ from pathlib import Path
 import unittest
 
 from .generation import recommend
-from .retrieval import ROOT, Retriever, feature
+from .retrieval import ROOT, Retriever, architecture_evidence, feature
 
 
 SCENARIOS = [
@@ -22,7 +22,7 @@ SCENARIOS = [
     {"name": "Тихий кофе и розетка", "query": "Хочу тихий кофе с розеткой", "start": {"label": "MEGA Silk Way", "lat": 51.0892, "lon": 71.4074}, "minutes": 60, "time_of_day": "day", "needs_results": False},
     {"name": "Прогулка с ребёнком", "query": "Погулять с ребёнком на свежем воздухе", "start": {"label": "Ботанический сад", "lat": 51.1053, "lon": 71.4121}, "minutes": 60, "time_of_day": "day", "needs_results": True},
     {"name": "Два часа у туриста", "query": "Я турист, хочу познакомиться с архитектурой Астаны", "start": {"label": "Бәйтерек", "lat": 51.1283, "lon": 71.4305}, "minutes": 120, "time_of_day": "day", "needs_results": True},
-    {"name": "Ночная активность", "query": "Ночная прогулка рядом", "start": {"label": "Бәйтерек", "lat": 51.1283, "lon": 71.4305}, "minutes": 60, "time_of_day": "night", "needs_results": False},
+    {"name": "Ночная активность", "query": "Ночью хочу найти активность рядом", "start": {"label": "Бәйтерек", "lat": 51.1283, "lon": 71.4305}, "minutes": 60, "time_of_day": "night", "needs_results": False},
 ]
 
 
@@ -39,12 +39,14 @@ def evaluate(retriever: Retriever, *, use_llm: bool = False) -> dict:
             and (not intent["accessible"] or feature(by_id[item["id"]], "wheelchair") == "yes")
             and (not intent["night"] or by_id[item["id"]].get("opening_hours") == "24/7")
             and (not intent["child"] or item["category"] != "bar")
+            and (not intent["architecture"] or item["category"] in intent["preferred_categories"] or architecture_evidence(by_id[item["id"]]))
             for item in selected
         )
         checks = {
             "budget": 0 <= response["plan"]["total_minutes"] <= scenario["minutes"],
             "limit": 0 <= len(selected) <= 3 and len(set(ids)) == len(ids),
             "sources": all(identifier in by_id for identifier in ids) and set(ids) == {source["id"] for source in response["sources"]},
+            "physical_deduplication": all(identifier not in retriever.duplicate_of for identifier in ids),
             "constraints": constraints,
             "useful_result_or_explained_abstention": bool(selected) if scenario["needs_results"] else bool(selected or response.get("clarification")),
         }

@@ -83,6 +83,15 @@ def install():
     (CACHE / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print("Local model and runtime installed. Weights remain ignored by Git.", flush=True)
 
+def server_command(port: int) -> list[str]:
+    if not 1024 <= port <= 65535:
+        raise ValueError("port must be 1024..65535")
+    servers = list((CACHE / RELEASE).rglob("llama-server.exe"))
+    model = CACHE / MODEL_NAME
+    if len(servers) != 1 or not model.is_file():
+        raise ValueError("Run --download first")
+    return [str(servers[0]), "-m", str(model), "--host", "127.0.0.1", "--port", str(port), "-c", "8192", "-np", "1", "-t", "6", "--jinja", "--reasoning", "off", "--chat-template-kwargs", '{"enable_thinking":false}', "--alias", "astana-local"]
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--download", action="store_true", help="Download ~1.9 GB from official sources and verify hashes")
@@ -92,14 +101,20 @@ def main():
     if args.download:
         install()
     if args.serve:
-        if not 1024 <= args.port <= 65535:
-            parser.error("port must be 1024..65535")
-        servers = list((CACHE / RELEASE).rglob("llama-server.exe"))
-        model = CACHE / MODEL_NAME
-        if len(servers) != 1 or not model.is_file():
-            parser.error("Run --download first")
+        command = server_command(args.port)
         print(f"Model endpoint: http://127.0.0.1:{args.port}/v1", flush=True)
-        return subprocess.call([str(servers[0]), "-m", str(model), "--host", "127.0.0.1", "--port", str(args.port), "-c", "4096", "-np", "1", "-t", "6", "--jinja", "--reasoning", "off", "--chat-template-kwargs", '{"enable_thinking":false}', "--alias", "astana-local"], creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        process = subprocess.Popen(command, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        try:
+            return process.wait()
+        except KeyboardInterrupt:
+            return 0
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
     if not args.download:
         parser.print_help()
     return 0

@@ -115,6 +115,17 @@ function invalidateResults(){
   $("status").classList.remove("error");$("status").textContent="Параметры изменены. Нажмите «Найти мою прогулку», чтобы обновить рекомендации.";drawMap();
 }
 $("origin").addEventListener("change",()=>{$("coordinates").hidden=$("origin").value!=="custom";invalidateResults();});
+$("use-location").addEventListener("click",()=>{
+  if(!navigator.geolocation){$("status").textContent="Геолокация недоступна в этом браузере. Выберите ориентир или укажите координаты вручную.";return;}
+  const button=$("use-location");button.disabled=true;button.textContent="Определяем локацию…";
+  navigator.geolocation.getCurrentPosition(position=>{
+    $("latitude").value=position.coords.latitude.toFixed(6);$("longitude").value=position.coords.longitude.toFixed(6);$("origin").value="custom";$("coordinates").hidden=false;invalidateResults();
+    $("status").textContent="Локация определена и используется только для текущего запроса. Выберите интересы и нажмите «Найти мою прогулку».";
+    button.disabled=false;button.textContent="⌖ Обновить мою геолокацию";
+  },()=>{
+    $("status").textContent="Не удалось получить локацию. Разрешите доступ в браузере или выберите ориентир вручную.";button.disabled=false;button.textContent="⌖ Использовать мою геолокацию";
+  },{enableHighAccuracy:false,timeout:10000,maximumAge:0});
+});
 for(const id of ["query","minutes","time-of-day","latitude","longitude"])$(id).addEventListener("change",invalidateResults);
 for(const button of document.querySelectorAll("[data-scenario]"))button.addEventListener("click",()=>{
   const preset=scenarios[button.dataset.scenario];$("query").value=preset.query;$("minutes").value=preset.minutes;$("origin").value=preset.origin;$("time-of-day").value=preset.time||"day";$("coordinates").hidden=true;
