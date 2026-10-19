@@ -1,0 +1,216 @@
+{
+  "capture_method": "Continuous real Chrome tab screenshots sampled at 2fps; actual observed timestamps preserved during FFmpeg encoding. No desktop or other windows captured.",
+  "playback_speed": "real elapsed time; frames repeated to 25fps, no invented UI states",
+  "clips": [
+    {
+      "file": "astana-walks-socket-demo.mp4",
+      "title": "Кофе и работа — честный отказ",
+      "sha256": "58b5af0e4d6e36e00cc0397ea7e46b1e6fd29597fa349afb15a5418bec4bf3a8",
+      "poster": "socket-preview.jpg",
+      "capture_date": "2026-10-20",
+      "timezone": "Asia/Almaty",
+      "origin": "https://entire-burn-cricket-ashley.trycloudflare.com/",
+      "source_commit": null,
+      "source_commit_note": "Local install UI exact commit; hosted service did not expose a commit id.",
+      "observed_frames": 64,
+      "sample_interval_target_seconds": 0.5,
+      "observed_frame_times_seconds": [
+        0,
+        0.5,
+        1.001,
+        1.5,
+        2,
+        2.5,
+        3.001,
+        3.501,
+        4,
+        4.501,
+        6.161,
+        6.208,
+        6.266,
+        6.5,
+        7.001,
+        7.5,
+        8,
+        8.501,
+        9,
+        9.5,
+        10,
+        10.5,
+        11,
+        11.5,
+        12.088,
+        12.501,
+        13.001,
+        13.5,
+        14,
+        14.5,
+        15,
+        15.501,
+        16,
+        16.5,
+        17.001,
+        17.501,
+        18.001,
+        18.5,
+        19,
+        19.5,
+        20.001,
+        20.5,
+        21,
+        21.5,
+        22.001,
+        22.5,
+        23,
+        23.5,
+        24,
+        24.501,
+        25,
+        25.5,
+        26.001,
+        26.5,
+        27,
+        27.5,
+        28,
+        28.5,
+        29.001,
+        29.5,
+        30,
+        30.5,
+        31,
+        31.5
+      ],
+      "caption_phases": [
+        {
+          "t": 0,
+          "caption": "Кофе и работа с розеткой.\nПроверяем подтверждённые данные."
+        },
+        {
+          "t": 6.161,
+          "caption": "Запрос отправлен в реальном интерфейсе.\nНеизвестную розетку не обещаем."
+        },
+        {
+          "t": 12.088,
+          "caption": "Нет подтверждения розетки — нет рекомендации.\nЧестный отказ вместо выдуманного свойства."
+        }
+      ],
+      "viewport_css": {
+        "width": 390,
+        "height": 844
+      },
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1080,
+            "height": 1920
+          }
+        ],
+        "format": {
+          "duration": "32.000000",
+          "size": "698987"
+        }
+      },
+      "audio": false,
+      "proves_live_llm": false,
+      "actual_device_installation": false
+    },
+    {
+      "file": "astana-walks-install-demo.mp4",
+      "title": "Ручная инструкция установки",
+      "sha256": "5afbf108b23d76321942987f0ea633fcf121317262a8fa3ae2111e7a182edd15",
+      "poster": "install-preview.jpg",
+      "capture_date": "2026-10-20",
+      "timezone": "Asia/Almaty",
+      "origin": "http://127.0.0.1:8012/",
+      "source_commit": "72cc27ddbb956acd1bede7487cbc27d0701ed176",
+      "source_commit_note": "Local install UI exact commit; hosted service did not expose a commit id.",
+      "observed_frames": 48,
+      "sample_interval_target_seconds": 0.5,
+      "observed_frame_times_seconds": [
+        0,
+        0.5,
+        1,
+        1.5,
+        2,
+        2.5,
+        3,
+        3.5,
+        4.351,
+        4.501,
+        5,
+        5.501,
+        6,
+        6.5,
+        7,
+        7.5,
+        8.001,
+        8.501,
+        9,
+        9.5,
+        10,
+        10.501,
+        11,
+        11.5,
+        12.001,
+        12.501,
+        13.001,
+        13.5,
+        14,
+        14.5,
+        15.001,
+        15.5,
+        16,
+        16.5,
+        17,
+        17.5,
+        18,
+        18.5,
+        19,
+        19.5,
+        20,
+        20.501,
+        21.001,
+        21.5,
+        22.001,
+        22.5,
+        23,
+        23.501
+      ],
+      "caption_phases": [
+        {
+          "t": 0,
+          "caption": "Одна кнопка «Установить».\nЗдесь показана ручная инструкция."
+        },
+        {
+          "t": 4.351,
+          "caption": "Chrome и Firefox на Android; Safari на iPhone.\nУстановка выполняется через меню браузера."
+        }
+      ],
+      "viewport_css": {
+        "width": 390,
+        "height": 844
+      },
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1080,
+            "height": 1920
+          }
+        ],
+        "format": {
+          "duration": "24.000000",
+          "size": "411743"
+        }
+      },
+      "audio": false,
+      "proves_live_llm": false,
+      "actual_device_installation": false
+    }
+  ]
+}
