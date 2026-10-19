@@ -16,7 +16,7 @@ DATA = ROOT / "data/poi.astana.json"
 class RealAstanaDataTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.document = json.loads(DATA.read_text())
+        cls.document = json.loads(DATA.read_text(encoding="utf-8"))
         cls.metadata = cls.document["dataset"]
         cls.places = cls.document["places"]
 
@@ -36,10 +36,10 @@ class RealAstanaDataTests(unittest.TestCase):
                 self.assertIsNotNone(place["source_updated_at"])
 
     def test_normalized_data_is_reproducible_from_retained_raw_snapshot(self):
-        raw = json.loads((ROOT / self.metadata["raw_snapshot"]).read_text())
+        raw = json.loads((ROOT / self.metadata["raw_snapshot"]).read_text(encoding="utf-8"))
         self.assertEqual(raw["osm3s"]["timestamp_osm_base"], self.metadata["source_snapshot_at"])
         self.assertEqual(normalize_elements(raw, self.metadata["collected_at"]), self.places)
-        self.assertEqual((ROOT / self.metadata["query_file"]).read_text(), build_query(DEFAULT_BBOX))
+        self.assertEqual((ROOT / self.metadata["query_file"]).read_text(encoding="utf-8"), build_query(DEFAULT_BBOX))
 
     def test_landmarks_and_unknown_attributes_are_retained_without_fabrication(self):
         by_id = {p["id"]: p for p in self.places}
