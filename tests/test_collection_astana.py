@@ -10,7 +10,7 @@ from scripts.collect_osm import DEFAULT_BBOX, build_query, normalize_elements
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data/poi.astana.osm.json"
+DATA = ROOT / "data/poi.astana.json"
 
 
 class RealAstanaDataTests(unittest.TestCase):
