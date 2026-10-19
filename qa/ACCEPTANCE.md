@@ -11,6 +11,15 @@
 - LLM не была настроена; результаты получены в `extractive`-режиме и не подтверждают работу генератора.
 - В проекте указано требование Python 3.11+. Доступен Python 3.10.11; команда `python -m unittest discover -s tests -v` завершилась с 2 failures и 1 error. Ошибки: `test_network_pagination_is_bounded_and_stops_on_short_page` и `test_replay_is_loadable_and_marked_source_data_not_demo` получили код возврата 1; `test_collection_astana.RealAstanaDataTests.setUpClass` завершился `UnicodeDecodeError` при чтении JSON через системную кодировку `cp1252`. Полный прогон на поддерживаемом Python не выполнен.
 
+### Повторный запуск на поддерживаемом Python
+
+20 октября тесты повторно запущены на доступном Python 3.12.14 из bundled workspace runtime; временные файлы направлены в доступный для записи каталог workspace. Из 33 тестовых случаев два завершились ошибкой, остальные прошли:
+
+- `test_network_pagination_is_bounded_and_stops_on_short_page`: тест читает созданный JSON без указания UTF-8 и завершился `UnicodeDecodeError` (`cp1252`, байт `0x9d`).
+- `test_collection_astana.RealAstanaDataTests.setUpClass`: `tests/test_collection_astana.py` читает JSON без указания UTF-8 и завершился `UnicodeDecodeError` (`cp1252`, байт `0x9d`).
+
+Таким образом, прежние сбои двух тестов 2ГИС из-за недоступного системного временного каталога при первом запуске в sandbox не воспроизвелись после перенаправления временных файлов в workspace. Оставшиеся две ошибки — проблемы декодирования UTF-8 JSON при системной кодировке Windows; код тестов не менялся в рамках этой QA-задачи.
+
 ## Сценарии
 
 | Сценарий и запрос | Ожидаемый результат | Фактический результат API | Статус |
