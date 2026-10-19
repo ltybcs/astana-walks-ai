@@ -1,0 +1,143 @@
+{
+  "source": "Retained provider replies, with deterministic application formatting shown separately",
+  "dataset": {
+    "name": "Astana POI / OpenStreetMap",
+    "is_demo": false,
+    "places_count": 738,
+    "path": "data/poi.astana.json",
+    "sha256": "eb5ebd1a3bd13bbae5ce5005a663a3ac0a0dbcb94b9dabfaa4d774f9610bee08"
+  },
+  "summary": {
+    "scenarios_total": 5,
+    "scenarios_passed": 5,
+    "tests": {
+      "run": 79,
+      "passed": 79,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "success": true,
+      "failure_tests": [],
+      "error_tests": []
+    },
+    "llm": {
+      "eligible_scenarios": 4,
+      "validated_scenarios": 4,
+      "fallback_scenarios": 0,
+      "total_attempts": 5
+    }
+  },
+  "scenarios": [
+    {
+      "scenario": "30–60 минут возле MEGA",
+      "mode": "llm-grounded",
+      "llm_status": "validated_after_repair",
+      "llm_attempts": 2,
+      "llm_rejections": [
+        "unsupported_view_claim"
+      ],
+      "recommendations": [
+        {
+          "id": "osm:way/1467797207",
+          "name": "NU Park",
+          "why": "Парк или сад, соответствует интересу прогулки на воздухе",
+          "provider_action": "Посетить парк для отдыха и наблюдения за природой",
+          "display_action": "Идея: Посетить парк для отдыха и наблюдения за природой Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:way/1467797207"
+          ]
+        }
+      ],
+      "provider_file": "tmp/live-provider-final/response-2.json"
+    },
+    {
+      "scenario": "Тихий кофе и розетка",
+      "mode": "extractive",
+      "llm_status": "no_candidates",
+      "llm_attempts": 0,
+      "llm_rejections": [],
+      "recommendations": [],
+      "clarification": "Нет подходящего места с подтверждённой в источнике розеткой. Увеличьте время, выберите другую отправную точку или уточните условия; неизвестные свойства не считаются подтверждёнными."
+    },
+    {
+      "scenario": "Прогулка с ребёнком",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "recommendations": [
+        {
+          "id": "osm:way/1196402246",
+          "name": "Ботанический сад",
+          "why": "Ботанический сад — подходящее место для прогулки с ребёнком, так как он находится в парковой зоне и соответствует категории 'прогулка на воздухе'.",
+          "provider_action": "Идея: осмотреть растительность и прогуляться по зелёному ландшапу.",
+          "display_action": "Идея: осмотреть растительность и прогуляться по зелёному ландшапу. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:way/1196402246"
+          ]
+        }
+      ],
+      "provider_file": "tmp/live-provider-final/response-3.json"
+    },
+    {
+      "scenario": "Два часа у туриста",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "recommendations": [
+        {
+          "id": "osm:way/230401645",
+          "name": "Байтерек",
+          "why": "Памятник в категории 'памятник' соответствует интересу в знакомстве с архитектурой города.",
+          "provider_action": "Идея: Посмотреть памятник на месте, чтобы увидеть архитектурные элементы города.",
+          "display_action": "Идея: Посмотреть памятник на месте, чтобы увидеть архитектурные элементы города. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:way/230401645"
+          ]
+        },
+        {
+          "id": "osm:way/917478479",
+          "name": "Астана Опера",
+          "why": "Театр в категории 'театр' соответствует интересу в знакомстве с архитектурой города.",
+          "provider_action": "Идея: Посмотреть театр на месте, чтобы увидеть архитектурные элементы города.",
+          "display_action": "Идея: Посмотреть театр на месте, чтобы увидеть архитектурные элементы города. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:way/917478479"
+          ]
+        },
+        {
+          "id": "osm:node/4958412863",
+          "name": "Zur Sultan",
+          "why": "Памятник в категории 'памятник' соответствует интересу в знакомстве с архитектурой города.",
+          "provider_action": "Идея: Посмотреть памятник на месте, чтобы увидеть архитектурные элементы города.",
+          "display_action": "Идея: Посмотреть памятник на месте, чтобы увидеть архитектурные элементы города. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:node/4958412863"
+          ]
+        }
+      ],
+      "provider_file": "tmp/live-provider-final/response-4.json"
+    },
+    {
+      "scenario": "Ночная активность",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "recommendations": [
+        {
+          "id": "osm:node/4199896989",
+          "name": "Avtor",
+          "why": "Категория 'бар' соответствует запросу 'короткая остановка во время прогулки' в ночное время.",
+          "provider_action": "Идея: осмотр бара для развлечения в ночное время.",
+          "display_action": "Идея: осмотр бара для развлечения в ночное время. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:node/4199896989"
+          ]
+        }
+      ],
+      "provider_file": "tmp/live-provider-final/response-5.json"
+    }
+  ]
+}

@@ -95,7 +95,8 @@ def recommend(retriever: Retriever, query: str, minutes: int, origin: dict, time
         facts_by_id[poi["id"]].update({"features": {key: feature(poi, key) for key in ("socket", "quiet", "wheelchair")}, "opening_hours": poi.get("opening_hours")})
         sources.append({"id": poi["id"], "title": poi["name"], "url": poi["source_url"], "collected_at": poi.get("collected_at", retriever.dataset.get("collected_at")), "verification": poi.get("verification", "source_reported")})
     mode = "extractive/demo" if retriever.dataset.get("is_demo", False) else "extractive"
-    llm, llm_status = narrate(recommendations, intent, facts_by_id=facts_by_id) if use_llm else (None, "disabled")
+    llm_info = {}
+    llm, llm_status = narrate(recommendations, intent, facts_by_id=facts_by_id, diagnostics=llm_info) if use_llm else (None, "disabled")
     if llm:
         by_id = {item["id"]: item for item in llm}
         for item in recommendations:
@@ -107,7 +108,7 @@ def recommend(retriever: Retriever, query: str, minutes: int, origin: dict, time
         mode = "llm-grounded/demo" if retriever.dataset.get("is_demo", False) else "llm-grounded"
     elif llm_status not in {"not_configured", "disabled", "no_candidates"} and recommendations:
         warnings.append("LLM недоступна или её ответ не прошёл проверку; использовано извлечение из базы без генерации новых фактов.")
-    response = {"recommendations": recommendations, "warnings": warnings, "mode": mode, "sources": sources, "plan": result["plan"], "retrieved_count": result["retrieved_count"], "dataset": retriever.dataset, "diagnostics": {"llm_status": llm_status, "filtered": result["filtered"], "ranking_policy": result["ranking_policy"], "intent": intent, "validation_note": "Структура, ссылки и защищённые свойства проверены; полная семантическая достоверность свободного текста не гарантируется." if llm else "Фразы сформированы из категории, источника и расчёта маршрута."}}
+    response = {"recommendations": recommendations, "warnings": warnings, "mode": mode, "sources": sources, "plan": result["plan"], "retrieved_count": result["retrieved_count"], "dataset": retriever.dataset, "diagnostics": {"llm_status": llm_status, "llm_attempts": llm_info.get("attempts", 0), "llm_rejections": llm_info.get("rejections", []), "filtered": result["filtered"], "ranking_policy": result["ranking_policy"], "intent": intent, "validation_note": "Структура, ссылки и защищённые свойства проверены; полная семантическая достоверность свободного текста не гарантируется." if llm else "Фразы сформированы из категории, источника и расчёта маршрута."}}
     if not recommendations:
         reasons = []
         if intent["socket"]:

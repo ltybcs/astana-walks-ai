@@ -24,6 +24,11 @@ function originValue() {
   if (!$("latitude").value.trim() || !$("longitude").value.trim() || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat)>90 || Math.abs(lon)>180) throw new Error("Укажите корректные координаты.");
   return {lat,lon,label:"Выбранная точка"};
 }
+function updateCoordinateFields() {
+  const custom=$("origin").value==="custom";
+  $("coordinates").hidden=!custom;
+  for(const id of ["latitude","longitude"])$(id).disabled=!custom;
+}
 function el(tag, className, content) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -48,7 +53,8 @@ function drawMap() {
   const svg=$("city-map"); svg.replaceChildren();
   let origin; try{origin=originValue();}catch{return;}
   const shown=lastRecommendations.length?lastRecommendations:places;
-  const points=shown.filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon)).sort((a,b)=>Math.hypot(a.lat-origin.lat,(a.lon-origin.lon)*.63)-Math.hypot(b.lat-origin.lat,(b.lon-origin.lon)*.63)).slice(0,100);
+  const validPoints=shown.filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+  const points=lastRecommendations.length?validPoints:validPoints.sort((a,b)=>Math.hypot(a.lat-origin.lat,(a.lon-origin.lon)*.63)-Math.hypot(b.lat-origin.lat,(b.lon-origin.lon)*.63)).slice(0,100);
   const bounds=[origin,...points];
   let minLat=Math.min(...bounds.map(p=>p.lat))-.004,maxLat=Math.max(...bounds.map(p=>p.lat))+.004;
   let minLon=Math.min(...bounds.map(p=>p.lon))-.007,maxLon=Math.max(...bounds.map(p=>p.lon))+.007;
@@ -112,14 +118,15 @@ function renderRecommendations(data) {
 function invalidateResults(){
   requestCounter++;if(activeController)activeController.abort();
   lastRecommendations=[];$("results").replaceChildren();$("plan-summary").hidden=true;$("generation-note").hidden=true;$("source-details").hidden=true;
+  $("result-mode").textContent="ПОИСК ПО POI";
   $("status").classList.remove("error");$("status").textContent="Параметры изменены. Нажмите «Найти мою прогулку», чтобы обновить рекомендации.";drawMap();
 }
-$("origin").addEventListener("change",()=>{$("coordinates").hidden=$("origin").value!=="custom";invalidateResults();});
+$("origin").addEventListener("change",()=>{updateCoordinateFields();invalidateResults();});
 $("use-location").addEventListener("click",()=>{
   if(!navigator.geolocation){$("status").textContent="Геолокация недоступна в этом браузере. Выберите ориентир или укажите координаты вручную.";return;}
   const button=$("use-location");button.disabled=true;button.textContent="Определяем локацию…";
   navigator.geolocation.getCurrentPosition(position=>{
-    $("latitude").value=position.coords.latitude.toFixed(6);$("longitude").value=position.coords.longitude.toFixed(6);$("origin").value="custom";$("coordinates").hidden=false;invalidateResults();
+    $("latitude").value=position.coords.latitude.toFixed(6);$("longitude").value=position.coords.longitude.toFixed(6);$("origin").value="custom";updateCoordinateFields();invalidateResults();
     $("status").textContent="Локация определена и используется только для текущего запроса. Выберите интересы и нажмите «Найти мою прогулку».";
     button.disabled=false;button.textContent="⌖ Обновить мою геолокацию";
   },()=>{
@@ -128,7 +135,7 @@ $("use-location").addEventListener("click",()=>{
 });
 for(const id of ["query","minutes","time-of-day","latitude","longitude"])$(id).addEventListener("change",invalidateResults);
 for(const button of document.querySelectorAll("[data-scenario]"))button.addEventListener("click",()=>{
-  const preset=scenarios[button.dataset.scenario];$("query").value=preset.query;$("minutes").value=preset.minutes;$("origin").value=preset.origin;$("time-of-day").value=preset.time||"day";$("coordinates").hidden=true;
+  const preset=scenarios[button.dataset.scenario];$("query").value=preset.query;$("minutes").value=preset.minutes;$("origin").value=preset.origin;$("time-of-day").value=preset.time||"day";updateCoordinateFields();
   for(const other of document.querySelectorAll("[data-scenario]"))other.classList.toggle("active",other===button);
   invalidateResults();
 });
@@ -136,6 +143,7 @@ $("planner-form").addEventListener("submit",async(event)=>{
   event.preventDefault();const requestId=++requestCounter;const button=$("submit-button");button.disabled=true;button.firstElementChild.textContent="Подбираем места…";
   $("status").textContent="Сопоставляем интересы, расстояния и ваш запас времени…";$("status").classList.remove("error");
   $("results").replaceChildren();$("plan-summary").hidden=true;$("source-details").hidden=true;$("generation-note").hidden=true;
+  lastRecommendations=[];$("result-mode").textContent="ПОДБОР МЕСТ";drawMap();
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),125000);activeController=controller;
   try{
     const response=await fetch("/api/recommend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:$("query").value,minutes:Number($("minutes").value),origin:originValue(),time_of_day:$("time-of-day").value}),signal:controller.signal});
@@ -145,7 +153,7 @@ $("planner-form").addEventListener("submit",async(event)=>{
   finally{clearTimeout(timer);if(activeController===controller)activeController=null;button.disabled=false;button.firstElementChild.textContent="Найти мою прогулку";}
 });
 async function initialize(){
-  drawMap();try{
+  updateCoordinateFields();drawMap();try{
     const response=await fetch("/api/places");if(!response.ok)throw new Error("Данные недоступны");const data=await response.json();places=data.places||[];
     const dataset=data.dataset||{};datasetInfo=dataset;const isDemo=dataset.is_demo!==false;
     const provider=/2gis|2гис/i.test(dataset.name||"")?"2ГИС":/openstreetmap|osm/i.test(dataset.name||"")?"OpenStreetMap":"Реальные POI";
