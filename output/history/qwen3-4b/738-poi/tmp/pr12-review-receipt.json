@@ -1,0 +1,243 @@
+{
+  "source_pr": 12,
+  "source_commit": "8bcf9f751b8fee4cb9d2d62cec2ec976dedc147b",
+  "reviewer": "Codex A local independent final_review",
+  "checks": [
+    {
+      "kind": "file_sha256",
+      "file": "astana-walks-demo.mp4",
+      "actual": "b158b781f6b7a4f128a60b564eb3e3fb41281a77479e6e937e6907bfe187db0e",
+      "expected": "b158b781f6b7a4f128a60b564eb3e3fb41281a77479e6e937e6907bfe187db0e",
+      "pass": true
+    },
+    {
+      "kind": "file_sha256",
+      "file": "astana-walks-live-pass.mp4",
+      "actual": "9c201ca9db632c912b2d467c4bf3bcb2614142be7c0af244edc9471c47cae2db",
+      "expected": "9c201ca9db632c912b2d467c4bf3bcb2614142be7c0af244edc9471c47cae2db",
+      "pass": true
+    },
+    {
+      "kind": "file_sha256",
+      "file": "preview-featured.jpg",
+      "actual": "7de81a86b5756e99bb9a1b31aac0d7c22fbf337a4390cce06258ea8a06c563a0",
+      "expected": "7de81a86b5756e99bb9a1b31aac0d7c22fbf337a4390cce06258ea8a06c563a0",
+      "pass": true
+    },
+    {
+      "kind": "file_sha256",
+      "file": "preview-coffee.jpg",
+      "actual": "f650a58129c448a226b2b25e094618d6a2a0b6a3cdd2a200c6cac28f677a662c",
+      "expected": "f650a58129c448a226b2b25e094618d6a2a0b6a3cdd2a200c6cac28f677a662c",
+      "pass": true
+    },
+    {
+      "kind": "file_sha256",
+      "file": "preview-family.jpg",
+      "actual": "24e7c35e4285d7f504880eb1c9b099050b2166791aed78623998cf2dbe700fb4",
+      "expected": "24e7c35e4285d7f504880eb1c9b099050b2166791aed78623998cf2dbe700fb4",
+      "pass": true
+    },
+    {
+      "kind": "file_sha256",
+      "file": "preview-tourist.jpg",
+      "actual": "2c01310fc2ddc0c039cba7c819931a5ed35c7d914761d5600d07d65320325fd7",
+      "expected": "2c01310fc2ddc0c039cba7c819931a5ed35c7d914761d5600d07d65320325fd7",
+      "pass": true
+    },
+    {
+      "kind": "file_sha256",
+      "file": "preview-night.jpg",
+      "actual": "77208dac6257ca7dfbc3d56a767a7735146114ed369fcf520ba4e0c0a7cc58b8",
+      "expected": "77208dac6257ca7dfbc3d56a767a7735146114ed369fcf520ba4e0c0a7cc58b8",
+      "pass": true
+    },
+    {
+      "kind": "file_sha256",
+      "file": "preview-privacy.jpg",
+      "actual": "5b9c8f84fc89e93b0ece1a72d96b05f672348273b3efb0e8174ed627c0527142",
+      "expected": "5b9c8f84fc89e93b0ece1a72d96b05f672348273b3efb0e8174ed627c0527142",
+      "pass": true
+    },
+    {
+      "kind": "file_sha256",
+      "file": "preview-install.jpg",
+      "actual": "6b70872fe8764752fcbc4a138f515a563cd22ae70ee9c63a43529b056fc33bf9",
+      "expected": "6b70872fe8764752fcbc4a138f515a563cd22ae70ee9c63a43529b056fc33bf9",
+      "pass": true
+    },
+    {
+      "kind": "observed_responses_sha256",
+      "pass": true
+    },
+    {
+      "kind": "timestamps",
+      "pass": true,
+      "count": 290,
+      "max_gap_seconds": 13.490999999999985
+    },
+    {
+      "kind": "dataset_sha256",
+      "pass": true
+    },
+    {
+      "kind": "poi_source",
+      "scenario": "featured",
+      "name": "NU Park",
+      "url": "https://www.openstreetmap.org/way/1467797207",
+      "pass": true
+    },
+    {
+      "kind": "poi_source",
+      "scenario": "family",
+      "name": "Парк Астана",
+      "url": "https://www.openstreetmap.org/relation/15957444",
+      "pass": true
+    },
+    {
+      "kind": "poi_source",
+      "scenario": "tourist",
+      "name": "Байтерек",
+      "url": "https://www.openstreetmap.org/way/230401645",
+      "pass": true
+    },
+    {
+      "kind": "poi_source",
+      "scenario": "tourist",
+      "name": "Astana Musical",
+      "url": "https://www.openstreetmap.org/way/1460537088",
+      "pass": true
+    },
+    {
+      "kind": "full_decode",
+      "file": "astana-walks-demo.mp4",
+      "pass": true,
+      "exit_code": 0,
+      "duration": "Duration: 00:03:24.44, start: 0.000000, bitrate: 175 kb/s",
+      "streams": [
+        "Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuvj420p(pc, bt470bg/unknown/unknown, progressive), 1080x1920 [SAR 3517:3519 DAR 3517:6256], 173 kb/s, SAR 5275:5278 DAR 47475:84448, 25 fps, 25 tbr, 12800 tbn (default)",
+        "Stream #0:0(und): Video: wrapped_avframe, yuvj420p(pc, bt470bg/unknown/unknown, progressive), 1080x1920 [SAR 5275:5278 DAR 47475:84448], q=2-31, 200 kb/s, 25 fps, 25 tbn (default)"
+      ],
+      "audio_streams": [],
+      "decoded_frames": 5111,
+      "expected_frames": 5111,
+      "bytes": 4491633,
+      "sha256": "b158b781f6b7a4f128a60b564eb3e3fb41281a77479e6e937e6907bfe187db0e",
+      "errors": null
+    },
+    {
+      "kind": "full_decode",
+      "file": "astana-walks-live-pass.mp4",
+      "pass": true,
+      "exit_code": 0,
+      "duration": "Duration: 00:03:00.44, start: 0.000000, bitrate: 177 kb/s",
+      "streams": [
+        "Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuvj420p(pc, bt470bg/unknown/unknown, progressive), 1080x1920 [SAR 3517:3519 DAR 3517:6256], 175 kb/s, SAR 5275:5278 DAR 47475:84448, 25 fps, 25 tbr, 12800 tbn (default)",
+        "Stream #0:0(und): Video: wrapped_avframe, yuvj420p(pc, bt470bg/unknown/unknown, progressive), 1080x1920 [SAR 5275:5278 DAR 47475:84448], q=2-31, 200 kb/s, 25 fps, 25 tbn (default)"
+      ],
+      "audio_streams": [],
+      "decoded_frames": 4511,
+      "expected_frames": 4511,
+      "bytes": 4008248,
+      "sha256": "9c201ca9db632c912b2d467c4bf3bcb2614142be7c0af244edc9471c47cae2db",
+      "errors": null
+    },
+    {
+      "kind": "frame_extraction",
+      "seconds": 2,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr12-review-frames\\final-2s.png",
+      "pass": true
+    },
+    {
+      "kind": "frame_extraction",
+      "seconds": 24,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr12-review-frames\\final-24s.png",
+      "pass": true
+    },
+    {
+      "kind": "frame_extraction",
+      "seconds": 53,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr12-review-frames\\final-53s.png",
+      "pass": true
+    },
+    {
+      "kind": "frame_extraction",
+      "seconds": 82,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr12-review-frames\\final-82s.png",
+      "pass": true
+    },
+    {
+      "kind": "frame_extraction",
+      "seconds": 137,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr12-review-frames\\final-137s.png",
+      "pass": true
+    },
+    {
+      "kind": "frame_extraction",
+      "seconds": 145,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr12-review-frames\\final-145s.png",
+      "pass": true
+    },
+    {
+      "kind": "frame_extraction",
+      "seconds": 165,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr12-review-frames\\final-165s.png",
+      "pass": true
+    },
+    {
+      "kind": "frame_extraction",
+      "seconds": 176,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr12-review-frames\\final-176s.png",
+      "pass": true
+    },
+    {
+      "kind": "frame_extraction",
+      "seconds": 180.6,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr12-review-frames\\final-180_6s.png",
+      "pass": true
+    },
+    {
+      "kind": "frame_extraction",
+      "seconds": 193,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr12-review-frames\\final-193s.png",
+      "pass": true
+    },
+    {
+      "kind": "frame_extraction",
+      "seconds": 203.8,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr12-review-frames\\final-203_8s.png",
+      "pass": true
+    }
+  ],
+  "manual_frame_review": {
+    "status": "approved",
+    "reviewed_at": "2026-10-19T21:20:08+00:00",
+    "source_commit": "8bcf9f751b8fee4cb9d2d62cec2ec976dedc147b",
+    "frames_extracted_and_viewed_seconds": [
+      24,
+      53,
+      82,
+      137,
+      145,
+      165,
+      176,
+      180.6,
+      193
+    ],
+    "scope": "Independently read all four observed why/action pairs and all five response statuses; inspected nine freshly extracted frames from the actual final MP4, including both tourist cards, visible caveats, privacy text and the separately labelled installation segment.",
+    "blockers": [],
+    "observations": [
+      "Three nonempty UI responses visibly show RAG + LLM; coffee/socket and strict outdoor night query correctly show explained extractive abstention.",
+      "Each of the four named POI source URLs resolves to the same entry in the archived real OSM dataset; all displayed why/action substrings agree with observed-responses.json.",
+      "The featured 42-minute, family 34-minute and tourist 67-minute budgets, return wording and source links are visible in actual encoded frames.",
+      "Unknown opening/access, approximate route and child-conditions caveats remain visible. No personal coordinates, keys, accounts or unrelated windows appear in the reviewed frames.",
+      "At 180.6 and 193 seconds the top caption explicitly says installation is a separate recording. It shows instructions, not actual OS installation.",
+      "The documented capture uses sampled tab screenshots with real observed timestamps, including gaps; this review does not call it full-frame screen recording or physical-phone footage.",
+      "Minor generated grammar in the featured action is retained. No concrete factual, privacy or publication-blocking defect was found in these observed outputs."
+    ],
+    "publication_scope": "Content is approved for the exact reviewed MP4; actual YouTube upload still requires the user-authorized channel and visibility. No publication was performed."
+  },
+  "publication_performed": false,
+  "approved": true,
+  "approved_final_sha256": "b158b781f6b7a4f128a60b564eb3e3fb41281a77479e6e937e6907bfe187db0e"
+}
