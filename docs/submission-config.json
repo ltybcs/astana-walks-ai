@@ -15,15 +15,6 @@
     "evidence": "PR #7 c31bc7a and quota fix 90ed954. web/sw.js: shell allowlist, API network-only, no query/non-GET caching. HTTPS resource results: output/https-check.json. Physical installation and launch from icon reported by the user on 2026-10-20, not independently observed.",
     "demo_url": "https://entire-burn-cricket-ashley.trycloudflare.com/",
     "https_evidence": "output/https-check.json",
-    "phone_evidence": "output/phone-check.json",
-    "phone_installation": {
-      "user_reported": true,
-      "reported_on": "2026-10-20",
-      "installed": true,
-      "opened_from_icon": true,
-      "os": null,
-      "device_model": null,
-      "offline_tested": false
-    }
+    "phone_evidence": "output/phone-check.json"
   }
 }
