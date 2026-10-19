@@ -3,41 +3,61 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Помощник по прогулкам в Астане: места рядом, понятный план и проверяемые источники.">
-  <title>Astana Walks — город в вашем темпе</title>
+  <meta name="description" content="Подберите прогулку по Астане: места рядом, время на дорогу и источники для каждой остановки.">
+  <title>Astana Walks — прогулки по Астане</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <header class="topbar"><a class="brand" href="/" aria-label="Astana Walks, главная"><span class="brand-icon">↗</span> astana<span>walks</span></a><div class="top-note"><span class="live-dot"></span> BUILD WITH AI <span class="divider">/</span> SMART CITY</div><a class="about-link" href="#how">Как это работает <span>↗</span></a></header>
+  <a class="skip-link" href="#planner-form">Перейти к подбору прогулки</a>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Astana Walks, главная">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 25V7h18M7 25 25 7M16 25h9v-9"/></svg>
+      astana walks<span class="brand-caption">город пешком</span>
+    </a>
+    <nav aria-label="О проекте"><span class="city-label">Астана, Казахстан</span><a class="about-link" href="#how">О маршрутах <span aria-hidden="true">↗</span></a></nav>
+  </header>
   <main>
-    <section class="intro"><div class="eyebrow">АСТАНА · В ВАШЕМ ТЕМПЕ</div><h1>Выйдите из привычного.<br><span>Город ближе, чем кажется.</span></h1><p>Расскажите, чего хочется. Подберём места рядом и соберём прогулку, на которую у вас есть время.</p></section>
+    <section class="intro" aria-labelledby="page-title">
+      <div><p class="eyebrow">ГОРОДСКОЙ ПУТЕВОДИТЕЛЬ</p><h1 id="page-title">Астана.<br><em>Выйдем погулять?</em></h1></div>
+      <p class="intro-description">Знакомые улицы, новые места.<br>Выберите отправную точку и время —<br class="desktop-break"> найдём, куда сходить рядом.</p>
+    </section>
     <div class="workspace">
       <section class="planner" aria-labelledby="planner-title">
-        <div class="section-heading"><span class="step">01</span><h2 id="planner-title">Ваша прогулка</h2><span class="small-label">НАЧНЁМ ЗДЕСЬ</span></div>
+        <div class="section-heading"><span class="step">01</span><h2 id="planner-title">Планы на прогулку</h2></div>
         <form id="planner-form">
-          <label for="origin">Откуда отправляемся?</label><div class="select-wrap"><select id="origin" name="origin"><option value="mega">MEGA Silk Way / EXPO</option><option value="baiterek">Байтерек</option><option value="river">Набережная Есиля</option><option value="custom">Указать координаты</option></select><span>⌖</span></div><button type="button" class="location-button" id="use-location">⌖ Использовать мою геолокацию</button>
+          <label for="origin">Откуда начнём</label>
+          <select id="origin" name="origin"><option value="mega">MEGA Silk Way / EXPO</option><option value="baiterek">Байтерек</option><option value="river">Набережная Есиля</option><option value="custom">Указать координаты</option></select>
+          <button type="button" class="location-button" id="use-location">Использовать мою геолокацию</button>
           <div id="coordinates" class="coordinate-fields" hidden><div><label for="latitude">Широта</label><input id="latitude" type="number" step="any" min="-90" max="90" value="51.0898"></div><div><label for="longitude">Долгота</label><input id="longitude" type="number" step="any" min="-180" max="180" value="71.4078"></div></div>
-          <label for="query">Что вам сейчас хочется?</label><textarea id="query" maxlength="2000" required placeholder="Например: прогуляться на свежем воздухе и посмотреть что-нибудь интересное">Хочу прогуляться на свежем воздухе и посмотреть город</textarea>
-          <div class="scenario-chips" aria-label="Примеры запросов"><button type="button" data-scenario="walk">↗ Прогулка</button><button type="button" data-scenario="coffee">☕ Кофе и работа</button><button type="button" data-scenario="family">♧ С ребёнком</button><button type="button" data-scenario="tourist">⌁ Я турист</button><button type="button" data-scenario="night">☾ Ночью</button></div>
-          <div class="form-row"><div><label for="minutes">Сколько есть времени?</label><select id="minutes"><option value="30">30 минут</option><option value="45">45 минут</option><option value="60" selected>1 час</option><option value="90">1,5 часа</option><option value="120">2 часа</option></select></div><div><label for="time-of-day">Когда гуляем?</label><select id="time-of-day"><option value="day">Днём</option><option value="evening">Вечером</option><option value="night">Ночью</option></select></div></div>
-          <button class="submit-button" id="submit-button" type="submit"><span>Найти мою прогулку</span><span aria-hidden="true">↗</span></button>
-          <p class="privacy-note"><span>⌖</span> Локация нужна только для этого запроса. История и координаты не сохраняются.</p>
+          <label for="query">Что хочется найти</label>
+          <textarea id="query" maxlength="2000" required placeholder="Например: короткая прогулка и кофе по пути">Хочу прогуляться на свежем воздухе и посмотреть город</textarea>
+          <div class="scenario-chips" aria-label="Примеры запросов"><button type="button" data-scenario="walk">Прогулка</button><button type="button" data-scenario="coffee">Кофе и работа</button><button type="button" data-scenario="family">С ребёнком</button><button type="button" data-scenario="tourist">Архитектура</button><button type="button" data-scenario="night">Ночью</button></div>
+          <div class="form-row"><div><label for="minutes">Есть время</label><select id="minutes"><option value="30">30 минут</option><option value="45">45 минут</option><option value="60" selected>1 час</option><option value="90">1,5 часа</option><option value="120">2 часа</option></select></div><div><label for="time-of-day">Время суток</label><select id="time-of-day"><option value="day">Днём</option><option value="evening">Вечером</option><option value="night">Ночью</option></select></div></div>
+          <button class="submit-button" id="submit-button" type="submit"><span>Найти мою прогулку</span><span aria-hidden="true">→</span></button>
+          <p class="privacy-note">Координаты нужны только для подбора мест.<br>Историю запросов не сохраняем.</p>
         </form>
       </section>
       <section class="explorer" aria-labelledby="explorer-title">
-        <div class="map-heading"><div><div class="eyebrow">ВАШ МАЛЕНЬКИЙ ПЛАН</div><h2 id="explorer-title">Поблизости — целый город</h2></div><span class="map-badge" id="dataset-badge">Загрузка данных…</span></div>
-        <div class="map-panel"><svg id="city-map" viewBox="0 0 720 320" role="img" aria-label="Схема расположения мест и выбранных рекомендаций"></svg><div class="map-caption"><span><i class="legend-dot"></i> Вы здесь</span><span>Схема по координатам · не навигация</span></div></div>
-        <div class="results-header"><div class="section-heading"><span class="step">02</span><h2>Места для вас</h2></div><span id="result-mode">ПОИСК ПО POI</span></div>
-        <div id="status" role="status" aria-live="polite" class="status-message">Выберите настроение — найдём подходящие места.</div>
+        <div class="map-heading"><div><p class="eyebrow">СХЕМА РАЙОНА</p><h2 id="explorer-title">Рядом с вами</h2></div><span class="map-badge" id="dataset-badge">Загрузка данных…</span></div>
+        <div class="map-panel"><svg id="city-map" viewBox="0 0 720 320" role="img" aria-label="Схема расположения мест и выбранных рекомендаций"></svg><div class="map-caption"><span><i class="legend-dot" aria-hidden="true"></i> Начало и конец прогулки</span><span>Схема по координатам · не навигация</span></div></div>
+        <div class="results-header"><div class="section-heading"><span class="step">02</span><h2>Ваш маршрут</h2></div><span id="result-mode">ПОИСК ПО POI</span></div>
+        <div id="status" role="status" aria-live="polite" class="status-message">Укажите, что вам интересно. Здесь появятся до трёх остановок и время на прогулку с возвращением.</div>
         <div id="plan-summary" class="plan-summary" hidden></div>
         <p id="generation-note" class="generation-note" hidden></p>
         <div id="results" class="results"></div>
-        <details id="source-details" class="source-details" hidden><summary>На каких данных основан ответ</summary><div id="sources"></div><div id="diagnostics"></div></details>
+        <details id="source-details" class="source-details" hidden><summary>Источники и подробности подбора</summary><div id="sources"></div><div id="diagnostics"></div></details>
       </section>
     </div>
-    <section id="how" class="how-section"><div><div class="eyebrow">МЕНЬШЕ ДОГАДОК. БОЛЬШЕ ГОРОДА.</div><h2>Рекомендации, которым<br>можно задать «почему».</h2></div><div class="how-item"><span>01 / ДАННЫЕ</span><h3>Места с источником</h3><p>Каждое место приходит из базы POI. Учебные данные помечены; для реальных данных есть сборщик OpenStreetMap.</p></div><div class="how-item"><span>02 / КОНТЕКСТ</span><h3>В вашем ритме</h3><p>Поиск учитывает интересы, расстояние и время на возвращение. Пеший путь оценивается приблизительно.</p></div><div class="how-item"><span>03 / ЧЕСТНОСТЬ</span><h3>Без выдуманных фактов</h3><p>Неизвестные часы, розетки и доступность остаются неизвестными. Режим генерации всегда указан под ответом.</p></div></section>
+    <details id="how" class="about-panel">
+      <summary><span>Полезно знать перед прогулкой</span><span aria-hidden="true">+</span></summary>
+      <div class="about-content">
+        <div><h3>Время с запасом на возвращение</h3><p>Маршрут включает путь обратно к старту. Расстояния и время приблизительны: это подбор мест, а не пошаговая навигация.</p></div>
+        <div><h3>У каждого места есть источник</h3><p>Сведения берём из базы городских мест. Дата сбора и ссылки доступны под ответом. Часы работы лучше проверить перед выходом.</p></div>
+        <div><h3>Неизвестное остаётся неизвестным</h3><p>Не обещаем розетку, доступность или работу ночью без подтверждения в данных. Режим формирования ответа указан рядом с маршрутом.</p></div>
+      </div>
+    </details>
   </main>
-  <footer><a class="brand" href="/">astana<span>walks</span></a><p>Прототип для Build with AI · задача НИЦ Smart City<br><a id="data-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">Данные © OpenStreetMap contributors · ODbL</a></p><span>ВЫБИРАЙТЕ СВОЙ ТЕМП ↗</span></footer>
+  <footer><span class="footer-project">Astana Walks <span>— Build with AI / Smart City</span></span><a id="data-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">Данные © OpenStreetMap contributors · ODbL</a></footer>
 </body>
 </html>
