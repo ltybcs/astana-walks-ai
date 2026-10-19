@@ -161,6 +161,6 @@ async function initialize(){
     $("dataset-badge").title=dataset.collected_at?"Собрано "+new Date(dataset.collected_at).toLocaleDateString("ru-RU")+" · "+(dataset.attribution||""):"Учебные и непроверенные сведения";drawMap();
     if(dataset.attribution)$("data-attribution").textContent=dataset.attribution+" · "+(dataset.license||"Условия источника");
     const licenseLink=safeLink(dataset.license_url);if(licenseLink)$("data-attribution").href=licenseLink;
-  }catch{$("dataset-badge").textContent="Нужно соединение";$("status").classList.add("error");$("status").textContent="Нет связи с сервисом. Подключитесь к интернету и обновите страницу. Сохранённый интерфейс доступен без сети; для подбора мест нужно подключение.";}
+  }catch{$("dataset-badge").textContent="Нужно соединение";$("status").classList.add("error");$("status").textContent="Нет связи с сервисом. Подключитесь к интернету и обновите страницу.";}
 }
 initialize();
