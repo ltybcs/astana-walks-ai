@@ -3,7 +3,7 @@
 #city-map:focus-visible {outline-offset:-3px}
 #city-map .leaflet-control-attribution {max-width:calc(100% - 16px);font-size:10px;line-height:1.5;white-space:normal;background:rgba(255,254,250,.94);color:#202f3a}
 #city-map .leaflet-control-attribution a {color:#263f47}
-#city-map .leaflet-control-zoom a {color:#202f3a;background:#fffefa}
+#city-map .leaflet-control-zoom a {width:44px;height:44px;line-height:44px;color:#202f3a;background:#fffefa}
 .street-map-tools {padding:13px 14px;background:#f3f3ed;border-top:1px solid #d1d8d5}
 .street-map-focus,.street-map-retry {min-height:40px;padding:8px 12px;border:1px solid #8e9c96;border-radius:2px;color:var(--ink);background:var(--white);font-size:12px;line-height:1.5;text-align:left}
 .street-map-focus:hover,.street-map-retry:hover {border-color:var(--accent);color:var(--accent)}

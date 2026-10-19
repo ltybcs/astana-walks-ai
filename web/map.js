@@ -107,6 +107,7 @@
     retry.hidden = true;
     tools.append(focus, privacy, status, retry, count);
     container.after(tools);
+    if (L.Control?.Zoom) L.Control.Zoom.mergeOptions({zoomInTitle: "Приблизить карту", zoomOutTitle: "Отдалить карту"});
     const map = L.map(container, {preferCanvas: true, scrollWheelZoom: false, minZoom: 3, maxZoom: 19});
     map.setView(CITY_CENTER, 12);
     map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet</a>');

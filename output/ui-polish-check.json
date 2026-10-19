@@ -1,0 +1,28 @@
+{
+  "client_width": 375,
+  "mode": "ОШИБКА ПОДБОРА",
+  "observed_at": "2026-10-19T22:11:08.123Z",
+  "result_cards": 0,
+  "scroll_width": 375,
+  "status": "Нет связи с сервисом. Подключитесь к интернету и попробуйте ещё раз.",
+  "submit_enabled": true,
+  "url": "http://127.0.0.1:8002/",
+  "zoom": [
+    {
+      "aria": "Приблизить карту",
+      "height": 44,
+      "width": 44
+    },
+    {
+      "aria": "Отдалить карту",
+      "height": 44,
+      "width": 44
+    }
+  ],
+  "method": "Actual browser on isolated local extractive server; stopped only own API process35311 before clicking submit. Public demo/model remained running; no provider calls.",
+  "screenshot": "output/ui-error-mobile.jpg",
+  "limitations": [
+    "API outage only, not a physical offline phone or disconnected external tiles.",
+    "Separate UI refinement after canonical131-test receipt; map/PWA offline harnesses and JS syntax also passed."
+  ]
+}

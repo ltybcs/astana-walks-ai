@@ -1,5 +1,5 @@
 "use strict";
-const SHELL_CACHE = "astana-walks-shell-v2";
+const SHELL_CACHE = "astana-walks-shell-v3";
 const SHELL_PATHS = new Set([
   "/", "/index.html", "/styles.css", "/app.js", "/pwa.js",
   "/manifest.webmanifest", "/favicon.svg",

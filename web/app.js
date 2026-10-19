@@ -143,7 +143,7 @@ $("planner-form").addEventListener("submit",async(event)=>{
     if(!(response.headers.get("Content-Type")||"").includes("application/json"))throw new Error("Сервис временно недоступен. Попробуйте ещё раз позже.");
     const data=await response.json();if(!response.ok)throw new Error(typeof data.error==="string"?data.error:"Не удалось обработать запрос.");
     if(requestId===requestCounter){renderRecommendations(data);revealResult(requestId);}
-  }catch(error){if(requestId===requestCounter){$("status").classList.add("error");$("status").textContent=error.name==="AbortError"?"Запрос занял слишком много времени. Попробуйте снова.":error.message;lastRecommendations=[];drawMap();revealResult(requestId);}}
+  }catch(error){if(requestId===requestCounter){$("result-mode").textContent="ОШИБКА ПОДБОРА";$("status").classList.add("error");$("status").textContent=error.name==="AbortError"?"Запрос занял слишком много времени. Попробуйте снова.":error.message;lastRecommendations=[];drawMap();revealResult(requestId);}}
   finally{clearTimeout(timer);if(activeController===controller)activeController=null;button.disabled=false;button.firstElementChild.textContent="Найти мою прогулку";}
 });
 function showTwoGisService(service){
