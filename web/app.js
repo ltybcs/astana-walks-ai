@@ -121,6 +121,14 @@ function invalidateResults(){
   $("result-mode").textContent="ПОИСК ПО POI";
   $("status").classList.remove("error");$("status").textContent="Параметры изменены. Нажмите «Найти мою прогулку», чтобы обновить рекомендации.";drawMap();
 }
+function revealResult(requestId){
+  if(requestId!==requestCounter||!window.matchMedia("(max-width: 760px)").matches)return;
+  const target=$("route-results"),heading=target.querySelector("h2");
+  heading.setAttribute("tabindex","-1");heading.focus({preventScroll:true});
+  // Moving focus can commit a field edit and invalidate the completed request.
+  if(requestId!==requestCounter)return;
+  target.scrollIntoView({block:"start",behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth"});
+}
 $("origin").addEventListener("change",()=>{updateCoordinateFields();invalidateResults();});
 $("use-location").addEventListener("click",()=>{
   if(!navigator.geolocation){$("status").textContent="Геолокация недоступна в этом браузере. Выберите ориентир или укажите координаты вручную.";return;}
@@ -148,8 +156,8 @@ $("planner-form").addEventListener("submit",async(event)=>{
   try{
     const response=await fetch("/api/recommend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:$("query").value,minutes:Number($("minutes").value),origin:originValue(),time_of_day:$("time-of-day").value}),signal:controller.signal});
     const data=await response.json();if(!response.ok)throw new Error(typeof data.error==="string"?data.error:"Не удалось обработать запрос.");
-    if(requestId===requestCounter)renderRecommendations(data);
-  }catch(error){if(requestId===requestCounter){$("status").classList.add("error");$("status").textContent=error.name==="AbortError"?"Запрос занял слишком много времени. Попробуйте снова.":error.message;lastRecommendations=[];drawMap();}}
+    if(requestId===requestCounter){renderRecommendations(data);revealResult(requestId);}
+  }catch(error){if(requestId===requestCounter){$("status").classList.add("error");$("status").textContent=error.name==="AbortError"?"Запрос занял слишком много времени. Попробуйте снова.":error.message;lastRecommendations=[];drawMap();revealResult(requestId);}}
   finally{clearTimeout(timer);if(activeController===controller)activeController=null;button.disabled=false;button.firstElementChild.textContent="Найти мою прогулку";}
 });
 async function initialize(){
