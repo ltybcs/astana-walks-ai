@@ -1,0 +1,466 @@
+{
+  "generated_at": "2026-10-20T03:33:37+05:00",
+  "repository": "https://github.com/ltybcs/astana-walks-ai",
+  "video_url": null,
+  "screenshot_relative": "output/demo-ui.jpg",
+  "screenshot_content_type": "image/jpeg",
+  "screenshot_sha256": "3d6113a60706f8c7930c11aed962acb8a618017a471a58ab312a445601eb3937",
+  "screenshot_crop": {
+    "left": 0.325,
+    "top": 0.49,
+    "right": 0.065,
+    "bottom": 0.015
+  },
+  "screenshot_frame": {
+    "left": 600.0,
+    "top": 214.63377049180332,
+    "width": 608.0,
+    "height": 359.73245901639336
+  },
+  "screenshot_layout": "detail",
+  "mobile_screenshot_relative": "output/demo-mobile.jpg",
+  "mobile_screenshot_content_type": "image/jpeg",
+  "mobile_screenshot_sha256": "35dcdece600f0e69e11ad8a28b5bb2b1affaf37eefc11d7f5a7174eb6205af1a",
+  "mobile_frame": {
+    "left": 77.93534482758622,
+    "top": 170,
+    "width": 210.12931034482756,
+    "height": 454.99999999999994
+  },
+  "dataset": {
+    "count": 1267,
+    "missing_hours": 1010,
+    "date_label": "20.10.2026",
+    "path": "data/poi.astana.json",
+    "sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+    "source_name": "Astana POI / OpenStreetMap",
+    "source_url": "https://www.openstreetmap.org/copyright",
+    "license_url": "https://www.openstreetmap.org/copyright",
+    "attribution": "© OpenStreetMap contributors",
+    "license": "ODbL 1.0",
+    "metadata": {
+      "name": "Astana POI / OpenStreetMap",
+      "version": 1,
+      "is_demo": false,
+      "collected_at": "2026-10-19T21:30:22+00:00",
+      "collection_method": "overpass_batch",
+      "endpoint": "https://overpass-api.de/api/interpreter",
+      "bbox": [
+        51.0,
+        71.2,
+        51.32,
+        71.7
+      ],
+      "geographic_scope": "Bounded Astana urban-area rectangle, not an administrative boundary or exhaustive inventory",
+      "query_profile": "astana_walk_v2",
+      "unnamed_count": 478,
+      "label_policy": "name_generated=true and source_name=null identify category/OSM-ID display labels, not official names; source_tags retain actual OSM values only",
+      "source_snapshot_at": "2026-10-19T21:29:20Z",
+      "attribution": "© OpenStreetMap contributors",
+      "license": "ODbL 1.0",
+      "license_url": "https://www.openstreetmap.org/copyright",
+      "limitations": [
+        "Не проверено на месте",
+        "Не является информацией об открытии сейчас",
+        "Отсутствующие теги означают неизвестность",
+        "Геометрия way/relation представлена центром объекта",
+        "Названия безымянных площадок/парков — явно отмеченные подписи категории и OSM ID"
+      ],
+      "source_file": null,
+      "raw_snapshot": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+      "query_file": "data/snapshots/astana-2026-10-19T213022966728Z.overpassql",
+      "raw_snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239"
+    }
+  },
+  "evaluation": {
+    "source": "output/evaluation.json",
+    "sha256": "31b9960af32be5a3be89c007731bd0caa64ce8b711af5845a23cd8511f1a9033",
+    "scenarios": [
+      {
+        "name": "30–60 минут возле MEGA",
+        "query": "У меня 45 минут возле Mega, хочу короткую прогулку",
+        "start": {
+          "label": "MEGA Silk Way",
+          "lat": 51.0892,
+          "lon": 71.4074
+        },
+        "minutes": 45,
+        "result_count": 1,
+        "total_minutes": 42,
+        "mode": "llm-grounded",
+        "pass": true,
+        "checks": {
+          "budget": true,
+          "limit": true,
+          "sources": true,
+          "physical_deduplication": true,
+          "constraints": true,
+          "useful_result_or_explained_abstention": true
+        },
+        "outcome": "recommendations",
+        "clarification": null,
+        "poi_ids": [
+          "osm:way/1467797207"
+        ],
+        "warnings": [
+          "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
+        ],
+        "llm_status": "validated",
+        "llm_attempts": 1,
+        "llm_rejections": [],
+        "passed": true,
+        "short_name": "Прогулка у EXPO",
+        "result_label": "1 место, 42 мин"
+      },
+      {
+        "name": "Тихий кофе и розетка",
+        "query": "Хочу тихий кофе с розеткой",
+        "start": {
+          "label": "MEGA Silk Way",
+          "lat": 51.0892,
+          "lon": 71.4074
+        },
+        "minutes": 60,
+        "result_count": 0,
+        "total_minutes": 0,
+        "mode": "extractive",
+        "pass": true,
+        "checks": {
+          "budget": true,
+          "limit": true,
+          "sources": true,
+          "physical_deduplication": true,
+          "constraints": true,
+          "useful_result_or_explained_abstention": true
+        },
+        "outcome": "explained_abstention",
+        "clarification": "Нет подходящего места с подтверждённой в источнике розеткой. Увеличьте время, выберите другую отправную точку или уточните условия; неизвестные свойства не считаются подтверждёнными.",
+        "poi_ids": [],
+        "warnings": [
+          "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+          "Тишина меняется в течение дня. Уровень шума не подтверждён, если это явно не указано источником."
+        ],
+        "llm_status": "no_candidates",
+        "llm_attempts": 0,
+        "llm_rejections": [],
+        "passed": true,
+        "short_name": "Кофе, тишина, розетка",
+        "result_label": "Нет подтверждённых мест"
+      },
+      {
+        "name": "Прогулка с ребёнком",
+        "query": "Погулять с ребёнком на свежем воздухе",
+        "start": {
+          "label": "Ботанический сад",
+          "lat": 51.1053,
+          "lon": 71.4121
+        },
+        "minutes": 60,
+        "result_count": 1,
+        "total_minutes": 32,
+        "mode": "llm-grounded",
+        "pass": true,
+        "checks": {
+          "budget": true,
+          "limit": true,
+          "sources": true,
+          "physical_deduplication": true,
+          "constraints": true,
+          "useful_result_or_explained_abstention": true
+        },
+        "outcome": "recommendations",
+        "clarification": null,
+        "poi_ids": [
+          "osm:way/1196402246"
+        ],
+        "warnings": [
+          "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+          "Возрастные ограничения, безопасность, туалеты и условия для ребёнка не подтверждены; проверьте их заранее."
+        ],
+        "llm_status": "validated",
+        "llm_attempts": 1,
+        "llm_rejections": [],
+        "passed": true,
+        "short_name": "Прогулка с ребёнком",
+        "result_label": "1 место, 32 мин"
+      },
+      {
+        "name": "Два часа у туриста",
+        "query": "Я турист, хочу познакомиться с архитектурой Астаны",
+        "start": {
+          "label": "Бәйтерек",
+          "lat": 51.1283,
+          "lon": 71.4305
+        },
+        "minutes": 120,
+        "result_count": 3,
+        "total_minutes": 111,
+        "mode": "llm-grounded",
+        "pass": true,
+        "checks": {
+          "budget": true,
+          "limit": true,
+          "sources": true,
+          "physical_deduplication": true,
+          "constraints": true,
+          "useful_result_or_explained_abstention": true
+        },
+        "outcome": "recommendations",
+        "clarification": null,
+        "poi_ids": [
+          "osm:way/230401645",
+          "osm:way/917478479",
+          "osm:node/4958412863"
+        ],
+        "warnings": [
+          "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
+        ],
+        "llm_status": "validated",
+        "llm_attempts": 1,
+        "llm_rejections": [],
+        "passed": true,
+        "short_name": "Турист, два часа",
+        "result_label": "3 места, 111 мин"
+      },
+      {
+        "name": "Ночная активность",
+        "query": "Ночью хочу найти активность рядом",
+        "start": {
+          "label": "Бәйтерек",
+          "lat": 51.1283,
+          "lon": 71.4305
+        },
+        "minutes": 60,
+        "result_count": 1,
+        "total_minutes": 46,
+        "mode": "llm-grounded",
+        "pass": true,
+        "checks": {
+          "budget": true,
+          "limit": true,
+          "sources": true,
+          "physical_deduplication": true,
+          "constraints": true,
+          "useful_result_or_explained_abstention": true
+        },
+        "outcome": "recommendations",
+        "clarification": null,
+        "poi_ids": [
+          "osm:node/4199896989"
+        ],
+        "warnings": [
+          "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+          "Ночной запрос: отобраны только точки, где источник явно указал 24/7; актуальный доступ, освещение и безопасность не проверены."
+        ],
+        "llm_status": "validated",
+        "llm_attempts": 1,
+        "llm_rejections": [],
+        "passed": true,
+        "short_name": "Ночная активность",
+        "result_label": "1 место, 46 мин"
+      }
+    ],
+    "llm_summary": {
+      "eligible_scenarios": 4,
+      "validated_scenarios": 4,
+      "fallback_scenarios": 0,
+      "total_attempts": 4
+    },
+    "additional_checks": [
+      {
+        "name": "Дополнительный фактический семейный пресет",
+        "query": "Гуляю с ребёнком, ищу детскую площадку или парк",
+        "start": {
+          "lat": 51.1546,
+          "lon": 71.4252
+        },
+        "minutes": 60,
+        "result_count": 2,
+        "total_minutes": 55,
+        "mode": "llm-grounded",
+        "llm_status": "validated",
+        "llm_attempts": 1,
+        "llm_rejections": [],
+        "checks": {
+          "budget": true,
+          "expected_snapshot_plan_55min": true,
+          "category_only": true,
+          "sources": true
+        },
+        "pass": true,
+        "observed_started_at": "2026-10-19T22:02:16+00:00",
+        "observed_completed_at": "2026-10-19T22:02:49+00:00",
+        "runtime_session": "37574"
+      }
+    ],
+    "validation_protocol": {
+      "type": "mixed_timestamp_guard_revalidation_and_new_family_generation",
+      "main_generation_runtime_session": "68810",
+      "family_generation_runtime_session": "37574",
+      "main_provider_calls_reused_without_regeneration": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "main_responses_revalidated_offline": 4,
+      "historical_manual_rejected_family_call": 5,
+      "new_family_provider_calls": [
+        6
+      ],
+      "new_family_generation_attempts": 1,
+      "unique_observed_provider_calls_including_rejected_history": 6,
+      "final_accepted_provider_calls": 5,
+      "current_raw_files_include_guard_rejected_attempts": false,
+      "historical_rejected_raw_preserved": true,
+      "not_a_new_sequential_full_generation_run": true,
+      "prompt_and_decoding_unchanged": true,
+      "only_guard_change": "Own-source park/garden containment evidence on nonpark POI",
+      "guard_revalidation_receipt": "output/llm-evidence/revalidation.json",
+      "tests_receipt": "output/llm-evidence/tests-receipt.json",
+      "old_failed_family_review": "output/history/qwen3-4b/1267-initial/20261019T214240Z/manual-review.json",
+      "main_generation_source_report_generated_at": "2026-10-19T21:44:06+00:00",
+      "main_original_archive": "output/history/qwen3-4b/1267-initial/20261019T214240Z/original",
+      "new_family_request_identical_to_historical_family_request": true,
+      "temperature_zero_is_not_a_determinism_guarantee": true
+    }
+  },
+  "tests": {
+    "run": 131,
+    "passed": 131,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "success": true,
+    "failure_tests": [],
+    "error_tests": [],
+    "source": "output/evaluation.json"
+  },
+  "llm": {
+    "provider": "llama.cpp b11739 (CPU, loopback)",
+    "model": "Qwen3-4B-Instruct-2507 Q4_K_M (Unsloth) / astana-local",
+    "live_verified": true,
+    "evidence": "Actual report: output/evaluation-live.json. 5/5 main scenarios, 131/131 tests. 4/4 eligible scenarios validated, 4 recorded provider calls in main scenarios. Свидетельства получены в разное время: 4 основных ответа повторно проверены новым guard без генерации, семейный пресет сгенерирован отдельно (1 вызов). Принято 5 ответов; всего наблюдалось 6 уникальных вызовов, включая исторический отказ. Это не новый последовательный прогон всех генераций.",
+    "privacy_note": "LLM получает признаки интересов и найденные публичные POI: name, category, description, features. Исходный запрос, origin, координаты, расчётные времена, расстояния и opening_hours не передаются. Числа и расписания отображаются отдельно из backend, а не генерируются в свободном тексте."
+  },
+  "pwa": {
+    "enabled": true,
+    "evidence": "PR #7 c31bc7a and quota fix 90ed954. web/sw.js: shell allowlist, API network-only, no query/non-GET caching. HTTPS resource results: output/https-check.json. Physical installation and launch from icon reported by the user on 2026-10-20, not independently observed.",
+    "demo_url": "https://entire-burn-cricket-ashley.trycloudflare.com/",
+    "https_evidence": "output/https-check.json",
+    "phone_evidence": "output/phone-check.json",
+    "https_resource_check": {
+      "passed": 16,
+      "total": 16,
+      "generated_at": "2026-10-19T22:04:45+00:00",
+      "source": "output/https-check.json",
+      "sha256": "a11d438f4bf561046e7b50a08a674455303cf158190ac68ac927577d23079343"
+    },
+    "phone_installation": {
+      "user_reported": true,
+      "reported_on": "2026-10-20",
+      "installed": true,
+      "opened_from_icon": true,
+      "os": "Android",
+      "browser": "Chrome",
+      "device_model": null,
+      "offline_tested": false,
+      "source": "output/phone-check.json",
+      "sha256": "97d1a14995316c328f9fe1ed44d60869553beda816a2fac3b464fa3e5f1c7503"
+    }
+  },
+  "features": {
+    "street_map": {
+      "available": true,
+      "library": "Leaflet",
+      "tile_provider": "OpenStreetMap",
+      "screenshot_dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+      "crop": {
+        "left": 0.325,
+        "top": 0.098,
+        "right": 0.065,
+        "bottom": 0.552
+      },
+      "screenshot_relative": "output/map-desktop.jpg",
+      "screenshot_sha256": "4e86aa16fe316545011ead4ed25fc09b12997b52f90fe321e2e1c760fec9886b",
+      "content_type": "image/jpeg",
+      "frame": {
+        "left": 106.95242678399552,
+        "top": 158.0,
+        "width": 1066.095146432009,
+        "height": 446.0
+      }
+    },
+    "osm_refresh": {
+      "available": true,
+      "ttl_hours": 24,
+      "retry_cooldown_hours": 1,
+      "opt_in": true,
+      "public_http_trigger": false
+    },
+    "two_gis": {
+      "available": true,
+      "page_size": 10,
+      "attempt_limit": 20,
+      "window_hours": 24,
+      "attribution": {
+        "text": "2ГИС",
+        "url": "http://dev.2gis.ru"
+      },
+      "poi_persistence": false,
+      "separate_from_osm_and_rag": true
+    }
+  },
+  "video": {
+    "publication": "user_upload_later",
+    "current_mp4": "output/video/final/astana-walks-demo.mp4",
+    "current_dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+    "manifest": "output/video/final/manifest.json",
+    "review_receipt": "output/video/final-review.json",
+    "previous_snapshot_video": "output/history/qwen3-4b/738-poi/output/video/final/astana-walks-demo.mp4",
+    "sha256": "7106a06c4122f8d9eceb9158aa80ab4a37e4495e35fa6d71b84a29e141b515b8",
+    "manifest_sha256": "fdb3ba1861aad20062c53a57bc966559a21efca3f58ba9b64b87b2022e7085da",
+    "review_sha256": "0162cf3eedfacd13f84cf303e8cd3cca06e9c778a3581d11a00522f1b85f9346",
+    "review_checks": {
+      "passed": 49,
+      "total": 49
+    },
+    "duration_seconds": 250.64,
+    "duration_label": "4:10,64",
+    "capture_method": "One sequential real Chrome tab UI pass, target2fps screenshots. Actual observation timestamps are retained; gaps repeat the last observed frame at real elapsed time. Not a native full-frame screen recording. No desktop or browser chrome captured.",
+    "physical_phone_capture": false,
+    "source_candidate": "8932474"
+  },
+  "ui_example": {
+    "source": "output/ui-check.json",
+    "sha256": "5c727272f245f6e8c6773efc070d6082bdd72544451f50eca289d1b95d517ea8",
+    "recorded_at": "2026-10-19T22:06:31.100Z",
+    "query": "У меня 45 минут возле Mega, хочу короткую прогулку",
+    "minutes": 45,
+    "total_minutes": 44,
+    "mode": "RAG + LLM",
+    "origin": {
+      "lat": 51.0898,
+      "lon": 71.4078,
+      "label": "MEGA Silk Way / EXPO UI preset"
+    },
+    "scope": "One featured MEGA45 live UI response after deployment95902 plus responsive layout and manual install guidance; not the five-scenario evaluator or physical phone.",
+    "limitations": [
+      "The UI preset start 51.0898,71.4078 differs from the formal evaluator start 51.0892,71.4074, giving44 rather than42minutes; both results remain literal.",
+      "This is one additional UI generation outside the six-call mixed evaluation protocol; no provider raw-capture or formal-call count is claimed.",
+      "Browser viewport screenshots do not certify a physical phone or offline map."
+    ]
+  },
+  "featured": {
+    "query": "У меня 45 минут возле Mega, хочу короткую прогулку",
+    "minutes": 45,
+    "total_minutes": 42,
+    "names": [
+      "NU Park"
+    ],
+    "result_count": 1,
+    "mode": "llm-grounded",
+    "generated_why": "Парк соответствует интересу в прогулке на воздухе",
+    "narration_source": "output/live-explanations.json"
+  }
+}

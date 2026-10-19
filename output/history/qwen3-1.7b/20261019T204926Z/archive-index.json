@@ -1,0 +1,95 @@
+{
+  "source": "Historical failed 1.7B ordinary-code evaluation, retained verbatim before approved 4B promotion",
+  "path_mapping": {
+    "original_prefix": "output/llm-evidence/",
+    "archived_relative_prefix": "llm-evidence/"
+  },
+  "entries": [
+    {
+      "original": "output/evaluation-live.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/evaluation-live.json",
+      "sha256": "d0cdaae591d95e709805eb17ed7e0d0af29b45849fff7d684295516bb2ec39ff"
+    },
+    {
+      "original": "output/live-explanations.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/live-explanations.json",
+      "sha256": "8aa07b9618d7a98feef90aecc2e80943dda5c3e4989443117c562b6bfa84b39d"
+    },
+    {
+      "original": "tmp/qwen3-4b-candidate-20261019T204541Z/historical-input/llm-1.7b-installed-manifest.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/installed-model-manifest.json",
+      "sha256": "573bff6116daed6fd11d2c893ef5e5a5c09b939db4fd420a64b97288646d12db"
+    },
+    {
+      "original": "output/llm-evidence/manifest.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/manifest.json",
+      "sha256": "52b4848adb4b08b9d60fb821945e2b2365a844ba155590663480b12d713bd576"
+    },
+    {
+      "original": "output/llm-evidence/request-1.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/request-1.json",
+      "sha256": "c8f273176e4f14545cb5db82db8094a07e1d363fc23e0388646c6bfd5be970d3"
+    },
+    {
+      "original": "output/llm-evidence/request-2.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/request-2.json",
+      "sha256": "a28c3d88343aa89b604c2fea40b31f5d0eb0c352f6d14453c8f54960ef41b091"
+    },
+    {
+      "original": "output/llm-evidence/request-3.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/request-3.json",
+      "sha256": "96cf1b9500163d5993eb60295c4cc4de5e4ea034d34e60e2db3a3c5b888e9d73"
+    },
+    {
+      "original": "output/llm-evidence/request-4.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/request-4.json",
+      "sha256": "29d3933c004bf1add5f94e9bd4740219c80c8ec0bfd0dca157f71859ea488982"
+    },
+    {
+      "original": "output/llm-evidence/request-5.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/request-5.json",
+      "sha256": "be0c1d153b2cb9ce40b39701a5a0301627427777817c12ffdab46134e190f6bf"
+    },
+    {
+      "original": "output/llm-evidence/request-6.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/request-6.json",
+      "sha256": "8bb1a530ed21874f108d62c1dd43ce1766986f62e08e7c276cc20684ca9314f3"
+    },
+    {
+      "original": "output/llm-evidence/response-1.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/response-1.json",
+      "sha256": "575e0a85b003d5c1b03a9bf24dc152002e087b3d124668ef2299ea916b8ccc9d"
+    },
+    {
+      "original": "output/llm-evidence/response-2.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/response-2.json",
+      "sha256": "edef0dd576316cb7acf45cd7906210ead454897a9be136c0fa03784f18d85528"
+    },
+    {
+      "original": "output/llm-evidence/response-3.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/response-3.json",
+      "sha256": "60348640d68a9ded02eabe56e3dc2cf44ac78cb391875fe18997e47540f35fd6"
+    },
+    {
+      "original": "output/llm-evidence/response-4.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/response-4.json",
+      "sha256": "61fad68f8acefea8783dcdea153c1f01b60abb8dd02a4828af47454b2d944c7a"
+    },
+    {
+      "original": "output/llm-evidence/response-5.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/response-5.json",
+      "sha256": "441f909742a798fcf38abc65ad821f0ea808115c6a9a3312004eb06f676441f8"
+    },
+    {
+      "original": "output/llm-evidence/response-6.json",
+      "archived": "output/history/qwen3-1.7b/20261019T204926Z/llm-evidence/response-6.json",
+      "sha256": "950f7584452d083fe92451cce9dd9d4736d93448e71fd151079300915520ac14"
+    }
+  ],
+  "generated_files": [
+    {
+      "path": "README.md",
+      "sha256": "4361db668e7cbe3aa8fd627f4455ecff56537d986f3766d2ff4245b00a69854f"
+    }
+  ]
+}

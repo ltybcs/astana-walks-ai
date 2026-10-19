@@ -1,0 +1,17 @@
+{
+  "recorded_at": "2026-10-19T20:09:22+00:00",
+  "method": "user_reported",
+  "url": "https://entire-burn-cricket-ashley.trycloudflare.com/",
+  "installed_on_physical_phone": true,
+  "launched_from_home_screen_icon": true,
+  "device_os": "Android",
+  "device_model": null,
+  "offline_on_physical_phone": "not_tested",
+  "evidence": "User explicitly answered: Установилось и открывается по иконке",
+  "limitations": [
+    "Physical installation was reported by the user, not operated or observed directly by Codex.",
+    "The URL is temporary and requires the PC, application and tunnel to stay running."
+  ],
+  "browser": "Chrome",
+  "follow_up_evidence": "User clarified: Firefox on the other Android phone; own Android Chrome works normally."
+}

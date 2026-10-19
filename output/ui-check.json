@@ -1,0 +1,96 @@
+{
+  "dataset": "OpenStreetMap · 1267 мест",
+  "desktop_layout": {
+    "document_width": 1425,
+    "height": 1050,
+    "scroll_width": 1425,
+    "width": 1440
+  },
+  "method": "Actual public in-app browser UI; public preset start, no geolocation",
+  "minutes": 45,
+  "plan": "≈ 44 мин всего · 24 мин пешком · 20 мин в местах · возврат к старту учтён",
+  "query": "У меня 45 минут возле Mega, хочу короткую прогулку",
+  "recommendations": [
+    {
+      "name": "NU Park",
+      "source": "https://www.openstreetmap.org/way/1467797207",
+      "text": "1\nNU Park\nПарк\n≈ 843 м от предыдущей точки\n20 мин на посещение\n\nПарк соответствует интересу в прогулке на воздухе\n\nЧто сделать: Идея: остановиться и пройти по тропинке в парке. Перед выходом проверьте доступ и часы по источнику.\n\nОбъяснение и идея — LLM · сведения о месте — POI\n\nЧасы и доступ сейчас не подтверждены; проверьте перед посещением.\n\nИсточник места ↗"
+    }
+  ],
+  "recorded_at": "2026-10-19T22:06:31.100Z",
+  "refresh": "Автообновление из OpenStreetMap включено: проверка раз в 24 ч.",
+  "rendered_mode": "RAG + LLM",
+  "time_of_day": "day",
+  "url": "https://entire-burn-cricket-ashley.trycloudflare.com/",
+  "warnings": "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+  "origin": {
+    "lat": 51.0898,
+    "lon": 71.4078,
+    "label": "MEGA Silk Way / EXPO UI preset"
+  },
+  "dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+  "mobile_layout": {
+    "horizontal_overflow": false,
+    "observed_document_width": 375,
+    "observed_scroll_width": 375,
+    "physical_device": false,
+    "requested_viewport_css": {
+      "height": 844,
+      "width": 390
+    }
+  },
+  "scope": "One featured MEGA45 live UI response after deployment95902 plus responsive layout and manual install guidance; not the five-scenario evaluator or physical phone.",
+  "runtime_session": "95902",
+  "model_evidence": "output/llm-evidence/model-manifest.json",
+  "evaluation_evidence": "output/evaluation-live.json",
+  "limitations": [
+    "The UI preset start 51.0898,71.4078 differs from the formal evaluator start 51.0892,71.4074, giving44 rather than42minutes; both results remain literal.",
+    "This is one additional UI generation outside the six-call mixed evaluation protocol; no provider raw-capture or formal-call count is claimed.",
+    "Browser viewport screenshots do not certify a physical phone or offline map."
+  ],
+  "manual_install_guidance": {
+    "observed": true,
+    "browser_viewport_only": true,
+    "android_chrome": true,
+    "android_firefox": true,
+    "iphone_safari": true,
+    "system_install_performed": false
+  },
+  "screenshots": [
+    {
+      "path": "output/demo-ui.jpg",
+      "sha256": "3d6113a60706f8c7930c11aed962acb8a618017a471a58ab312a445601eb3937",
+      "width": 1425,
+      "height": 1039,
+      "content_type": "image/jpeg"
+    },
+    {
+      "path": "output/demo-mobile.jpg",
+      "sha256": "35dcdece600f0e69e11ad8a28b5bb2b1affaf37eefc11d7f5a7174eb6205af1a",
+      "width": 375,
+      "height": 812,
+      "content_type": "image/jpeg"
+    },
+    {
+      "path": "output/demo-mobile-install.jpg",
+      "sha256": "3dc6fc1dc7ac302d6b720741648f74bedc4c35db800319db97c02ca0b8411514",
+      "width": 375,
+      "height": 812,
+      "content_type": "image/jpeg"
+    },
+    {
+      "path": "output/map-desktop.jpg",
+      "sha256": "4e86aa16fe316545011ead4ed25fc09b12997b52f90fe321e2e1c760fec9886b",
+      "width": 1425,
+      "height": 1039,
+      "content_type": "image/jpeg"
+    },
+    {
+      "path": "output/map-mobile.jpg",
+      "sha256": "bd9c88878dbd2561cab444be7575cf3a711f186df17a1525df5b06aeb4feffaa",
+      "width": 375,
+      "height": 812,
+      "content_type": "image/jpeg"
+    }
+  ]
+}

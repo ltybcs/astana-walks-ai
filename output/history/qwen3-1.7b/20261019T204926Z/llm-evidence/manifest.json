@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-19T20:13:16+00:00",
+  "source": "Actual ordinary application requests and provider responses from fixed public evaluation scenarios plus a public family preset; sequential, no parameter override",
+  "privacy": "Request bodies contain structured interest labels and public POI name/category/description/features only. No raw user query, origin label, coordinates, API key or authorization headers are included.",
+  "dataset": {
+    "name": "Astana POI / OpenStreetMap",
+    "is_demo": false,
+    "places_count": 738,
+    "path": "data/poi.astana.json",
+    "sha256": "eb5ebd1a3bd13bbae5ce5005a663a3ac0a0dbcb94b9dabfaa4d774f9610bee08"
+  },
+  "actual_config": {
+    "model": "astana-local",
+    "temperature": 0,
+    "seed_supplied": false,
+    "json_mode": "schema",
+    "token_parameter": "max_tokens"
+  },
+  "calls": [
+    {
+      "call": 1,
+      "request_file": "request-1.json",
+      "response_file": "response-1.json",
+      "request_sha256": "c8f273176e4f14545cb5db82db8094a07e1d363fc23e0388646c6bfd5be970d3",
+      "response_sha256": "575e0a85b003d5c1b03a9bf24dc152002e087b3d124668ef2299ea916b8ccc9d",
+      "temperature": 0,
+      "seed_supplied": false,
+      "model": "astana-local"
+    },
+    {
+      "call": 2,
+      "request_file": "request-2.json",
+      "response_file": "response-2.json",
+      "request_sha256": "a28c3d88343aa89b604c2fea40b31f5d0eb0c352f6d14453c8f54960ef41b091",
+      "response_sha256": "edef0dd576316cb7acf45cd7906210ead454897a9be136c0fa03784f18d85528",
+      "temperature": 0,
+      "seed_supplied": false,
+      "model": "astana-local"
+    },
+    {
+      "call": 3,
+      "request_file": "request-3.json",
+      "response_file": "response-3.json",
+      "request_sha256": "96cf1b9500163d5993eb60295c4cc4de5e4ea034d34e60e2db3a3c5b888e9d73",
+      "response_sha256": "60348640d68a9ded02eabe56e3dc2cf44ac78cb391875fe18997e47540f35fd6",
+      "temperature": 0,
+      "seed_supplied": false,
+      "model": "astana-local"
+    },
+    {
+      "call": 4,
+      "request_file": "request-4.json",
+      "response_file": "response-4.json",
+      "request_sha256": "29d3933c004bf1add5f94e9bd4740219c80c8ec0bfd0dca157f71859ea488982",
+      "response_sha256": "61fad68f8acefea8783dcdea153c1f01b60abb8dd02a4828af47454b2d944c7a",
+      "temperature": 0,
+      "seed_supplied": false,
+      "model": "astana-local"
+    },
+    {
+      "call": 5,
+      "request_file": "request-5.json",
+      "response_file": "response-5.json",
+      "request_sha256": "be0c1d153b2cb9ce40b39701a5a0301627427777817c12ffdab46134e190f6bf",
+      "response_sha256": "441f909742a798fcf38abc65ad821f0ea808115c6a9a3312004eb06f676441f8",
+      "temperature": 0,
+      "seed_supplied": false,
+      "model": "astana-local"
+    },
+    {
+      "call": 6,
+      "request_file": "request-6.json",
+      "response_file": "response-6.json",
+      "request_sha256": "8bb1a530ed21874f108d62c1dd43ce1766986f62e08e7c276cc20684ca9314f3",
+      "response_sha256": "950f7584452d083fe92451cce9dd9d4736d93448e71fd151079300915520ac14",
+      "temperature": 0,
+      "seed_supplied": false,
+      "model": "astana-local"
+    }
+  ],
+  "scenario_results": [
+    {
+      "scenario": "30–60 минут возле MEGA",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "provider_file": "output/llm-evidence/response-1.json"
+    },
+    {
+      "scenario": "Тихий кофе и розетка",
+      "mode": "extractive",
+      "llm_status": "no_candidates",
+      "llm_attempts": 0,
+      "llm_rejections": [],
+      "provider_file": null
+    },
+    {
+      "scenario": "Прогулка с ребёнком",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "provider_file": "output/llm-evidence/response-2.json"
+    },
+    {
+      "scenario": "Два часа у туриста",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "provider_file": "output/llm-evidence/response-3.json"
+    },
+    {
+      "scenario": "Ночная активность",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "provider_file": "output/llm-evidence/response-4.json"
+    },
+    {
+      "scenario": "Дополнительный фактический семейный пресет",
+      "mode": "llm-grounded",
+      "llm_status": "validated_after_repair",
+      "llm_attempts": 2,
+      "llm_rejections": [
+        "unsupported_location_claim"
+      ],
+      "provider_file": "output/llm-evidence/response-6.json"
+    }
+  ],
+  "manual_review": {
+    "performed_at": "2026-10-19T20:13:54+00:00",
+    "scope": "All accepted why/action texts from the five fixed scenarios and the additional family check were read manually",
+    "quality_pass": false,
+    "constraint_checks_distinct_from_prose_quality": true,
+    "issues": [
+      {
+        "scenario": "30–60 минут возле MEGA",
+        "poi_id": "osm:way/1467797207",
+        "type": "nonsensical_action",
+        "observed_action": "Идея: осмотреть зелёную зону парка для поглаживания рук или наблюдения за природой.",
+        "provider_file": "output/llm-evidence/response-1.json",
+        "note": "The factual guards accepted this text, but its proposed action is nonsensical. Temperature=0 alone did not remove this known small-model quality failure."
+      }
+    ]
+  }
+}

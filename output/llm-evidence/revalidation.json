@@ -1,0 +1,62 @@
+{
+  "generated_at": "2026-10-19T21:50:35+00:00",
+  "method": "Offline validate_narration_with_reason over exact original provider content and unchanged own POI public facts; no generation or response rewriting",
+  "original_guard_sha256": "733d480fdac4c33e6c47f58245710a9b9985215cd5bd4861575ffdea1ffb910d",
+  "current_guard_sha256": "f2a1cd73fb21caae8c1f3dbfdf8173a1eb71190714b5f1882cd4002541c78b4e",
+  "dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+  "cases": [
+    {
+      "call": 1,
+      "valid": true,
+      "reason": null,
+      "poi_ids": [
+        "osm:way/1467797207"
+      ],
+      "request_sha256": "c8f273176e4f14545cb5db82db8094a07e1d363fc23e0388646c6bfd5be970d3",
+      "response_sha256": "5d21facd1eb98024d5a7fa6d6cce26e33379eccf532115e3befddd246be2c21d"
+    },
+    {
+      "call": 2,
+      "valid": true,
+      "reason": null,
+      "poi_ids": [
+        "osm:way/1196402246"
+      ],
+      "request_sha256": "a28c3d88343aa89b604c2fea40b31f5d0eb0c352f6d14453c8f54960ef41b091",
+      "response_sha256": "f2fb6a0a0a025e49e11c246a2b635964d9c6c7d462281c8eda60d14aeafa20b3"
+    },
+    {
+      "call": 3,
+      "valid": true,
+      "reason": null,
+      "poi_ids": [
+        "osm:way/230401645",
+        "osm:way/917478479",
+        "osm:node/4958412863"
+      ],
+      "request_sha256": "96cf1b9500163d5993eb60295c4cc4de5e4ea034d34e60e2db3a3c5b888e9d73",
+      "response_sha256": "e7b7be05c33b4999b0eec4e48b3fe583eb29cd4900945603f410b38f309a166d"
+    },
+    {
+      "call": 4,
+      "valid": true,
+      "reason": null,
+      "poi_ids": [
+        "osm:node/4199896989"
+      ],
+      "request_sha256": "29d3933c004bf1add5f94e9bd4740219c80c8ec0bfd0dca157f71859ea488982",
+      "response_sha256": "8463e12eed9c78aa42a2609e0df9d7e176de9d43b795c94fd979fdfabeffa170"
+    },
+    {
+      "call": 5,
+      "valid": false,
+      "reason": "unsupported_location_claim",
+      "poi_ids": [
+        "osm:way/1131138292",
+        "osm:relation/15957444"
+      ],
+      "request_sha256": "633f407864f30a3550813179aaac55d10010a9b0a8f1500ef6712e8bc467e84a",
+      "response_sha256": "bc5fbdac8e769a2a322bffbd483a915396b98ad99c78334585b0e36206e50981"
+    }
+  ]
+}

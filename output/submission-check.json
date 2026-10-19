@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-19T22:35:06+00:00",
+  "pass": true,
+  "checks": [
+    {
+      "name": "Canonical evaluation is byte-identical to approved live report",
+      "pass": true
+    },
+    {
+      "name": "Current dataset has1267 non-demo POI and matching report SHA",
+      "pass": true
+    },
+    {
+      "name": "Formal42 and observed UI44 remain distinct",
+      "pass": true
+    },
+    {
+      "name": "Mixed temporal validation protocol is explicit",
+      "pass": true
+    },
+    {
+      "name": "Expected PDF page counts",
+      "pass": true
+    },
+    {
+      "name": "Accepted current MP4 is bound to dataset, exact bytes and49/49review; YouTube user-upload is deferred",
+      "pass": true
+    },
+    {
+      "name": "All five actual JPEG captures match recorded bytes and dimensions",
+      "pass": true
+    },
+    {
+      "name": "PPTX matches validated first-party import",
+      "pass": true
+    },
+    {
+      "name": "Three embedded actual screenshots use JPEG bytes",
+      "pass": true
+    },
+    {
+      "name": "Editable PPTX retains ten notes parts",
+      "pass": true
+    },
+    {
+      "name": "stale-ui-dataset rejected without provider calls or output writes",
+      "pass": true,
+      "observed_error": "UI evidence used a different POI snapshot.",
+      "provider_calls": 0
+    },
+    {
+      "name": "stale-screenshot-hash rejected without provider calls or output writes",
+      "pass": true,
+      "observed_error": "UI evidence screenshot hash is absent or differs.",
+      "provider_calls": 0
+    },
+    {
+      "name": "stale-mobile-valid-JPEG rejected without provider calls or output writes",
+      "pass": true,
+      "observed_error": "Mobile screenshot hash is absent from UI evidence or differs.",
+      "provider_calls": 0
+    },
+    {
+      "name": "stale-map-valid-JPEG rejected without provider calls or output writes",
+      "pass": true,
+      "observed_error": "Map screenshot hash is absent from UI evidence or differs.",
+      "provider_calls": 0
+    },
+    {
+      "name": "stale-video-bytes rejected without provider calls or output writes",
+      "pass": true,
+      "observed_error": "Current video bytes differ from the recorded manifest.",
+      "provider_calls": 0
+    },
+    {
+      "name": "failed-video-review rejected without provider calls or output writes",
+      "pass": true,
+      "observed_error": "Current video lacks a successful review of its exact bytes.",
+      "provider_calls": 0
+    }
+  ],
+  "visual_review": {
+    "reviewer": "delivery_artifacts",
+    "method": "Baseline16pages individually reviewed using Poppler. Final accepted-video update: slide10 and document pages1/6 re-rendered and visually inspected; other13pages are pixel-identical to reviewed baseline.",
+    "presentation_pages_reviewed": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "document_pages_reviewed": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "latest_presentation_pages_re_reviewed": [
+      10
+    ],
+    "latest_document_pages_re_reviewed": [
+      1,
+      6
+    ],
+    "unchanged_page_pixel_comparisons": [
+      {
+        "artifact": "slides",
+        "page": 1,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "slides",
+        "page": 2,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "slides",
+        "page": 3,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "slides",
+        "page": 4,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "slides",
+        "page": 5,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "slides",
+        "page": 6,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "slides",
+        "page": 7,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "slides",
+        "page": 8,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "slides",
+        "page": 9,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "document",
+        "page": 2,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "document",
+        "page": 3,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "document",
+        "page": 4,
+        "pixel_identical": true
+      },
+      {
+        "artifact": "document",
+        "page": 5,
+        "pixel_identical": true
+      }
+    ],
+    "findings": [],
+    "native_powerpoint_execution_verified": false
+  },
+  "scope": "Submission artifacts only. No new LLM,2GIS,geolocation,physical-phone or field checks. Application metrics are from approved recorded evaluation; media integrity/approval is attributed to the independent final video receipt.",
+  "files": [
+    {
+      "path": "output/presentations/astana-walks.pptx",
+      "sha256": "07b4aa3595aeadb190247bfee9d0a3f3c33944dbb4017085a2db03e35a397011"
+    },
+    {
+      "path": "output/presentations/validation.json",
+      "sha256": "b3b2ed9ad2d2a7290cdfff707f222b9a9302634aa43341c526563e5252b71e5d"
+    },
+    {
+      "path": "output/pdf/astana-walks-presentation.pdf",
+      "sha256": "beaa72ffeb9f5fe6ed3ea3bc521f7d93ca00a93a4589512f7fe87ab33c42b057"
+    },
+    {
+      "path": "output/pdf/astana-walks-scenarios.pdf",
+      "sha256": "d8634a31644947a03be490161ca16ba578210e0e981f797def2640814ba91419"
+    },
+    {
+      "path": "output/submission-facts.json",
+      "sha256": "f90592ae43c0fb8ab69f2d27e2d56a0a79713172eb05e59f1d86937834ab8df6"
+    },
+    {
+      "path": "output/speaker-script.md",
+      "sha256": "e738181a0f8d721b8f65c0e35a9bdcfc14420cb1a87f18b26c3c5f874ac113bc"
+    },
+    {
+      "path": "output/evaluation.json",
+      "sha256": "31b9960af32be5a3be89c007731bd0caa64ce8b711af5845a23cd8511f1a9033"
+    },
+    {
+      "path": "output/ui-check.json",
+      "sha256": "5c727272f245f6e8c6773efc070d6082bdd72544451f50eca289d1b95d517ea8"
+    },
+    {
+      "path": "docs/submission-config.json",
+      "sha256": "49759c902fc6ed2a8bb294cc8d7323229405090062a1b4155c40a8898c314374"
+    },
+    {
+      "path": "output/video/final/astana-walks-demo.mp4",
+      "sha256": "7106a06c4122f8d9eceb9158aa80ab4a37e4495e35fa6d71b84a29e141b515b8"
+    },
+    {
+      "path": "output/video/final/manifest.json",
+      "sha256": "fdb3ba1861aad20062c53a57bc966559a21efca3f58ba9b64b87b2022e7085da"
+    },
+    {
+      "path": "output/video/final-review.json",
+      "sha256": "0162cf3eedfacd13f84cf303e8cd3cca06e9c778a3581d11a00522f1b85f9346"
+    }
+  ],
+  "source_guard_review": {
+    "checked_at": "2026-10-19T22:35:06+00:00",
+    "script": "scripts/build_submission.py",
+    "sha256": "ca34340b5f87bf2bc9de3d05a08d5f3016f3854499e95ba51a0f26f213e868df",
+    "negative_screenshot_probes": 4,
+    "negative_video_probes": 2,
+    "provider_calls": 0,
+    "canonical_artifacts_unchanged_during_probes": true,
+    "note": "Baseline assemble succeeds. Current main/mobile/map evidence requires individual SHA; active video requires dataset, manifest bytes and successful independent exact-media review/decode. All negative probes use temporary copies/configs."
+  }
+}

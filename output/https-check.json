@@ -1,0 +1,165 @@
+{
+  "generated_at": "2026-10-19T22:04:45+00:00",
+  "url": "https://entire-burn-cricket-ashley.trycloudflare.com",
+  "kind": "temporary user-authorized public HTTPS demo",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "text/html",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "cache_control": "no-store",
+      "pass": true,
+      "places_count": 1267,
+      "llm_configured": true,
+      "refresh": {
+        "enabled": true,
+        "state": "fresh",
+        "ttl_hours": 24,
+        "active_source": "shipped",
+        "last_good_at": "2026-10-19T21:30:22+00:00",
+        "last_attempt_at": null,
+        "next_check_at": "2026-10-20T21:30:22+00:00",
+        "stale": false,
+        "last_error": null
+      },
+      "two_gis": {
+        "configured": true,
+        "available": true,
+        "quota": {
+          "limit": 20,
+          "used": 5,
+          "remaining": 15,
+          "window_seconds": 86400,
+          "retry_after_seconds": 0
+        },
+        "code": "ready"
+      }
+    },
+    {
+      "path": "/manifest.webmanifest",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "application/manifest+json",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/sw.js",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "text/javascript",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/icons/icon-512.png",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "image/png",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/app/server.py",
+      "status": 404,
+      "expected_status": 404,
+      "content_type": "application/json; charset=utf-8",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/v1/models",
+      "status": 404,
+      "expected_status": 404,
+      "content_type": "application/json; charset=utf-8",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/map.js",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "text/javascript",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/map.css",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "text/css",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/vendor/leaflet/1.9.4/leaflet.js",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "text/javascript",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/vendor/leaflet/1.9.4/leaflet.css",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "text/css",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/vendor/leaflet/1.9.4/images/marker-icon.png",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "image/png",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/vendor/leaflet/1.9.4/images/marker-icon-2x.png",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "image/png",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/vendor/leaflet/1.9.4/images/marker-shadow.png",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "image/png",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/vendor/leaflet/1.9.4/images/layers.png",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "image/png",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/vendor/leaflet/1.9.4/images/layers-2x.png",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "image/png",
+      "cache_control": "no-store",
+      "pass": true
+    }
+  ],
+  "pass": true,
+  "limitations": [
+    "This resource check does not prove installation on a physical phone or semantic quality of generated text.",
+    "The URL depends on this PC and the temporary tunnel process."
+  ]
+}

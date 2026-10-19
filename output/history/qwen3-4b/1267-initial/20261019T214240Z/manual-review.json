@@ -1,0 +1,20 @@
+{
+  "status": "rejected_by_two_readers",
+  "quality_pass": false,
+  "reviewers": [
+    {
+      "name": "Codex B / rag_backend",
+      "result": "reject"
+    },
+    {
+      "name": "Codex A / root",
+      "result": "reject"
+    }
+  ],
+  "recorded_at": "2026-10-19T21:50:34+00:00",
+  "poi_id": "osm:way/1131138292",
+  "provider_call": 5,
+  "literal_action": "Идея: посмотреть на детскую площадку в парке",
+  "reason": "Own OSM source establishes playground category only, not containment in a park. Nearby park selection is not evidence of containment.",
+  "scope": "Main four provider responses (six pairs) were read without new blockers; the two-place family response fails because of one unsupported location claim."
+}

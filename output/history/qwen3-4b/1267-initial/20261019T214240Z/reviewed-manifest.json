@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-19T21:44:33+00:00",
+  "privacy": "Only structured intent and public POI name/category/description/features. No raw user query, origin label, coordinates, keys or authorization headers are captured.",
+  "dataset": {
+    "name": "Astana POI / OpenStreetMap",
+    "is_demo": false,
+    "places_count": 1267,
+    "path": "data/poi.astana.json",
+    "sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e"
+  },
+  "actual_config": {
+    "model_alias": "astana-local",
+    "temperature": 0,
+    "seed_supplied": false,
+    "json_mode": "schema",
+    "token_parameter": "max_tokens",
+    "timeout_seconds": 120
+  },
+  "model": {
+    "installed_manifest": {
+      "runtime": "b11739",
+      "runtime_url": "https://github.com/ggml-org/llama.cpp/releases/download/b11739/llama-b11739-bin-win-cpu-x64.zip",
+      "runtime_sha256": "b1e0a14abdb4665c1b821b377ba063b221cec62882c373065cf8fb672988d3ff",
+      "model": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+      "base_model": "Qwen/Qwen3-4B-Instruct-2507",
+      "quantization_publisher": "Unsloth",
+      "model_revision": "a06e946bb6b655725eafa393f4a9745d460374c9",
+      "model_file": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+      "model_sha256": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+      "model_size": 2497281120,
+      "model_license": "apache-2.0",
+      "source": "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF"
+    },
+    "installed_manifest_sha256": "fd2a4c276e09d1fcfc3ba62a98eab4498eef5a2c27168ad4c606567e68e60119",
+    "weights_file_size_verified": 2497281120,
+    "weights_sha256_verified": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+    "endpoint_launch_confirmation": {
+      "confirmed_by": "Codex A / root",
+      "runtime_session": "68810",
+      "launch": "scripts/run_demo.py --data data/poi.astana.json --local-llm --refresh-poi",
+      "evidence": "Parent confirmed the fresh 1267-POI launcher is serving 8000/8081 with the same verified pinned 4B install before assigning the exclusive LLM slot",
+      "api_identity_limit": "Provider responses expose alias astana-local only; installed model identity is recorded through exact manifest/file SHA and parent-confirmed launch"
+    }
+  },
+  "calls": [
+    {
+      "call": 1,
+      "request_file": "request-1.json",
+      "response_file": "response-1.json",
+      "request_sha256": "c8f273176e4f14545cb5db82db8094a07e1d363fc23e0388646c6bfd5be970d3",
+      "temperature": 0,
+      "seed_supplied": false,
+      "request_model_alias": "astana-local",
+      "outcome": "response_received",
+      "response_sha256": "5d21facd1eb98024d5a7fa6d6cce26e33379eccf532115e3befddd246be2c21d",
+      "elapsed_seconds": 21.15,
+      "response_model_alias": "astana-local"
+    },
+    {
+      "call": 2,
+      "request_file": "request-2.json",
+      "response_file": "response-2.json",
+      "request_sha256": "a28c3d88343aa89b604c2fea40b31f5d0eb0c352f6d14453c8f54960ef41b091",
+      "temperature": 0,
+      "seed_supplied": false,
+      "request_model_alias": "astana-local",
+      "outcome": "response_received",
+      "response_sha256": "f2fb6a0a0a025e49e11c246a2b635964d9c6c7d462281c8eda60d14aeafa20b3",
+      "elapsed_seconds": 14.02,
+      "response_model_alias": "astana-local"
+    },
+    {
+      "call": 3,
+      "request_file": "request-3.json",
+      "response_file": "response-3.json",
+      "request_sha256": "96cf1b9500163d5993eb60295c4cc4de5e4ea034d34e60e2db3a3c5b888e9d73",
+      "temperature": 0,
+      "seed_supplied": false,
+      "request_model_alias": "astana-local",
+      "outcome": "response_received",
+      "response_sha256": "e7b7be05c33b4999b0eec4e48b3fe583eb29cd4900945603f410b38f309a166d",
+      "elapsed_seconds": 36.46,
+      "response_model_alias": "astana-local"
+    },
+    {
+      "call": 4,
+      "request_file": "request-4.json",
+      "response_file": "response-4.json",
+      "request_sha256": "29d3933c004bf1add5f94e9bd4740219c80c8ec0bfd0dca157f71859ea488982",
+      "temperature": 0,
+      "seed_supplied": false,
+      "request_model_alias": "astana-local",
+      "outcome": "response_received",
+      "response_sha256": "8463e12eed9c78aa42a2609e0df9d7e176de9d43b795c94fd979fdfabeffa170",
+      "elapsed_seconds": 14.46,
+      "response_model_alias": "astana-local"
+    },
+    {
+      "call": 5,
+      "request_file": "request-5.json",
+      "response_file": "response-5.json",
+      "request_sha256": "633f407864f30a3550813179aaac55d10010a9b0a8f1500ef6712e8bc467e84a",
+      "temperature": 0,
+      "seed_supplied": false,
+      "request_model_alias": "astana-local",
+      "outcome": "response_received",
+      "response_sha256": "bc5fbdac8e769a2a322bffbd483a915396b98ad99c78334585b0e36206e50981",
+      "elapsed_seconds": 24.68,
+      "response_model_alias": "astana-local"
+    }
+  ],
+  "manual_review": {
+    "status": "rejected_by_two_readers",
+    "quality_pass": false,
+    "reviewers": [
+      {
+        "name": "Codex B / rag_backend",
+        "result": "reject"
+      },
+      {
+        "name": "Codex A / root",
+        "result": "reject"
+      }
+    ],
+    "recorded_at": "2026-10-19T21:50:34+00:00",
+    "poi_id": "osm:way/1131138292",
+    "provider_call": 5,
+    "literal_action": "Идея: посмотреть на детскую площадку в парке",
+    "reason": "Own OSM source establishes playground category only, not containment in a park. Nearby park selection is not evidence of containment.",
+    "scope": "Main four provider responses (six pairs) were read without new blockers; the two-place family response fails because of one unsupported location claim."
+  },
+  "application_sha256": {
+    "app/llm.py": "733d480fdac4c33e6c47f58245710a9b9985215cd5bd4861575ffdea1ffb910d",
+    "app/generation.py": "a6bbf94a08b2c3be05f5eded32297275a5defd478c2c75d001b7cba49d6fcb5c",
+    "app/retrieval.py": "642ab81c1f9dfec27497b1d9650e61b16fa3df4476782a58182a22e4cf936da2"
+  }
+}

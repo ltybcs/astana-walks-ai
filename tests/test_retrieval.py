@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from app.generation import recommend
-from app.retrieval import Retriever, walk_minutes
+from app.retrieval import ROOT, Retriever, walk_minutes
 from app.server import static_target, validate_request
 from scripts.collect_osm import build_query, normalize_elements
 
@@ -87,7 +87,7 @@ class RetrievalTests(unittest.TestCase):
         self.assertEqual(response["mode"], "extractive")
 
     def test_sample_is_labeled_demo_and_budget_examples_work(self):
-        retriever = Retriever()
+        retriever = Retriever(ROOT / "data" / "poi.sample.json")
         for minutes in (30, 60, 120):
             response = recommend(retriever, "прогулка возле Mega", minutes, ORIGIN, use_llm=False)
             self.assertTrue(response["recommendations"])
@@ -97,20 +97,20 @@ class RetrievalTests(unittest.TestCase):
 
     @patch.dict("os.environ", {"LLM_API_KEY": "not-a-real-key", "LLM_MODEL": "test-model"})
     def test_llm_cannot_invent_a_source_or_facts(self):
-        envelope = {"choices": [{"message": {"content": json.dumps({"choices": [{"id": "invented", "why_index": 0, "action_index": 0}]})}}]}
-        with patch("app.generation.urlopen", return_value=io.BytesIO(json.dumps(envelope).encode())):
+        envelope = {"choices": [{"message": {"content": json.dumps({"recommendations": [{"id": "invented", "why": "Произвольное объяснение.", "action": "Идея: осмотреть место снаружи.", "citations": ["invented"], "fact_keys": ["category"]}]})}}]}
+        with patch("app.llm.open_url", return_value=io.BytesIO(json.dumps(envelope).encode())):
             response = recommend(index(poi("known")), "прогулка", 60, ORIGIN)
         self.assertEqual(response["mode"], "extractive")
         self.assertEqual(response["recommendations"][0]["id"], "known")
         self.assertTrue(any("не прошёл проверку" in warning for warning in response["warnings"]))
 
     @patch.dict("os.environ", {"LLM_API_KEY": "not-a-real-key", "LLM_MODEL": "test-model"})
-    def test_valid_llm_only_selects_from_grounded_options(self):
-        envelope = {"choices": [{"message": {"content": json.dumps({"choices": [{"id": "known", "why_index": 1, "action_index": 0}]})}}]}
-        with patch("app.generation.urlopen", return_value=io.BytesIO(json.dumps(envelope).encode())):
+    def test_valid_llm_produces_free_grounded_explanations(self):
+        envelope = {"choices": [{"message": {"content": json.dumps({"recommendations": [{"id": "known", "why": "Парк подходит для короткой прогулки на воздухе.", "action": "Идея: пройтись по парку после проверки доступа.", "citations": ["known"], "fact_keys": ["category"]}]})}}]}
+        with patch("app.llm.open_url", return_value=io.BytesIO(json.dumps(envelope).encode())):
             response = recommend(index(poi("known")), "прогулка", 60, ORIGIN)
-        self.assertEqual(response["mode"], "llm-constrained")
-        self.assertTrue(response["recommendations"][0]["why"].startswith("Наблюдение из тестового источника."))
+        self.assertEqual(response["mode"], "llm-grounded")
+        self.assertTrue(response["recommendations"][0]["why"].startswith("Парк подходит"))
 
 
 class ValidationTests(unittest.TestCase):

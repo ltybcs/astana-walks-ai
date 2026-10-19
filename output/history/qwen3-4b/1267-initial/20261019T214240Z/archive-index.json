@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-19T21:50:34+00:00",
+  "quality_pass": false,
+  "originals_preserved_verbatim": true,
+  "files": [
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/evaluation-live.json",
+      "archived_path": "original/evaluation-live.json",
+      "bytes": 11289,
+      "sha256": "a550008732bca4f9ca2054b55bfa1d544b1bbbe793277df1d39449f1d8abccb7"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/live-explanations.json",
+      "archived_path": "original/live-explanations.json",
+      "bytes": 11299,
+      "sha256": "780ab49b782b7fb98cf6d074dd5e541e221cc1b5e6f33ee9b634340b2594c760"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/manifest.json",
+      "archived_path": "original/llm-evidence/manifest.json",
+      "bytes": 5561,
+      "sha256": "d00b5584e7f0b82fa1ab50b4036c6c815fd820580c97858fb6a0abee87c46ffc"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/model-manifest.json",
+      "archived_path": "original/llm-evidence/model-manifest.json",
+      "bytes": 719,
+      "sha256": "fd2a4c276e09d1fcfc3ba62a98eab4498eef5a2c27168ad4c606567e68e60119"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/request-1.json",
+      "archived_path": "original/llm-evidence/request-1.json",
+      "bytes": 5680,
+      "sha256": "c8f273176e4f14545cb5db82db8094a07e1d363fc23e0388646c6bfd5be970d3"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/request-2.json",
+      "archived_path": "original/llm-evidence/request-2.json",
+      "bytes": 5810,
+      "sha256": "a28c3d88343aa89b604c2fea40b31f5d0eb0c352f6d14453c8f54960ef41b091"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/request-3.json",
+      "archived_path": "original/llm-evidence/request-3.json",
+      "bytes": 6957,
+      "sha256": "96cf1b9500163d5993eb60295c4cc4de5e4ea034d34e60e2db3a3c5b888e9d73"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/request-4.json",
+      "archived_path": "original/llm-evidence/request-4.json",
+      "bytes": 5683,
+      "sha256": "29d3933c004bf1add5f94e9bd4740219c80c8ec0bfd0dca157f71859ea488982"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/request-5.json",
+      "archived_path": "original/llm-evidence/request-5.json",
+      "bytes": 6522,
+      "sha256": "633f407864f30a3550813179aaac55d10010a9b0a8f1500ef6712e8bc467e84a"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/response-1.json",
+      "archived_path": "original/llm-evidence/response-1.json",
+      "bytes": 1007,
+      "sha256": "5d21facd1eb98024d5a7fa6d6cce26e33379eccf532115e3befddd246be2c21d"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/response-2.json",
+      "archived_path": "original/llm-evidence/response-2.json",
+      "bytes": 1109,
+      "sha256": "f2fb6a0a0a025e49e11c246a2b635964d9c6c7d462281c8eda60d14aeafa20b3"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/response-3.json",
+      "archived_path": "original/llm-evidence/response-3.json",
+      "bytes": 1786,
+      "sha256": "e7b7be05c33b4999b0eec4e48b3fe583eb29cd4900945603f410b38f309a166d"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/response-4.json",
+      "archived_path": "original/llm-evidence/response-4.json",
+      "bytes": 1058,
+      "sha256": "8463e12eed9c78aa42a2609e0df9d7e176de9d43b795c94fd979fdfabeffa170"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/response-5.json",
+      "archived_path": "original/llm-evidence/response-5.json",
+      "bytes": 1548,
+      "sha256": "bc5fbdac8e769a2a322bffbd483a915396b98ad99c78334585b0e36206e50981"
+    },
+    {
+      "original_path": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/privacy-and-history-check.json",
+      "archived_path": "original/privacy-and-history-check.json",
+      "bytes": 296,
+      "sha256": "8d1f78f298f923e08a88c66c9ab138c497c187fb18c84fc9d6da1d1ecc658344"
+    }
+  ]
+}

@@ -23,8 +23,9 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 ENDPOINT = "https://catalog.api.2gis.com/3.0/items"
 DEFAULT_BBOX = (51.02, 71.30, 51.22, 71.55)
 MAX_BYTES = 5_000_000
+DEFAULT_PAGE_SIZE = 10
 DEFAULT_QUERIES = ("Кофейни", "Музеи", "Парки", "Достопримечательности", "Детские площадки", "Торговые центры")
-FIELDS = "items.point,items.rubrics,items.schedule,items.schedule_special,items.flags,items.is_deleted,items.attribute_groups"
+FIELDS = "items.point,items.rubrics,items.schedule,items.schedule_special,items.flags,items.dates.deleted_at,items.attribute_groups"
 RUBRICS = {
     "кофейни": "cafe", "кафе": "cafe", "рестораны": "restaurant",
     "бары": "bar", "пабы": "bar", "музеи": "museum", "театры": "theatre",
@@ -95,6 +96,9 @@ def normalize_items(items, collected_at, bbox=DEFAULT_BBOX):
     for item in items:
         if not isinstance(item, dict) or item.get("is_deleted"):
             continue
+        dates = item.get("dates")
+        if isinstance(dates, dict) and dates.get("deleted_at"):
+            continue
         flags = item.get("flags")
         if isinstance(flags, dict) and flags.get("temporary_closed"):
             continue
@@ -150,9 +154,11 @@ def normalize_items(items, collected_at, bbox=DEFAULT_BBOX):
     return sorted(places.values(), key=lambda p: p["id"])
 
 
-def fetch_page(key, query, bbox, page):
+def fetch_page(key, query, bbox, page, page_size=DEFAULT_PAGE_SIZE):
+    if type(page_size) is not int or not 1 <= page_size <= 50:
+        raise CollectionError("page_size: целое число от 1 до 50; демо-ключ допускает до 10.")
     south, west, north, east = bbox
-    params = {"key": key, "q": query, "locale": "ru_KZ", "page": page, "page_size": 50,
+    params = {"key": key, "q": query, "locale": "ru_KZ", "page": page, "page_size": page_size,
               "point1": f"{west},{north}", "point2": f"{east},{south}",
               "type": "branch,attraction,adm_div.place", "fields": FIELDS}
     request = Request(ENDPOINT + "?" + urlencode(params), headers={"Accept": "application/json", "User-Agent": "AstanaWalks/0.1 (educational batch collector)"})
@@ -179,13 +185,15 @@ def fetch_page(key, query, bbox, page):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--query", action="append", help="Repeat for several queries; defaults to six POI categories")
-    parser.add_argument("--pages", type=int, default=1, help="Maximum pages per query, 1–10 (50 results/page)")
+    parser.add_argument("--pages", type=int, default=1, help="Maximum pages per query, 1–10; demo keys allow at most 5")
+    parser.add_argument("--page-size", type=int, default=DEFAULT_PAGE_SIZE,
+                        help="Results/page, 1–50; default 10 is demo-compatible, values above 10 require a suitable subscription")
     parser.add_argument("--bbox", nargs=4, type=float, default=DEFAULT_BBOX, metavar=("SOUTH", "WEST", "NORTH", "EAST"))
     parser.add_argument("--input", type=Path, action="append", help="Replay a saved official API JSON response, without a key or network")
     parser.add_argument("--output", type=Path, default=Path("data/poi.2gis.json"))
     args = parser.parse_args(argv)
-    if not valid_bbox(args.bbox) or not 1 <= args.pages <= 10:
-        parser.error("Проверьте bbox и pages (от 1 до 10).")
+    if not valid_bbox(args.bbox) or not 1 <= args.pages <= 10 or not 1 <= args.page_size <= 50:
+        parser.error("Проверьте bbox, pages (от 1 до 10) и page-size (от 1 до 50).")
     queries = args.query or list(DEFAULT_QUERIES)
     if any(not q.strip() or len(q) > 500 for q in queries):
         parser.error("query: от 1 до 500 символов.")
@@ -204,12 +212,12 @@ def main(argv=None):
                 for page in range(1, args.pages + 1):
                     if requests:
                         time.sleep(0.25)
-                    payload = fetch_page(key, query, tuple(args.bbox), page)
+                    payload = fetch_page(key, query, tuple(args.bbox), page, args.page_size)
                     requests += 1
                     batch = response_items(payload)
                     items.extend(batch)
                     total = payload["result"].get("total")
-                    if len(batch) < 50 or (type(total) is int and page * 50 >= total):
+                    if len(batch) < args.page_size or (type(total) is int and page * args.page_size >= total):
                         break
         collected_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
         places = normalize_items(items, collected_at, tuple(args.bbox))
@@ -220,6 +228,7 @@ def main(argv=None):
                     "collection_method": "2gis_api_replay" if args.input else "2gis_places_api",
                     "queries": None if args.input else queries, "bbox": list(args.bbox),
                     "pages_per_query_limit": None if args.input else args.pages, "requests": requests,
+                    "page_size": None if args.input else args.page_size,
                     "coverage": "bounded_query_sample_not_complete_city_catalog",
                     "source_files": [p.name for p in args.input] if args.input else [],
                     "attribution": "2ГИС", "license": "2GIS API terms (not ODbL)",

@@ -1,0 +1,68 @@
+{
+  "method": "actual in-app browser UI; simulated public start, no geolocation",
+  "minutes": 45,
+  "origin": {
+    "lat": 51.0892,
+    "lon": 71.4074
+  },
+  "plan": "≈ 42 мин всего · 22 мин пешком · 20 мин в местах · возврат к старту учтён",
+  "query": "У меня 45 минут возле Mega, хочу короткую прогулку",
+  "recommendations": [
+    {
+      "name": "NU Park",
+      "source": "https://www.openstreetmap.org/way/1467797207",
+      "text": "1\nNU Park\nПарк\n≈ 775 м от предыдущей точки\n20 мин на посещение\n\nПарк соответствует интересу в прогулке на воздухе\n\nЧто сделать: Идея: сделать короткую остановку в парке для отдыха в свежем воздухе. Перед выходом проверьте доступ и часы по источнику.\n\nОбъяснение и идея — LLM · сведения о месте — POI\n\nЧасы и доступ сейчас не подтверждены; проверьте перед посещением.\n\nИсточник места ↗"
+    }
+  ],
+  "recorded_at": "2026-10-19T20:52:30.391Z",
+  "rendered_mode": "RAG + LLM",
+  "time_of_day": "day",
+  "url": "https://entire-burn-cricket-ashley.trycloudflare.com/",
+  "viewport_after_reset": {
+    "documentWidth": 1027,
+    "height": 815,
+    "scrollWidth": 1027,
+    "width": 1042
+  },
+  "warnings": "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+  "scope": "One featured MEGA45 live UI result plus responsive layout and manual install instruction; not the five-scenario evaluator or physical-phone installation",
+  "model_evidence": "output/llm-evidence/model-manifest.json",
+  "evaluation_evidence": "output/evaluation-live.json",
+  "mobile_layout": {
+    "requested_viewport_css": {
+      "width": 390,
+      "height": 844
+    },
+    "observed_document_width": 375,
+    "observed_scroll_width": 375,
+    "horizontal_overflow": false,
+    "physical_device": false
+  },
+  "screenshots": [
+    {
+      "path": "output/demo-ui.jpg",
+      "format": "JPEG",
+      "width": 1027,
+      "height": 804,
+      "sha256": "0a854b342e062ee2c9f00f1db2fd13acbdd3dbcdc80494d060a518116347adb0"
+    },
+    {
+      "path": "output/demo-mobile.jpg",
+      "format": "JPEG",
+      "width": 375,
+      "height": 812,
+      "sha256": "719945a0524ed8324a1b1922f4d7f65c8799cad8c2e5230cdc0547108c71a421"
+    },
+    {
+      "path": "output/demo-mobile-install.jpg",
+      "format": "JPEG",
+      "width": 375,
+      "height": 812,
+      "sha256": "d0a21a6802d3364597c366b86edf52f28c3c48ef769c216157b6278d88682544"
+    }
+  ],
+  "limitations": [
+    "UI actions can vary from the separately recorded evaluator text. The plan, POI and why match; the deck quote cites the evaluator.",
+    "These screenshots show a desktop browser and a mobile viewport, not a physical phone. Android Chrome installation is user-reported separately in phone-check.json."
+  ]
+}

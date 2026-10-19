@@ -1,0 +1,24 @@
+{
+  "started_at": "2026-10-19T22:03:15+00:00",
+  "completed_at": "2026-10-19T22:03:16+00:00",
+  "command": "python -m unittest discover -s tests -v (same unittest discovery, elevated for OS temp/socket tests)",
+  "results": {
+    "run": 131,
+    "passed": 131,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "success": true,
+    "failure_tests": [],
+    "error_tests": []
+  },
+  "suite_output": ".Saved 25 POI to C:\\Users\\ltybcs\\AppData\\Local\\Temp\\tmpar9y7uum\\poi.json; source: 2GIS, not field verified.\n.Saved 60 POI to C:\\Users\\ltybcs\\AppData\\Local\\Temp\\tmpeu2j5fsw\\poi.json; source: 2GIS, not field verified.\n...Saved 1 POI to C:\\Users\\ltybcs\\AppData\\Local\\Temp\\tmp1qy_cs_z\\poi.json; source: 2GIS, not field verified.\n...Saved 1 POI to C:\\Users\\ltybcs\\AppData\\Local\\Temp\\tmpeg2obmrr\\poi.json; source: 2GIS, not field verified.\n...........................................................................................................................\n----------------------------------------------------------------------\nRan 131 tests in 1.477s\n\nOK\n",
+  "application_sha256": {
+    "app/llm.py": "f2a1cd73fb21caae8c1f3dbfdf8173a1eb71190714b5f1882cd4002541c78b4e",
+    "app/generation.py": "a6bbf94a08b2c3be05f5eded32297275a5defd478c2c75d001b7cba49d6fcb5c",
+    "app/retrieval.py": "642ab81c1f9dfec27497b1d9650e61b16fa3df4476782a58182a22e4cf936da2",
+    "app/server.py": "515412a93e6572eeeb8a7f82bd65fd8e1d67a0c8eec97d8db3ff3478ad0f4d12",
+    "app/dgis_live.py": "0b32b5a6118e2275b5b8d362d711da7e0132558288a1177911c762c9181d2977"
+  },
+  "restricted_attempt": "Prior restricted run failed due OS Temp permissions and socket access; receipt retained in ignored candidate only."
+}

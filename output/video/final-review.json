@@ -1,0 +1,395 @@
+{
+  "source_pr": 13,
+  "source_commit": "b2462065e4d470b4c06f38ee82e87a2e9b96c4bf",
+  "archive_sha256": "40fb3bcc5cac81d1d699b55d8fcfb7e747904aa40caeb4288f9c93aec1ff385c",
+  "reviewer": "Codex A local independent final_review",
+  "checked_at": "2026-10-19T22:29:06.285950+00:00",
+  "checks": [
+    {
+      "name": "Exact Git ZIP comment",
+      "pass": true
+    },
+    {
+      "name": "Bounded extraction only final media files",
+      "pass": true,
+      "files": 18
+    },
+    {
+      "name": "Dataset1267 exact bytes",
+      "pass": true
+    },
+    {
+      "name": "Pinned installed model manifest bytes",
+      "pass": true
+    },
+    {
+      "name": "Video model pinned weight SHA",
+      "pass": true
+    },
+    {
+      "name": "Frozen source candidate",
+      "pass": true
+    },
+    {
+      "name": "Source current static bytes app.js",
+      "pass": true
+    },
+    {
+      "name": "Source current static bytes map.js",
+      "pass": true
+    },
+    {
+      "name": "Source current static bytes map.css",
+      "pass": true
+    },
+    {
+      "name": "Source current static bytes sw.js",
+      "pass": true
+    },
+    {
+      "name": "Exact manifest media astana-walks-demo.mp4",
+      "pass": true,
+      "sha256": "7106a06c4122f8d9eceb9158aa80ab4a37e4495e35fa6d71b84a29e141b515b8",
+      "bytes": 6248376
+    },
+    {
+      "name": "Exact manifest media astana-walks-live-pass.mp4",
+      "pass": true,
+      "sha256": "944f5dc34ffa69c70392e56a3dfccfafb977809cec96c4e0bf569225d08dc483",
+      "bytes": 5966402
+    },
+    {
+      "name": "Exact manifest media preview-overview.jpg",
+      "pass": true,
+      "sha256": "aa4feaafe6b4bce21e623bc3fc6c2c3109f68c92f906e0415c6c27be25c370b6",
+      "bytes": 147484
+    },
+    {
+      "name": "Exact manifest media preview-featured.jpg",
+      "pass": true,
+      "sha256": "004161d49d1789e3c07ba44ba78a323b54b3ca446816d89f855acb8916a816b4",
+      "bytes": 127198
+    },
+    {
+      "name": "Exact manifest media preview-map-route.jpg",
+      "pass": true,
+      "sha256": "30ac2a488a66cceb65c63173d7e5d5075293a133dd2c7ce119db846c018ea260",
+      "bytes": 166428
+    },
+    {
+      "name": "Exact manifest media preview-coffee.jpg",
+      "pass": true,
+      "sha256": "fec143ce465171cf96439e415ffc5b4466e98e4b0f25170824fc0e856619d761",
+      "bytes": 129785
+    },
+    {
+      "name": "Exact manifest media preview-family.jpg",
+      "pass": true,
+      "sha256": "5354a42de47de73092ab35373a210fd387ae7b6c9212673d0a41cfe80e88434c",
+      "bytes": 140254
+    },
+    {
+      "name": "Exact manifest media preview-family-second.jpg",
+      "pass": true,
+      "sha256": "9c4e27defed642331e47f044a3d8a78be44197aedef31b8b58d4b5b71b0b72e5",
+      "bytes": 139424
+    },
+    {
+      "name": "Exact manifest media preview-tourist.jpg",
+      "pass": true,
+      "sha256": "6f02b06f599d173bd28447422e8d1a86c515e6bb923b7c30748ae7ad523a45ec",
+      "bytes": 130015
+    },
+    {
+      "name": "Exact manifest media preview-tourist-second.jpg",
+      "pass": true,
+      "sha256": "81f82498fbb3534b08c4c26e60217aa1260b33485c03ae8972cdb86421e0f63d",
+      "bytes": 130457
+    },
+    {
+      "name": "Exact manifest media preview-night.jpg",
+      "pass": true,
+      "sha256": "e4e4edbe196a811bf026e50b2a2e9dade26fe52b79e9a63409f220206b9e3a8e",
+      "bytes": 130411
+    },
+    {
+      "name": "Exact manifest media preview-quota.jpg",
+      "pass": true,
+      "sha256": "bee49b085fbdf28c4761f8bdd7e7670ca68d524ef49c5686386b48df6c4ffe79",
+      "bytes": 143052
+    },
+    {
+      "name": "Exact manifest media preview-privacy.jpg",
+      "pass": true,
+      "sha256": "995fdfd3ee815de8cbd0bb3161ebc6f5848efa9bc3f48991cadfa66a37c53a31",
+      "bytes": 134450
+    },
+    {
+      "name": "Exact manifest media preview-install.jpg",
+      "pass": true,
+      "sha256": "39ad297a7b60122f830fad433e3e1425c4d6bdc5e095291fcc2e66cbfeb4656b",
+      "bytes": 161100
+    },
+    {
+      "name": "Observed responses exact manifest bytes",
+      "pass": true
+    },
+    {
+      "name": "Original separate install clip exact bytes",
+      "pass": true
+    },
+    {
+      "name": "Separate old installation provenance",
+      "pass": true
+    },
+    {
+      "name": "348 strictly increasing observation timestamps",
+      "pass": true
+    },
+    {
+      "name": "Actual maximum sample gap / main real span",
+      "pass": true
+    },
+    {
+      "name": "No physical-phone/personal GPS claim",
+      "pass": true
+    },
+    {
+      "name": "Video has no new 2GIS provider calls",
+      "pass": true
+    },
+    {
+      "name": "Full decode astana-walks-demo.mp4",
+      "pass": true,
+      "exit_code": 0,
+      "error_log": ""
+    },
+    {
+      "name": "Actual probe astana-walks-demo.mp4",
+      "pass": true,
+      "duration": 250.64,
+      "probe_log": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\astana-walks-demo.mp4':\n  Metadata:\n    major_brand     : isom\n    minor_version   : 512\n    compatible_brands: isomiso2avc1mp41\n    encoder         : Lavf62.12.102\n  Duration: 00:04:10.64, start: 0.000000, bitrate: 199 kb/s\n  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuvj420p(pc, bt470bg/unknown/unknown, progressive), 1080x1920 [SAR 3517:3519 DAR 3517:6256], 197 kb/s, SAR 5275:5278 DAR 47475:84448, 25 fps, 25 tbr, 12800 tbn (default)\n      Metadata:\n        handler_name    : VideoHandler\n        vendor_id       : [0][0][0][0]\n        encoder         : Lavc62.28.102 libx264\nAt least one output file must be specified\n"
+    },
+    {
+      "name": "Full decode astana-walks-live-pass.mp4",
+      "pass": true,
+      "exit_code": 0,
+      "error_log": ""
+    },
+    {
+      "name": "Actual probe astana-walks-live-pass.mp4",
+      "pass": true,
+      "duration": 226.64,
+      "probe_log": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\astana-walks-live-pass.mp4':\n  Metadata:\n    major_brand     : isom\n    minor_version   : 512\n    compatible_brands: isomiso2avc1mp41\n    encoder         : Lavf62.12.102\n  Duration: 00:03:46.64, start: 0.000000, bitrate: 210 kb/s\n  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuvj420p(pc, bt470bg/unknown/unknown, progressive), 1080x1920 [SAR 3517:3519 DAR 3517:6256], 208 kb/s, SAR 5275:5278 DAR 47475:84448, 25 fps, 25 tbr, 12800 tbn (default)\n      Metadata:\n        handler_name    : VideoHandler\n        vendor_id       : [0][0][0][0]\n        encoder         : Lavc62.28.102 libx264\nAt least one output file must be specified\n"
+    },
+    {
+      "name": "Extract actual final frame overview",
+      "pass": true,
+      "error_log": ""
+    },
+    {
+      "name": "Extract actual final frame map",
+      "pass": true,
+      "error_log": ""
+    },
+    {
+      "name": "Extract actual final frame family",
+      "pass": true,
+      "error_log": ""
+    },
+    {
+      "name": "Extract actual final frame family-second",
+      "pass": true,
+      "error_log": ""
+    },
+    {
+      "name": "Extract actual final frame quota",
+      "pass": true,
+      "error_log": ""
+    },
+    {
+      "name": "Extract actual final frame privacy",
+      "pass": true,
+      "error_log": ""
+    },
+    {
+      "name": "Extract actual final frame install-boundary",
+      "pass": true,
+      "error_log": ""
+    },
+    {
+      "name": "Extract actual final frame install",
+      "pass": true,
+      "error_log": ""
+    },
+    {
+      "name": "Extract actual final frame end",
+      "pass": true,
+      "error_log": ""
+    },
+    {
+      "name": "All five card names and source links match snapshot",
+      "pass": true
+    },
+    {
+      "name": "All five literal why/action pairs are in observed card text",
+      "pass": true
+    },
+    {
+      "name": "Three visible LLM results and two labelled template results",
+      "pass": true
+    },
+    {
+      "name": "Only public origins and budgets including return",
+      "pass": true
+    },
+    {
+      "name": "Independent actual frame review has no visual/privacy blocker",
+      "pass": true,
+      "frames": [
+        "map38",
+        "family114",
+        "family-second122",
+        "quota211",
+        "privacy223",
+        "install-boundary226.7",
+        "install238.64",
+        "end250.4"
+      ]
+    }
+  ],
+  "decodes": [
+    {
+      "file": "astana-walks-demo.mp4",
+      "full_decode_pass": true,
+      "decode_exit_code": 0,
+      "decode_error_log": "",
+      "probe_pass": true,
+      "duration_seconds": 250.64,
+      "probe_log": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\astana-walks-demo.mp4':\n  Metadata:\n    major_brand     : isom\n    minor_version   : 512\n    compatible_brands: isomiso2avc1mp41\n    encoder         : Lavf62.12.102\n  Duration: 00:04:10.64, start: 0.000000, bitrate: 199 kb/s\n  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuvj420p(pc, bt470bg/unknown/unknown, progressive), 1080x1920 [SAR 3517:3519 DAR 3517:6256], 197 kb/s, SAR 5275:5278 DAR 47475:84448, 25 fps, 25 tbr, 12800 tbn (default)\n      Metadata:\n        handler_name    : VideoHandler\n        vendor_id       : [0][0][0][0]\n        encoder         : Lavc62.28.102 libx264\nAt least one output file must be specified\n"
+    },
+    {
+      "file": "astana-walks-live-pass.mp4",
+      "full_decode_pass": true,
+      "decode_exit_code": 0,
+      "decode_error_log": "",
+      "probe_pass": true,
+      "duration_seconds": 226.64,
+      "probe_log": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\astana-walks-live-pass.mp4':\n  Metadata:\n    major_brand     : isom\n    minor_version   : 512\n    compatible_brands: isomiso2avc1mp41\n    encoder         : Lavf62.12.102\n  Duration: 00:03:46.64, start: 0.000000, bitrate: 210 kb/s\n  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuvj420p(pc, bt470bg/unknown/unknown, progressive), 1080x1920 [SAR 3517:3519 DAR 3517:6256], 208 kb/s, SAR 5275:5278 DAR 47475:84448, 25 fps, 25 tbr, 12800 tbn (default)\n      Metadata:\n        handler_name    : VideoHandler\n        vendor_id       : [0][0][0][0]\n        encoder         : Lavc62.28.102 libx264\nAt least one output file must be specified\n"
+    }
+  ],
+  "actual_frames": [
+    {
+      "label": "overview",
+      "seconds": 2,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\overview.png",
+      "sha256": "ee8968ed6f76f82b5358772b0acea4d4f4b5ee42e253f4a039e92d24e1474ff9"
+    },
+    {
+      "label": "map",
+      "seconds": 38,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\map.png",
+      "sha256": "7d3774e41fcff594148516ce945d6ce7a908b734217fb3baa940365e0733357b"
+    },
+    {
+      "label": "family",
+      "seconds": 114,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\family.png",
+      "sha256": "9ca518d004ac4e63609d9c4c85d847f9d521f23bf4ab037fbc512b76f04ed7f2"
+    },
+    {
+      "label": "family-second",
+      "seconds": 122,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\family-second.png",
+      "sha256": "a1bf8c087a5c62fd7345af4a2b5dc82fa2de7c01eb1f9536d0e6129bfb739f48"
+    },
+    {
+      "label": "quota",
+      "seconds": 211,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\quota.png",
+      "sha256": "a654eac66670bdc759846b965f0ff67d2a70c7864acfbb32d8f2fb579ca6d2f7"
+    },
+    {
+      "label": "privacy",
+      "seconds": 223,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\privacy.png",
+      "sha256": "a8c3ad134c7bd1bb06b1f992a4ce6d62864859ec400387f8c0ee339fdc9707c0"
+    },
+    {
+      "label": "install-boundary",
+      "seconds": 226.7,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\install-boundary.png",
+      "sha256": "cda2137e2d9bc9944fcf0cd2b40fac592b75020066eadc5ea13ff49dea7c2f13"
+    },
+    {
+      "label": "install",
+      "seconds": 238.64,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\install.png",
+      "sha256": "857f4f695e5ab7fcf75ca29d65c8604f4450aba9b88a41682af5ff30e70db93e"
+    },
+    {
+      "label": "end",
+      "seconds": 250.4,
+      "path": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\pr13-independent\\end.png",
+      "sha256": "d86291c062c4deab8d3a13bc2aa75404b9c9be2f92cb5d8886b1947ee583d228"
+    }
+  ],
+  "visual_review": {
+    "reviewer": "local independent final_review",
+    "source": "Frames independently decoded from final MP4, not supplied previews",
+    "reviewed_seconds": [
+      38,
+      114,
+      122,
+      211,
+      223,
+      226.7,
+      238.64,
+      250.4
+    ],
+    "observations": [
+      "Street tiles, numbered stop/return diagram, OSM attribution and unverified-passage warning are visible.",
+      "Both family cards show source links, unconfirmed access/hours and ordinary LLM action labels; no playground-in-park claim.",
+      "2GIS pane visibly states15/20, no precise geolocation sent, no results stored; caption says provider search not made in recording.",
+      "Installation segment visibly starts as separate recording and says manual browser guidance; no OS/physical phone installation is shown.",
+      "No personal GPS, account windows or credentials visible in the inspected frames."
+    ],
+    "blockers": []
+  },
+  "provider_calls": 0,
+  "network_calls": 0,
+  "git_mutations": 0,
+  "canonical_changes": 0,
+  "root_review": {
+    "reviewer": "Codex A/root",
+    "reported_via": "Direct parent-agent message during this review",
+    "actual_frame_directory": "C:\\Users\\ltybcs\\Documents\\ChatGPT\\Хакатон GDG Astana AI 2016\\tmp\\root-pr13-frames",
+    "seconds": [
+      2,
+      21,
+      55,
+      178,
+      186,
+      201,
+      223
+    ],
+    "scope": "Root reported independently viewing all seven final-MP4 frames and reading all five literal why/display_action pairs; no blockers. This is attributed review evidence, not claimed as this subagent visual work."
+  },
+  "metadata_second_reader": {
+    "reviewer": "local child audit_skeleton_review",
+    "scope": "Read-only ZIP manifest/README/observed-responses and historical installation provenance",
+    "result": "No blockers; literal five pairs are present in captured card text; timing/source/privacy metadata consistent.",
+    "limitation": "Video manifest describes model as reported by A and pins weight SHA; model-manifest SHA is not directly asserted there. This review separately matched packaged model-manifest exact fd2a4c... bytes."
+  },
+  "limitations": [
+    "Sampled tab screenshots at target2fps, not a native full-frame screen recording; maximum observation gap20.801s retains last observed image.",
+    "No physical-phone capture. Last24s is a separately labelled older installation-instruction clip.",
+    "This UI take has no provider-attempt count; canonical mixed six-call evidence is separate.",
+    "NU Park path and architecture descriptions remain suggestions/general category statements; access, child safety, toilets, operating hours and walkable passages remain unverified.",
+    "Full decoding establishes media integrity, not observation of every UI state between sampled frames."
+  ],
+  "checks_passed": 49,
+  "checks_total": 49,
+  "blockers": [],
+  "approved_commit": "b2462065e4d470b4c06f38ee82e87a2e9b96c4bf"
+}

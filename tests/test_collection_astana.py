@@ -38,8 +38,9 @@ class RealAstanaDataTests(unittest.TestCase):
     def test_normalized_data_is_reproducible_from_retained_raw_snapshot(self):
         raw = json.loads((ROOT / self.metadata["raw_snapshot"]).read_text(encoding="utf-8"))
         self.assertEqual(raw["osm3s"]["timestamp_osm_base"], self.metadata["source_snapshot_at"])
-        self.assertEqual(normalize_elements(raw, self.metadata["collected_at"]), self.places)
-        self.assertEqual((ROOT / self.metadata["query_file"]).read_text(encoding="utf-8"), build_query(DEFAULT_BBOX))
+        profile = self.metadata.get("query_profile", "legacy_named")
+        self.assertEqual(normalize_elements(raw, self.metadata["collected_at"], bbox=self.metadata["bbox"], profile=profile), self.places)
+        self.assertEqual((ROOT / self.metadata["query_file"]).read_text(encoding="utf-8"), build_query(tuple(self.metadata["bbox"]), profile=profile))
 
     def test_landmarks_and_unknown_attributes_are_retained_without_fabrication(self):
         by_id = {p["id"]: p for p in self.places}

@@ -1,0 +1,41 @@
+{
+  "llm": {
+    "provider": "llama.cpp b11739 (CPU, loopback)",
+    "model": "Qwen3-4B-Instruct-2507 Q4_K_M (Unsloth) / astana-local",
+    "live_verified": true,
+    "evidence": "Actual recorded results and accepted narration: output/evaluation-live.json and output/live-explanations.json. Generated metrics are derived from the report."
+  },
+  "video_url": null,
+  "screenshot_layout": "detail",
+  "screenshot_crop": {"left": 0.325, "top": 0.49, "right": 0.065, "bottom": 0.015},
+  "mobile_screenshot": "output/demo-mobile.jpg",
+  "ui_evidence": "output/ui-check.json",
+  "narration_evidence": "output/live-explanations.json",
+  "features": {
+    "street_map": {
+      "available": true,
+      "library": "Leaflet",
+      "tile_provider": "OpenStreetMap",
+      "screenshot": "output/map-desktop.jpg",
+      "screenshot_dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+      "crop": {"left": 0.325, "top": 0.098, "right": 0.065, "bottom": 0.552}
+    },
+    "osm_refresh": {"available": true},
+    "two_gis": {"available": true}
+  },
+  "video": {
+    "publication": "user_upload_later",
+    "current_mp4": "output/video/final/astana-walks-demo.mp4",
+    "current_dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+    "manifest": "output/video/final/manifest.json",
+    "review_receipt": "output/video/final-review.json",
+    "previous_snapshot_video": "output/history/qwen3-4b/738-poi/output/video/final/astana-walks-demo.mp4"
+  },
+  "pwa": {
+    "enabled": true,
+    "evidence": "PR #7 c31bc7a and quota fix 90ed954. web/sw.js: shell allowlist, API network-only, no query/non-GET caching. HTTPS resource results: output/https-check.json. Physical installation and launch from icon reported by the user on 2026-10-20, not independently observed.",
+    "demo_url": "https://entire-burn-cricket-ashley.trycloudflare.com/",
+    "https_evidence": "output/https-check.json",
+    "phone_evidence": "output/phone-check.json"
+  }
+}

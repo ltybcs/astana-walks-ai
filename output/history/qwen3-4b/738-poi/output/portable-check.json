@@ -1,0 +1,286 @@
+{
+  "source_commit": "6bc91c4",
+  "generated_at": "2026-10-19T21:05:34+00:00",
+  "zip_sha256": "62171db035358e32077e2fd2b8c958c95c1b7737ce511d656913bafb8a6a8325",
+  "python": {
+    "version": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+    "executable": "C:\\Users\\ltybcs\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe"
+  },
+  "checks": {
+    "zip_commit_comment": {
+      "pass": true,
+      "result": "6bc91c49e9d5f03054297cabd74cbc3b7cdbd6b7"
+    },
+    "safe_zip_extraction": {
+      "pass": true,
+      "result": {
+        "files": 111,
+        "expanded_bytes": 5250301,
+        "directory": "tmp/portable-6bc91c4-oki60jog",
+        "symlinks_allowed": false,
+        "paths_confined": true
+      }
+    },
+    "isolated_child_environment": {
+      "pass": true,
+      "result": {
+        "llm_environment_variables": [],
+        "pythonpath_removed": true,
+        "poi_data_path_removed": true,
+        "cwd": "tmp/portable-6bc91c4-oki60jog/astana-walks"
+      }
+    },
+    "health_real_dataset_no_llm": {
+      "pass": true,
+      "result": {
+        "status": "ok",
+        "api_version": 1,
+        "places_count": 738,
+        "mode": "extractive",
+        "llm_configured": false,
+        "generation": "extractive",
+        "dataset_name": "Astana POI / OpenStreetMap",
+        "dataset_is_demo": false
+      }
+    },
+    "loopback_separate_port": {
+      "pass": true,
+      "result": {
+        "host": "127.0.0.1",
+        "port": 52471,
+        "standard_app_main": true,
+        "hidden_child": true,
+        "python_flags": [
+          "-E",
+          "-s",
+          "-S"
+        ],
+        "site_packages_disabled": true
+      }
+    },
+    "places_default_738": {
+      "pass": true,
+      "result": {
+        "http_status": 200,
+        "count": 738
+      }
+    },
+    "ui_manifest_icons": {
+      "pass": true,
+      "result": {
+        "/": {
+          "status": 200,
+          "bytes": 9807,
+          "content_type": "text/html"
+        },
+        "/app.js": {
+          "status": 200,
+          "bytes": 16035,
+          "content_type": "text/javascript"
+        },
+        "/styles.css": {
+          "status": 200,
+          "bytes": 12674,
+          "content_type": "text/css"
+        },
+        "/pwa.js": {
+          "status": 200,
+          "bytes": 4238,
+          "content_type": "text/javascript"
+        },
+        "/sw.js": {
+          "status": 200,
+          "bytes": 2186,
+          "content_type": "text/javascript"
+        },
+        "/favicon.svg": {
+          "status": 200,
+          "bytes": 214,
+          "content_type": "image/svg+xml"
+        },
+        "/manifest.webmanifest": {
+          "status": 200,
+          "bytes": 812,
+          "content_type": "application/manifest+json"
+        },
+        "/icons/icon-192.png": {
+          "status": 200,
+          "bytes": 4364,
+          "content_type": "image/png"
+        },
+        "/icons/icon-512.png": {
+          "status": 200,
+          "bytes": 11314,
+          "content_type": "image/png"
+        },
+        "/icons/maskable-512.png": {
+          "status": 200,
+          "bytes": 4095,
+          "content_type": "image/png"
+        },
+        "/icons/apple-touch-icon.png": {
+          "status": 200,
+          "bytes": 1841,
+          "content_type": "image/png"
+        }
+      }
+    },
+    "private_paths_closed": {
+      "pass": true,
+      "result": {
+        "/app/server.py": 404,
+        "/v1/models": 404
+      }
+    },
+    "mega_custom_45_http": {
+      "pass": true,
+      "result": {
+        "http_status": 200,
+        "mode": "extractive",
+        "llm_status": "not_configured",
+        "count": 1,
+        "total_minutes": 42,
+        "names": [
+          "NU Park"
+        ],
+        "clarification": null
+      }
+    },
+    "mega_expected_42min": {
+      "pass": true,
+      "result": {
+        "minutes": 42,
+        "ids": [
+          "osm:way/1467797207"
+        ]
+      }
+    },
+    "socket_http": {
+      "pass": true,
+      "result": {
+        "http_status": 200,
+        "mode": "extractive",
+        "llm_status": "not_configured",
+        "count": 0,
+        "total_minutes": 0,
+        "names": [],
+        "clarification": "Нет подходящего места с подтверждённой в источнике розеткой. Увеличьте время, выберите другую отправную точку или уточните условия; неизвестные свойства не считаются подтверждёнными."
+      }
+    },
+    "socket_explained_abstention": {
+      "pass": true,
+      "result": {
+        "result_count": 0,
+        "clarification": "Нет подходящего места с подтверждённой в источнике розеткой. Увеличьте время, выберите другую отправную точку или уточните условия; неизвестные свойства не считаются подтверждёнными."
+      }
+    },
+    "family_http": {
+      "pass": true,
+      "result": {
+        "http_status": 200,
+        "mode": "extractive",
+        "llm_status": "not_configured",
+        "count": 1,
+        "total_minutes": 34,
+        "names": [
+          "Парк Астана"
+        ],
+        "clarification": null
+      }
+    },
+    "family_expected_34min": {
+      "pass": true,
+      "result": {
+        "minutes": 34,
+        "names": [
+          "Парк Астана"
+        ]
+      }
+    },
+    "five_extractive_scenarios": {
+      "pass": true,
+      "result": {
+        "summary": {
+          "scenarios_total": 5,
+          "scenarios_passed": 5,
+          "tests": null,
+          "llm": {
+            "eligible_scenarios": 4,
+            "validated_scenarios": 0,
+            "fallback_scenarios": 4,
+            "total_attempts": 0
+          }
+        },
+        "dataset": {
+          "name": "Astana POI / OpenStreetMap",
+          "is_demo": false,
+          "places_count": 738,
+          "path": "data/poi.astana.json",
+          "sha256": "eb5ebd1a3bd13bbae5ce5005a663a3ac0a0dbcb94b9dabfaa4d774f9610bee08"
+        },
+        "scenarios": [
+          {
+            "name": "30–60 минут возле MEGA",
+            "mode": "extractive",
+            "result_count": 1,
+            "total_minutes": 42,
+            "pass": true
+          },
+          {
+            "name": "Тихий кофе и розетка",
+            "mode": "extractive",
+            "result_count": 0,
+            "total_minutes": 0,
+            "pass": true
+          },
+          {
+            "name": "Прогулка с ребёнком",
+            "mode": "extractive",
+            "result_count": 1,
+            "total_minutes": 32,
+            "pass": true
+          },
+          {
+            "name": "Два часа у туриста",
+            "mode": "extractive",
+            "result_count": 3,
+            "total_minutes": 111,
+            "pass": true
+          },
+          {
+            "name": "Ночная активность",
+            "mode": "extractive",
+            "result_count": 1,
+            "total_minutes": 46,
+            "pass": true
+          }
+        ]
+      }
+    },
+    "no_original_app_imports": {
+      "pass": true,
+      "result": {
+        "child_python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+        "app_module_files_relative_to_extracted_root": {
+          "app": "app/__init__.py",
+          "app.llm": "app/llm.py",
+          "app.retrieval": "app/retrieval.py",
+          "app.generation": "app/generation.py",
+          "app.server": "app/server.py"
+        }
+      }
+    }
+  },
+  "limitations": [
+    "Portable stdlib/HTTP smoke only; no LLM generation or calls to model port 8081.",
+    "No physical phone, browser rendering, installed-PWA or public HTTPS check in this smoke.",
+    "All coordinates and requests in this report are fixed public evaluation scenarios."
+  ],
+  "process_cleanup": {
+    "own_child_stopped": true,
+    "exit_code": 1,
+    "foreign_processes_touched": false,
+    "threads_started_by_checker": 0
+  },
+  "success": true
+}

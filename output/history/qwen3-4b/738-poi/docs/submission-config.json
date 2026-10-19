@@ -1,0 +1,20 @@
+{
+  "llm": {
+    "provider": "llama.cpp b11739 (CPU, loopback)",
+    "model": "Qwen3-4B-Instruct-2507 Q4_K_M (Unsloth) / astana-local",
+    "live_verified": true,
+    "evidence": "Actual recorded results and accepted narration: output/evaluation-live.json and output/live-explanations.json. Generated metrics are derived from the report."
+  },
+  "video_url": null,
+  "screenshot_layout": "detail",
+  "screenshot_crop": {"left": 0.345, "top": 0.05, "right": 0.025, "bottom": 0.23},
+  "mobile_screenshot": "output/demo-mobile.jpg",
+  "narration_evidence": "output/live-explanations.json",
+  "pwa": {
+    "enabled": true,
+    "evidence": "PR #7 c31bc7a and quota fix 90ed954. web/sw.js: shell allowlist, API network-only, no query/non-GET caching. HTTPS resource results: output/https-check.json. Physical installation and launch from icon reported by the user on 2026-10-20, not independently observed.",
+    "demo_url": "https://entire-burn-cricket-ashley.trycloudflare.com/",
+    "https_evidence": "output/https-check.json",
+    "phone_evidence": "output/phone-check.json"
+  }
+}

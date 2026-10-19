@@ -1,0 +1,225 @@
+{
+  "source": "Actual observed ordinary-code 4B application responses, staged pending two manual readings",
+  "dataset": {
+    "name": "Astana POI / OpenStreetMap",
+    "is_demo": false,
+    "places_count": 1267,
+    "path": "data/poi.astana.json",
+    "sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e"
+  },
+  "summary": {
+    "scenarios_total": 5,
+    "scenarios_passed": 5,
+    "tests": {
+      "run": 124,
+      "passed": 124,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "success": true,
+      "failure_tests": [],
+      "error_tests": []
+    },
+    "llm": {
+      "eligible_scenarios": 4,
+      "validated_scenarios": 4,
+      "fallback_scenarios": 0,
+      "total_attempts": 4
+    }
+  },
+  "evidence": {
+    "manifest": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/manifest.json",
+    "actual_config": {
+      "model_alias": "astana-local",
+      "temperature": 0,
+      "seed_supplied": false,
+      "json_mode": "schema",
+      "token_parameter": "max_tokens",
+      "timeout_seconds": 120
+    },
+    "model": {
+      "installed_manifest": {
+        "runtime": "b11739",
+        "runtime_url": "https://github.com/ggml-org/llama.cpp/releases/download/b11739/llama-b11739-bin-win-cpu-x64.zip",
+        "runtime_sha256": "b1e0a14abdb4665c1b821b377ba063b221cec62882c373065cf8fb672988d3ff",
+        "model": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+        "base_model": "Qwen/Qwen3-4B-Instruct-2507",
+        "quantization_publisher": "Unsloth",
+        "model_revision": "a06e946bb6b655725eafa393f4a9745d460374c9",
+        "model_file": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+        "model_sha256": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+        "model_size": 2497281120,
+        "model_license": "apache-2.0",
+        "source": "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF"
+      },
+      "installed_manifest_sha256": "fd2a4c276e09d1fcfc3ba62a98eab4498eef5a2c27168ad4c606567e68e60119",
+      "weights_file_size_verified": 2497281120,
+      "weights_sha256_verified": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+      "endpoint_launch_confirmation": {
+        "confirmed_by": "Codex A / root",
+        "runtime_session": "68810",
+        "launch": "scripts/run_demo.py --data data/poi.astana.json --local-llm --refresh-poi",
+        "evidence": "Parent confirmed the fresh 1267-POI launcher is serving 8000/8081 with the same verified pinned 4B install before assigning the exclusive LLM slot",
+        "api_identity_limit": "Provider responses expose alias astana-local only; installed model identity is recorded through exact manifest/file SHA and parent-confirmed launch"
+      }
+    },
+    "ordinary_application_code": true,
+    "temperature_override": false,
+    "provider_calls_including_additional_check": 5
+  },
+  "manual_review": {
+    "status": "pending_two_independent_readings",
+    "quality_pass": null,
+    "reviewers": [],
+    "note": "Automatic constraint/tests success does not approve prose. Every accepted why/action must be read by Codex B and the parent before promotion."
+  },
+  "scenarios": [
+    {
+      "scenario": "30–60 минут возле MEGA",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "provider_file": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/response-1.json",
+      "clarification": null,
+      "recommendations": [
+        {
+          "id": "osm:way/1467797207",
+          "name": "NU Park",
+          "why": "Парк соответствует интересу в прогулке на воздухе",
+          "provider_action": "Идея: остановиться и пройти по тропинке в парке",
+          "display_action": "Идея: остановиться и пройти по тропинке в парке. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:way/1467797207"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": "Тихий кофе и розетка",
+      "mode": "extractive",
+      "llm_status": "no_candidates",
+      "llm_attempts": 0,
+      "llm_rejections": [],
+      "provider_file": null,
+      "clarification": "Нет подходящего места с подтверждённой в источнике розеткой. Увеличьте время, выберите другую отправную точку или уточните условия; неизвестные свойства не считаются подтверждёнными.",
+      "recommendations": []
+    },
+    {
+      "scenario": "Прогулка с ребёнком",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "provider_file": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/response-2.json",
+      "clarification": null,
+      "recommendations": [
+        {
+          "id": "osm:way/1196402246",
+          "name": "Ботанический сад",
+          "why": "Парк или сад соответствует запросу на прогулку на воздухе и может быть интересен детям.",
+          "provider_action": "Идея: сделать короткую остановку в парке для прогулки с ребёнком.",
+          "display_action": "Идея: сделать короткую остановку в парке для прогулки с ребёнком. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:way/1196402246"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": "Два часа у туриста",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "provider_file": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/response-3.json",
+      "clarification": null,
+      "recommendations": [
+        {
+          "id": "osm:way/230401645",
+          "name": "Байтерек",
+          "why": "Памятник соответствует интересу в знакомстве с городской архитектурой",
+          "provider_action": "Идея: остановиться и рассмотреть внешний вид Байтерека",
+          "display_action": "Идея: остановиться и рассмотреть внешний вид Байтерека. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:way/230401645"
+          ]
+        },
+        {
+          "id": "osm:way/917478479",
+          "name": "Астана Опера",
+          "why": "Театр может быть интересен для осмотра архитектурных особенностей",
+          "provider_action": "Идея: остановиться и осмотреть архитектуру Астана Опера",
+          "display_action": "Идея: остановиться и осмотреть архитектуру Астана Опера. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:way/917478479"
+          ]
+        },
+        {
+          "id": "osm:node/4958412863",
+          "name": "Zur Sultan",
+          "why": "Памятник представляет собой архитектурный объект для знакомства с городом",
+          "provider_action": "Идея: остановиться и рассмотреть Зур Султан",
+          "display_action": "Идея: остановиться и рассмотреть Зур Султан. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:node/4958412863"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": "Ночная активность",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "provider_file": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/response-4.json",
+      "clarification": null,
+      "recommendations": [
+        {
+          "id": "osm:node/4199896989",
+          "name": "Avtor",
+          "why": "Бар соответствует запросу на короткую остановку во время прогулки.",
+          "provider_action": "Идея: сделать короткую остановку для отдыха и разговора.",
+          "display_action": "Идея: сделать короткую остановку для отдыха и разговора. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:node/4199896989"
+          ]
+        }
+      ]
+    }
+  ],
+  "additional_checks": [
+    {
+      "scenario": "Дополнительный фактический семейный пресет",
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "provider_file": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/response-5.json",
+      "clarification": null,
+      "recommendations": [
+        {
+          "id": "osm:way/1131138292",
+          "name": "Без названия: детская площадка (OSM way/1131138292)",
+          "why": "Детская площадка соответствует интересу в прогулке с ребёнком и наличии условий для детей",
+          "provider_action": "Идея: посмотреть на детскую площадку в парке",
+          "display_action": "Идея: посмотреть на детскую площадку в парке. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:way/1131138292"
+          ]
+        },
+        {
+          "id": "osm:relation/15957444",
+          "name": "Парк Астана",
+          "why": "Парк или сад предоставляет пространство для прогулки на воздухе и соответствует запросу на природу",
+          "provider_action": "Идея: сделать короткую остановку в парке Астана",
+          "display_action": "Идея: сделать короткую остановку в парке Астана. Перед выходом проверьте доступ и часы по источнику.",
+          "citations": [
+            "osm:relation/15957444"
+          ]
+        }
+      ]
+    }
+  ]
+}
