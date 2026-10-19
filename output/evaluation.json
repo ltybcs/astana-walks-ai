@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-19T20:52:16+00:00",
+  "generated_at": "2026-10-19T20:47:20+00:00",
   "dataset": {
     "name": "Astana POI / OpenStreetMap",
     "is_demo": false,
@@ -8,8 +8,8 @@
     "path": "data/poi.astana.json",
     "sha256": "eb5ebd1a3bd13bbae5ce5005a663a3ac0a0dbcb94b9dabfaa4d774f9610bee08"
   },
-  "live_llm_requested": false,
-  "live_llm_used": false,
+  "live_llm_requested": true,
+  "live_llm_used": true,
   "scenarios": [
     {
       "name": "30–60 минут возле MEGA",
@@ -22,7 +22,7 @@
       "minutes": 45,
       "result_count": 1,
       "total_minutes": 42,
-      "mode": "extractive",
+      "mode": "llm-grounded",
       "pass": true,
       "checks": {
         "budget": true,
@@ -40,8 +40,8 @@
       "warnings": [
         "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
       ],
-      "llm_status": "disabled",
-      "llm_attempts": 0,
+      "llm_status": "validated",
+      "llm_attempts": 1,
       "llm_rejections": []
     },
     {
@@ -72,7 +72,7 @@
         "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
         "Тишина меняется в течение дня. Уровень шума не подтверждён, если это явно не указано источником."
       ],
-      "llm_status": "disabled",
+      "llm_status": "no_candidates",
       "llm_attempts": 0,
       "llm_rejections": []
     },
@@ -87,7 +87,7 @@
       "minutes": 60,
       "result_count": 1,
       "total_minutes": 32,
-      "mode": "extractive",
+      "mode": "llm-grounded",
       "pass": true,
       "checks": {
         "budget": true,
@@ -106,8 +106,8 @@
         "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
         "Возрастные ограничения, безопасность, туалеты и условия для ребёнка не подтверждены; проверьте их заранее."
       ],
-      "llm_status": "disabled",
-      "llm_attempts": 0,
+      "llm_status": "validated",
+      "llm_attempts": 1,
       "llm_rejections": []
     },
     {
@@ -121,7 +121,7 @@
       "minutes": 120,
       "result_count": 3,
       "total_minutes": 111,
-      "mode": "extractive",
+      "mode": "llm-grounded",
       "pass": true,
       "checks": {
         "budget": true,
@@ -141,8 +141,8 @@
       "warnings": [
         "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
       ],
-      "llm_status": "disabled",
-      "llm_attempts": 0,
+      "llm_status": "validated",
+      "llm_attempts": 1,
       "llm_rejections": []
     },
     {
@@ -156,7 +156,7 @@
       "minutes": 60,
       "result_count": 1,
       "total_minutes": 46,
-      "mode": "extractive",
+      "mode": "llm-grounded",
       "pass": true,
       "checks": {
         "budget": true,
@@ -175,8 +175,8 @@
         "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
         "Ночной запрос: отобраны только точки, где источник явно указал 24/7; актуальный доступ, освещение и безопасность не проверены."
       ],
-      "llm_status": "disabled",
-      "llm_attempts": 0,
+      "llm_status": "validated",
+      "llm_attempts": 1,
       "llm_rejections": []
     }
   ],
@@ -195,14 +195,109 @@
     },
     "llm": {
       "eligible_scenarios": 4,
-      "validated_scenarios": 0,
-      "fallback_scenarios": 4,
-      "total_attempts": 0
+      "validated_scenarios": 4,
+      "fallback_scenarios": 0,
+      "total_attempts": 4
     }
   },
   "limitations": [
     "Проверяются сценарные ограничения и источники, а не полное качество городских рекомендаций.",
     "Пустой ответ при неподтверждённой розетке или режиме 24/7 — честное воздержание.",
     "Нет полевой проверки POI, дорожного графа и гарантии семантической достоверности свободного текста."
-  ]
+  ],
+  "additional_checks": [
+    {
+      "name": "Дополнительный фактический семейный пресет",
+      "query": "Гуляю с ребёнком, ищу детскую площадку или парк",
+      "start": {
+        "lat": 51.1546,
+        "lon": 71.4252
+      },
+      "minutes": 60,
+      "result_count": 1,
+      "total_minutes": 34,
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "checks": {
+        "budget": true,
+        "expected_snapshot_plan_34min": true,
+        "category_only": true,
+        "sources": true
+      },
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "manifest": "output/llm-evidence/manifest.json",
+    "actual_config": {
+      "model_alias": "astana-local",
+      "temperature": 0,
+      "seed_supplied": false,
+      "json_mode": "schema",
+      "token_parameter": "max_tokens",
+      "timeout_seconds": 120
+    },
+    "model": {
+      "installed_manifest": {
+        "runtime": "b11739",
+        "runtime_url": "https://github.com/ggml-org/llama.cpp/releases/download/b11739/llama-b11739-bin-win-cpu-x64.zip",
+        "runtime_sha256": "b1e0a14abdb4665c1b821b377ba063b221cec62882c373065cf8fb672988d3ff",
+        "model": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+        "base_model": "Qwen/Qwen3-4B-Instruct-2507",
+        "quantization_publisher": "Unsloth",
+        "model_revision": "a06e946bb6b655725eafa393f4a9745d460374c9",
+        "model_file": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+        "model_sha256": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+        "model_size": 2497281120,
+        "model_license": "apache-2.0",
+        "source": "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF"
+      },
+      "installed_manifest_sha256": "fd2a4c276e09d1fcfc3ba62a98eab4498eef5a2c27168ad4c606567e68e60119",
+      "weights_file_size_verified": 2497281120,
+      "weights_sha256_verified": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+      "endpoint_launch_confirmation": {
+        "confirmed_by": "Codex A / root",
+        "evidence": "Parent stopped the old server, setup --download verified the exact installed 4B SHA-256, and launched these exact weights through scripts/run_demo.py --local-llm session9942, which passed model health before candidate execution",
+        "launch_time_utc": "2026-10-19 20:44 UTC (minute precision, parent report)",
+        "runtime_session": "9942",
+        "api_identity_limit": "The provider API exposes alias astana-local only; installation manifest, full weight checksum and parent-confirmed launch establish the recorded model provenance"
+      }
+    },
+    "ordinary_application_code": true,
+    "temperature_override": false,
+    "provider_calls_including_additional_check": 5
+  },
+  "manual_review": {
+    "status": "approved_by_two_readers",
+    "quality_pass": true,
+    "reviewers": [
+      {
+        "reviewer": "Codex B / rag_backend",
+        "reviewed_at": "2026-10-19T20:48:38+00:00",
+        "quality_pass": true,
+        "accepted_recommendations_read": 7,
+        "scope": "Read all seven accepted why/action pairs and the coffee/socket abstention; checked diagnostics and all five raw request/response hashes. This is a review of these observed outputs, not a guarantee for every future generation.",
+        "notes": [
+          "No prior nonsense about stroking hands; no promised sockets, playground equipment, current opening, numeric route claims or safety in the accepted prose.",
+          "MEGA 'walk along a path in the park' is a category-derived activity suggestion. The dataset does not establish a specific path or its surface; actual access and route remain unverified.",
+          "Family 'place for children' relates the requested interest to the park category. It is not evidence of children's infrastructure, age suitability or safety; the application retains explicit warnings."
+        ]
+      },
+      {
+        "reviewer": "Codex A / root",
+        "recorded_at": "2026-10-19T20:49:18+00:00",
+        "quality_pass": true,
+        "accepted_recommendations_read": 7,
+        "scope": "Independently read the complete candidate live-explanations and all five raw responses; explicitly authorized reviewed promotion",
+        "notes": [
+          "All seven why/action pairs are coherent and tied to categories/interests; no prior nonsense or duplicated Idea prefix.",
+          "Architecture suggestions relate monument/theatre categories to external architectural observation.",
+          "A path in MEGA is a typical proposed activity, not confirmed infrastructure; family suitability/safety is unproven; this approval is no guarantee for future answers."
+        ]
+      }
+    ],
+    "note": "Two independent readers approved these specific observed outputs with the documented limits; automatic checks alone did not grant this approval."
+  }
 }
