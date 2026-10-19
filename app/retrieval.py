@@ -7,11 +7,14 @@ distance and duration estimates are derived locally, never stated as live facts.
 from __future__ import annotations
 
 from collections import Counter
+import hashlib
 import json
 import math
 from pathlib import Path
 import re
 from typing import Any
+from itertools import permutations
+from urllib.parse import urlparse
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,8 +22,8 @@ DEFAULT_DATA = ROOT / "data" / "poi.sample.json"
 WALK_METRES_PER_MINUTE = 75
 PATH_FACTOR = 1.3
 CATEGORY_TEXT = {
-    "park": "парк сад природа зелень прогулка гулять воздух ребёнок дети семья",
-    "playground": "детская площадка ребёнок дети семья играть",
+    "park": "парк сад природа зелень прогулка гулять воздух ребёнок дети семья park garden nature саябақ серуен отбасы",
+    "playground": "детская площадка ребёнок дети семья играть playground бала балалар",
     "cafe": "кафе кофе чай перекус посидеть coffee cafe",
     "restaurant": "ресторан еда поесть обед ужин",
     "museum": "музей выставка история культура турист достопримечательность",
@@ -37,6 +40,7 @@ DEFAULT_VISIT = {
     "museum": 45, "attraction": 20, "monument": 15, "viewpoint": 15,
     "theatre": 15, "mall": 20, "promenade": 20, "bar": 30,
 }
+MIN_VISIT = {"park": 10, "playground": 15, "cafe": 15, "restaurant": 25, "museum": 30, "attraction": 10, "monument": 10, "viewpoint": 10, "theatre": 10, "mall": 15, "promenade": 10, "bar": 20}
 STOPWORDS = set("а и в на у по из со с к для мне меня мой моя есть хочу нужно возле около рядом минут мин час часа часов провести времени время давай где можно the a an to near my".split())
 
 
@@ -69,16 +73,47 @@ def walk_minutes(a: dict[str, Any], b: dict[str, Any]) -> int:
     return math.ceil(walk_distance_m(a, b) / WALK_METRES_PER_MINUTE)
 
 
-def detect_intent(query: str, time_of_day: str = "day") -> dict[str, bool]:
+def _wanted(query: str, pattern: str) -> bool:
+    """Recognize local, explicit negation instead of demanding 'без розетки'."""
+    for match in re.finditer(pattern, query):
+        prefix = query[max(0, match.start() - 35):match.start()]
+        suffix = query[match.end():match.end() + 30]
+        negated_prefix = re.search(r"(?:\bбез|\bне\s+(?:нуж\w*|хочу|надо|интерес\w*|обязательн\w*)|\bнеобязательн\w*|\bno|\bwithout)\s+(?:\w+\s+){0,2}$", prefix)
+        negated_suffix = re.search(r"^\s+(?:не\s+(?:нуж\w*|надо|требу\w*|обязательн\w*)|необязательн\w*)", suffix)
+        if not negated_prefix and not negated_suffix:
+            return True
+    return False
+
+
+def detect_intent(query: str, time_of_day: str = "day") -> dict[str, Any]:
     query = query.lower().replace("ё", "е")
+    category_patterns = {
+        "cafe": r"коф\w*|кафе|coffee|caf[eé]|кофе",
+        "park": r"парк\w*|\bсад\w*|park|garden|саябақ",
+        "playground": r"детск\w*\s+площад\w*|playground|ойын\s+алаң",
+        "museum": r"музе\w*|museum|мұражай",
+        "restaurant": r"ресторан\w*|поесть|обед\w*|ужин\w*|restaurant|food",
+        "promenade": r"набереж\w*|бульвар\w*|promenade|riverside",
+        "theatre": r"театр\w*|балет\w*|theatre|theater",
+        "bar": r"\bбар\w*|\bпаб\w*|\bpub\b|\bbar\b",
+        "mall": r"шопинг|покуп\w*|shopping",
+    }
+    requested = [category for category, pattern in category_patterns.items() if _wanted(query, pattern)]
+    excluded = [category for category, pattern in category_patterns.items() if re.search(pattern, query) and not _wanted(query, pattern)]
     return {
-        "coffee": bool(re.search(r"коф|кафе|coffee|cafe", query)),
-        "socket": bool(re.search(r"розет|заряд|socket|power outlet", query)),
-        "quiet": bool(re.search(r"тих|спокой|quiet", query)),
-        "child": bool(re.search(r"ребен|деть|дети|детск|семь|family|child|kids", query)),
-        "tourist": bool(re.search(r"турист|достопримеч|архитект|tourist|sightsee", query)),
-        "night": time_of_day == "night" or bool(re.search(r"ноч|night", query)),
-        "accessible": bool(re.search(r"коляс|безбарьер|wheelchair", query)),
+        "coffee": "cafe" in requested,
+        "socket": _wanted(query, r"розет\w*|заряд\w*|socket|power outlet"),
+        "quiet": _wanted(query, r"тих\w*|спокой\w*|quiet|тыныш"),
+        "strict_quiet": _wanted(query, r"тих\w*|quiet|тыныш") and bool(re.search(r"(?:только|обязательно|only|must).{0,20}(?:тих|quiet|тыныш)", query)),
+        "child": _wanted(query, r"ребен\w*|деть\w*|дети|детск\w*|семь[яеюи]\w*|семейн\w*|family|child\w*|kids|бала\w*|отбасы"),
+        "tourist": _wanted(query, r"турист\w*|достопримеч\w*|архитект\w*|tourist|sightsee\w*"),
+        "night": time_of_day == "night" or _wanted(query, r"ноч\w*|night|түн\w*"),
+        "accessible": _wanted(query, r"коляс\w*|безбарьер\w*|wheelchair|accessible|арбамен"),
+        "outdoor": _wanted(query, r"прогул\w*|погуля\w*|гуля\w*|walk\w*|серуен\w*|воздух"),
+        "preferred_categories": requested,
+        "excluded_categories": excluded,
+        "time_of_day": time_of_day,
+        "general_suggestion": bool(re.search(r"куда|где|посовету\w*|рядом|near\w*|where|suggest\w*", query)),
     }
 
 
@@ -94,9 +129,14 @@ def feature(poi: dict[str, Any], name: str) -> str:
 
 class Retriever:
     def __init__(self, data_path: str | Path | None = None, *, data: dict | None = None):
+        self.data_path = None
+        self.data_sha256 = None
         if data is None:
-            with Path(data_path or DEFAULT_DATA).open(encoding="utf-8-sig") as handle:
-                data = json.load(handle)
+            self.data_path = Path(data_path or DEFAULT_DATA).resolve()
+            raw = self.data_path.read_bytes()
+            self.data_sha256 = hashlib.sha256(raw).hexdigest()
+            data = json.loads(raw.decode("utf-8-sig"))
+        self._validate_data(data)
         self.dataset = data.get("dataset", {})
         self.places = data["places"]
         self.documents = []
@@ -110,6 +150,44 @@ class Retriever:
         self.lengths = [sum(doc.values()) for doc in self.documents]
         self.average_length = sum(self.lengths) / max(1, len(self.lengths))
         self.frequencies = Counter(term for doc in self.documents for term in doc)
+
+    @staticmethod
+    def _validate_data(data: object) -> None:
+        if not isinstance(data, dict) or not isinstance(data.get("dataset", {}), dict) or not isinstance(data.get("places"), list):
+            raise ValueError("POI dataset: ожидаются dataset object и places array.")
+        if len(data["places"]) > 100_000:
+            raise ValueError("POI dataset: слишком много объектов.")
+        if type(data.get("dataset", {}).get("is_demo", False)) is not bool:
+            raise ValueError("POI dataset: is_demo должен быть boolean.")
+        seen = set()
+        for index, poi in enumerate(data["places"]):
+            error = f"POI #{index}: "
+            if not isinstance(poi, dict):
+                raise ValueError(error + "ожидается object.")
+            for field in ("id", "name", "category", "description", "source_url"):
+                if not isinstance(poi.get(field), str) or not poi[field].strip() or len(poi[field]) > 4000:
+                    raise ValueError(error + field + " должен быть непустым текстом до 4000 символов.")
+            if poi["id"] in seen:
+                raise ValueError(error + "дублирующий id.")
+            seen.add(poi["id"])
+            for field, low, high in (("lat", -90, 90), ("lon", -180, 180)):
+                value = poi.get(field)
+                if type(value) not in (int, float) or not low <= value <= high or not math.isfinite(value):
+                    raise ValueError(error + "неверная координата " + field)
+            parsed = urlparse(poi["source_url"])
+            if parsed.scheme not in {"https", "http"} or not parsed.hostname or parsed.username or parsed.password:
+                raise ValueError(error + "source_url должен быть безопасным HTTP(S) URL.")
+            if not isinstance(poi.get("features", {}), dict):
+                raise ValueError(error + "features должен быть object.")
+            if not isinstance(poi.get("source_tags", {}), dict):
+                raise ValueError(error + "source_tags должен быть object.")
+            aliases = poi.get("aliases", [])
+            if not isinstance(aliases, list) or len(aliases) > 100 or any(not isinstance(value, str) for value in aliases):
+                raise ValueError(error + "aliases должен быть массивом строк.")
+            if poi.get("visit_minutes") is not None and (type(poi["visit_minutes"]) is not int or not 1 <= poi["visit_minutes"] <= 240):
+                raise ValueError(error + "visit_minutes должен быть целым числом 1–240.")
+            if poi.get("opening_hours") is not None and (not isinstance(poi["opening_hours"], str) or len(poi["opening_hours"]) > 500):
+                raise ValueError(error + "неверный opening_hours.")
 
     def lexical_score(self, index: int, terms: list[str]) -> float:
         doc = self.documents[index]
@@ -128,9 +206,22 @@ class Retriever:
         candidates = []
         filtered = Counter()
         terms = tokens(query)
+        preferred = set(intent["preferred_categories"])
+        outdoor_categories = {"park", "playground", "promenade", "monument", "attraction", "viewpoint", "theatre"}
+        tourist_categories = outdoor_categories | {"museum"}
         for index, poi in enumerate(self.places):
             category = poi["category"]
-            if intent["coffee"] and category != "cafe":
+            if category in intent["excluded_categories"]:
+                filtered["excluded_category"] += 1
+                continue
+            if preferred and category not in preferred:
+                filtered["category"] += 1
+                continue
+            if not preferred and intent["outdoor"] and not intent["tourist"] and category not in outdoor_categories:
+                filtered["outdoor"] += 1
+                continue
+            if poi.get("source_tags", {}).get("access") in {"no", "private"}:
+                filtered["private_access"] += 1
                 continue
             if intent["socket"] and feature(poi, "socket") != "yes":
                 filtered["socket"] += 1
@@ -138,15 +229,21 @@ class Retriever:
             if intent["accessible"] and feature(poi, "wheelchair") != "yes":
                 filtered["accessible"] += 1
                 continue
+            if intent["strict_quiet"] and feature(poi, "quiet") != "yes":
+                filtered["quiet"] += 1
+                continue
             if intent["child"] and category == "bar":
                 continue
             if intent["night"] and poi.get("opening_hours") != "24/7":
                 filtered["night"] += 1
                 continue
-            if intent["tourist"] and category not in {"attraction", "monument", "viewpoint", "museum", "promenade", "park", "theatre"}:
+            if intent["tourist"] and not preferred and category not in tourist_categories:
                 continue
             visit = int(poi.get("visit_minutes") or DEFAULT_VISIT.get(category, 20))
             walking = walk_minutes(origin, poi)
+            # Visit duration is a proposed activity, not an opening-hours fact.
+            # A short exterior stop may shrink, but never below a useful minimum.
+            visit = min(visit, max(MIN_VISIT.get(category, 10), minutes - walking * 2))
             if walking * 2 + visit > minutes:
                 filtered["budget"] += 1
                 continue
@@ -159,13 +256,28 @@ class Retriever:
             # Distance contributes smoothly; semantics dominate among nearby POI.
             score = lexical + preference + 1 / (1 + walking / 15)
             candidates.append({"poi": poi, "score": score, "lexical_score": lexical, "visit_minutes": visit})
+        relevant_intent = any(intent[key] for key in ("coffee", "socket", "quiet", "child", "tourist", "night", "accessible", "outdoor", "general_suggestion")) or bool(preferred)
+        if candidates and not relevant_intent and not any(item["lexical_score"] > 0 for item in candidates):
+            filtered["no_text_match"] = len(candidates)
+            candidates = []
         candidates.sort(key=lambda item: (-item["score"], item["poi"]["id"]))
-        # Greedy itinerary: each added stop must leave time to return to origin.
+        # Fair ranking: no paid/sponsor/rating fields. Diversity prevents a dense
+        # chain of identical POI dominating a broad walk. Hard filters stay hard.
         selected = []
         elapsed = 0
         last = origin
-        for candidate in candidates:
+        remaining = list(candidates)
+        while remaining and len(selected) < 3:
+            def diversity_score(item):
+                same_category = sum(other["poi"]["category"] == item["poi"]["category"] for other in selected)
+                penalty = 1 if len(preferred) == 1 else 1 + 0.8 * same_category
+                return item["score"] / penalty
+            remaining.sort(key=lambda item: (-diversity_score(item), item["poi"]["id"]))
+            candidate = remaining.pop(0)
             poi = candidate["poi"]
+            if any(tokens(poi["name"]) == tokens(item["poi"]["name"]) and distance_m(poi, item["poi"]) < 80 for item in selected):
+                filtered["duplicate_place"] += 1
+                continue
             leg = walk_minutes(last, poi)
             if elapsed + leg + candidate["visit_minutes"] + walk_minutes(poi, origin) > minutes:
                 continue
@@ -173,8 +285,19 @@ class Retriever:
             selected.append(candidate)
             elapsed += leg + candidate["visit_minutes"]
             last = poi
-            if len(selected) == 3:
-                break
+        # Optimize stop order exactly for this tiny itinerary (at most 3! = 6).
+        if len(selected) > 1:
+            def route_cost(order):
+                route = [origin] + [item["poi"] for item in order] + [origin]
+                return sum(walk_minutes(a, b) for a, b in zip(route, route[1:]))
+            selected = list(min(permutations(selected), key=route_cost))
+            last = origin
+            elapsed = 0
+            for item in selected:
+                item["leg_walk_minutes"] = walk_minutes(last, item["poi"])
+                item["leg_distance_m"] = walk_distance_m(last, item["poi"])
+                elapsed += item["leg_walk_minutes"] + item["visit_minutes"]
+                last = item["poi"]
         return_minutes = walk_minutes(last, origin) if selected else 0
         plan = {
             "total_minutes": elapsed + return_minutes,
@@ -186,4 +309,4 @@ class Retriever:
             "returns_to_origin": True,
             "method": "haversine × 1.3; 75 м/мин; без дорожного графа",
         }
-        return {"selected": selected, "intent": intent, "filtered": dict(filtered), "plan": plan, "retrieved_count": len(candidates)}
+        return {"selected": selected, "intent": intent, "filtered": dict(filtered), "plan": plan, "retrieved_count": len(candidates), "ranking_policy": "BM25 + walking distance + request context; diversity; no paid boosts"}
