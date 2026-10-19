@@ -17,6 +17,10 @@ let lastRecommendations = [];
 let requestCounter = 0;
 let activeController = null;
 let datasetInfo = {};
+let catalogPromise = null;
+let checkingDataset = false;
+let twoGisBusy = false;
+let twoGisAvailable = false;
 const categoryNames = {park:"Парк",museum:"Музей",cafe:"Кафе",attraction:"Достопримечательность",playground:"Детская площадка",viewpoint:"Смотровая площадка",walk:"Прогулка",monument:"Монумент",promenade:"Прогулочная зона",mall:"Торговый центр",theatre:"Театр",bar:"Бар",restaurant:"Ресторан"};
 function originValue() {
   if ($("origin").value !== "custom") return origins[$("origin").value];
@@ -43,42 +47,22 @@ function sourceLink(url, label) {
   if (!href) return el("span","source-link","Ссылка на источник недоступна");
   const link=el("a","source-link",label); link.href=href;link.target="_blank";link.rel="noopener noreferrer";return link;
 }
-function svgNode(tag, attrs, content) {
-  const node=document.createElementNS("http://www.w3.org/2000/svg",tag);
-  for(const [key,value] of Object.entries(attrs))node.setAttribute(key,String(value));
-  if(content!==undefined)node.textContent=content;
-  return node;
-}
 function drawMap() {
-  const svg=$("city-map"); svg.replaceChildren();
-  let origin; try{origin=originValue();}catch{return;}
-  const shown=lastRecommendations.length?lastRecommendations:places;
-  const validPoints=shown.filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon));
-  const points=lastRecommendations.length?validPoints:validPoints.sort((a,b)=>Math.hypot(a.lat-origin.lat,(a.lon-origin.lon)*.63)-Math.hypot(b.lat-origin.lat,(b.lon-origin.lon)*.63)).slice(0,100);
-  const bounds=[origin,...points];
-  let minLat=Math.min(...bounds.map(p=>p.lat))-.004,maxLat=Math.max(...bounds.map(p=>p.lat))+.004;
-  let minLon=Math.min(...bounds.map(p=>p.lon))-.007,maxLon=Math.max(...bounds.map(p=>p.lon))+.007;
-  const pos=p=>[55+(p.lon-minLon)/(maxLon-minLon)*610,265-(p.lat-minLat)/(maxLat-minLat)*210];
-  for(let x=0;x<740;x+=40)svg.append(svgNode("line",{x1:x,y1:0,x2:x,y2:320,stroke:"#dee6d8","stroke-width":1}));
-  for(let y=0;y<340;y+=40)svg.append(svgNode("line",{x1:0,y1:y,x2:720,y2:y,stroke:"#dee6d8","stroke-width":1}));
-  svg.append(svgNode("text",{x:28,y:35,fill:"#8b9c86","font-size":10,"letter-spacing":3},"ASTANA / EXPLORE NEARBY"));
-  if(lastRecommendations.length){
-    const path=[origin,...lastRecommendations.filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon)),origin].map(p=>pos(p).join(",")).join(" ");
-    svg.append(svgNode("polyline",{points:path,fill:"none",stroke:"#729878","stroke-width":2,"stroke-dasharray":"6 6"}));
+  let origin;
+  try{origin=originValue();}catch{
+    if(window.AstanaMap)window.AstanaMap.update({origin:null,places,recommendations:[],focusAllowed:false});
+    return;
   }
-  points.forEach((p,i)=>{
-    const [x,y]=pos(p);const g=svgNode("g",{});
-    g.append(svgNode("circle",{cx:x,cy:y,r:lastRecommendations.length?13:7,fill:lastRecommendations.length?"#23675a":"#b0c2a5",stroke:"#fff","stroke-width":3}));
-    if(lastRecommendations.length)g.append(svgNode("text",{x,y:y+4,fill:"#fff","font-size":11,"text-anchor":"middle"},i+1));
-    g.append(svgNode("title",{},p.name));
-    if(lastRecommendations.length)g.append(svgNode("text",{x:Math.min(Math.max(x,90),630),y:y-23,fill:"#335142","font-size":11,"text-anchor":"middle"},p.name.length>30?p.name.slice(0,29)+"…":p.name));
-    svg.append(g);
-  });
-  const [x,y]=pos(origin);
-  svg.append(svgNode("circle",{cx:x,cy:y,r:20,fill:"#23675a",opacity:.12}),svgNode("circle",{cx:x,cy:y,r:9,fill:"#23675a",stroke:"white","stroke-width":3}),svgNode("text",{x,y:y+31,fill:"#23675a","font-size":11,"font-weight":600,"text-anchor":"middle"},"Вы здесь"));
+  if(window.AstanaMap){
+    window.AstanaMap.update({origin,places,recommendations:lastRecommendations,focusAllowed:$("origin").value!=="custom"});
+  }else{
+    $("city-map").textContent="Карта не загрузилась. Список рекомендаций и ссылки на места доступны ниже.";
+  }
 }
 function renderRecommendations(data) {
   const list=$("results");list.replaceChildren();
+  const usedDataset=data.dataset||datasetInfo;
+  if(usedDataset.collected_at&&usedDataset.collected_at!==datasetInfo.collected_at)loadPlaces(false);
   lastRecommendations=(data.recommendations||[]).map(p=>({...places.find(x=>x.id===p.id),...p}));
   lastRecommendations.forEach((p,index)=>{
     const card=el("article","place-card"),body=el("div");
@@ -88,6 +72,7 @@ function renderRecommendations(data) {
     const distance=Number(p.distance_m); const distanceText=Number.isFinite(distance)?(distance>=1000?(distance/1000).toFixed(1)+" км":Math.round(distance)+" м"):"Расстояние неизвестно";
     meta.append(el("span",null,categoryNames[p.category]||p.category||"Место"),el("span",null,"≈ "+distanceText+" от предыдущей точки"),el("span",null,(p.visit_minutes||"—")+" мин на посещение"));body.append(meta);
     if(p.why)body.append(el("p",null,p.why));
+    if(p.name_generated)body.append(el("p","evidence-label","Название в источнике не указано: показана категория и идентификатор OSM."));
     if(p.action)body.append(el("p","action","Что сделать: "+p.action));
     const generated=String(p.explanation_source||data.mode||"").includes("llm");
     body.append(el("p","evidence-label",generated?"Объяснение и идея — LLM · сведения о месте — POI":"Объяснение по базе POI · идея действия — шаблон"));
@@ -106,7 +91,7 @@ function renderRecommendations(data) {
   const sources=$("sources");sources.replaceChildren();
   sources.append(el("p",null,"Использованы: введённые координаты, запрос, время прогулки и выбранное время суток. Часы и свойства мест требуют проверки. Сгенерированная идея действия не подтверждает наличие услуги."));
   for(const s of data.sources||[])if(s&&typeof s==="object")sources.append(sourceLink(s.source_url||s.url,s.name||s.title||s.id||"Источник"));
-  if(datasetInfo.collected_at)sources.append(el("p",null,"Сбор данных: "+new Date(datasetInfo.collected_at).toLocaleString("ru-RU")+". "+(datasetInfo.attribution||"")));
+  if(usedDataset.collected_at)sources.append(el("p",null,"Сбор данных этого ответа: "+new Date(usedDataset.collected_at).toLocaleString("ru-RU")+". "+(usedDataset.attribution||"")));
   const diagnostics=$("diagnostics");diagnostics.replaceChildren();
   if(data.diagnostics){
     const d=data.diagnostics;
@@ -155,20 +140,91 @@ $("planner-form").addEventListener("submit",async(event)=>{
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),125000);activeController=controller;
   try{
     const response=await fetch("/api/recommend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:$("query").value,minutes:Number($("minutes").value),origin:originValue(),time_of_day:$("time-of-day").value}),signal:controller.signal});
+    if(!(response.headers.get("Content-Type")||"").includes("application/json"))throw new Error("Сервис временно недоступен. Попробуйте ещё раз позже.");
     const data=await response.json();if(!response.ok)throw new Error(typeof data.error==="string"?data.error:"Не удалось обработать запрос.");
     if(requestId===requestCounter){renderRecommendations(data);revealResult(requestId);}
   }catch(error){if(requestId===requestCounter){$("status").classList.add("error");$("status").textContent=error.name==="AbortError"?"Запрос занял слишком много времени. Попробуйте снова.":error.message;lastRecommendations=[];drawMap();revealResult(requestId);}}
   finally{clearTimeout(timer);if(activeController===controller)activeController=null;button.disabled=false;button.firstElementChild.textContent="Найти мою прогулку";}
 });
-async function initialize(){
-  updateCoordinateFields();drawMap();try{
+function showTwoGisService(service){
+  if(!service)return;
+  twoGisAvailable=service.available===true;
+  if(twoGisBusy)return;
+  $("two-gis-submit").disabled=!twoGisAvailable;
+  $("two-gis-quota").textContent=!service.configured?"Живой поиск 2ГИС не подключён на этом сервере. Подбор прогулки по OpenStreetMap доступен выше.":
+    service.quota?"Осталось "+service.quota.remaining+" из "+service.quota.limit+" запросов за последние 24 часа. Лимит общий для этого демо.":
+    "Живой поиск 2ГИС временно недоступен. Повторите позже.";
+}
+$("two-gis-category").addEventListener("change",()=>{$("two-gis-results").replaceChildren();});
+$("two-gis-form").addEventListener("submit",async(event)=>{
+  event.preventDefault();if(twoGisBusy||!twoGisAvailable)return;
+  twoGisBusy=true;const button=$("two-gis-submit"),category=$("two-gis-category");
+  button.disabled=true;category.disabled=true;button.textContent="Ищем в 2ГИС…";
+  $("two-gis-results").replaceChildren();$("two-gis-status").textContent="Запрашиваем свежие карточки выбранной категории в Астане…";
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),35000);
+  try{
+    const response=await fetch("/api/2gis/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({category:category.value}),signal:controller.signal});
+    if(!(response.headers.get("Content-Type")||"").includes("application/json"))throw new Error("Живой поиск 2ГИС временно недоступен. Попробуйте позже.");
+    const data=await response.json();
+    if(data.quota)twoGisAvailable=data.quota.remaining>0;
+    if(!response.ok)throw new Error(data.error||"Не удалось выполнить поиск в 2ГИС.");
+    const list=$("two-gis-results"),found=Array.isArray(data.places)?data.places:[];
+    for(const place of found){
+      const card=el("article","live-place");card.append(el("h3",null,place.name));
+      card.append(el("p",null,categoryNames[place.category]||"Место"));
+      if(place.address)card.append(el("p",null,place.address));
+      card.append(el("p",null,place.opening_hours?"Расписание из 2ГИС: "+place.opening_hours+". Проверьте перед визитом.":"Часы и доступ сейчас не подтверждены."));
+      card.append(sourceLink(place.source_url,"Открыть карточку в 2ГИС ↗"));list.append(card);
+    }
+    const remaining=data.quota?" Осталось запросов за 24 часа: "+data.quota.remaining+".":"";
+    $("two-gis-status").textContent=(found.length?"Получено карточек: "+found.length+". Это одна страница поиска, а не полный каталог.":"В этой выборке нет подходящих карточек. Попробуйте другую категорию.")+remaining;
+  }catch(error){
+    $("two-gis-status").textContent=error.name==="AbortError"?"Поиск занял слишком много времени. Попытка уже могла быть учтена в лимите.":error.message;
+  }finally{
+    clearTimeout(timer);twoGisBusy=false;category.disabled=false;button.disabled=!twoGisAvailable;button.textContent="Найти в 2ГИС";
+    checkDataset();
+  }
+});
+async function loadPlaces(initial){
+  if(catalogPromise)return catalogPromise;
+  catalogPromise=(async()=>{try{
     const response=await fetch("/api/places");if(!response.ok)throw new Error("Данные недоступны");const data=await response.json();places=data.places||[];
     const dataset=data.dataset||{};datasetInfo=dataset;const isDemo=dataset.is_demo!==false;
     const provider=/2gis|2гис/i.test(dataset.name||"")?"2ГИС":/openstreetmap|osm/i.test(dataset.name||"")?"OpenStreetMap":"Реальные POI";
     $("dataset-badge").textContent=isDemo?"Учебные POI · "+places.length+" мест":provider+" · "+places.length+" мест";
     $("dataset-badge").title=dataset.collected_at?"Собрано "+new Date(dataset.collected_at).toLocaleDateString("ru-RU")+" · "+(dataset.attribution||""):"Учебные и непроверенные сведения";drawMap();
+    $("dataset-freshness").textContent=dataset.collected_at?"Получено из источника: "+new Date(dataset.collected_at).toLocaleString("ru-RU")+". Сведения не проверены на месте.":"Дата получения неизвестна.";
     if(dataset.attribution)$("data-attribution").textContent=dataset.attribution+" · "+(dataset.license||"Условия источника");
     const licenseLink=safeLink(dataset.license_url);if(licenseLink)$("data-attribution").href=licenseLink;
-  }catch{$("dataset-badge").textContent="Нужно соединение";$("status").classList.add("error");$("status").textContent="Нет связи с сервисом. Подключитесь к интернету и обновите страницу.";}
+  }catch{
+    if(initial){$("dataset-badge").textContent="Нужно соединение";$("status").classList.add("error");$("status").textContent="Нет связи с сервисом. Подключитесь к интернету и обновите страницу.";}
+    else $("dataset-freshness").textContent="Нет связи для обновления списка. На карте остаётся ранее загруженный набор.";
+  }})().finally(()=>{catalogPromise=null;});
+  return catalogPromise;
+}
+async function checkDataset(){
+  if(checkingDataset||document.hidden)return;
+  checkingDataset=true;
+  try{
+    const response=await fetch("/api/health");if(!response.ok)return;
+    const health=await response.json();
+    showTwoGisService(health.two_gis);
+    if(health.dataset?.collected_at&&health.dataset.collected_at!==datasetInfo.collected_at)await loadPlaces(false);
+    const refresh=health.refresh;
+    if(refresh){
+      $("dataset-refresh").textContent=!refresh.enabled?"Используется сохранённый набор; автообновление на сервере выключено.":
+        refresh.state==="updating"?"Сервер получает свежие места из OpenStreetMap. Текущий набор остаётся доступен.":
+        refresh.last_error?"Не удалось обновить источник. Используется последний проверенный набор; сервер повторит попытку позже.":
+        "Автообновление из OpenStreetMap включено: проверка раз в "+(Number(refresh.ttl_hours)||24)+" ч.";
+    }
+  }catch{/* Keep the last loaded catalog and the user's current answer. */}
+  finally{checkingDataset=false;}
+}
+async function initialize(){
+  updateCoordinateFields();drawMap();await loadPlaces(true);
+  await checkDataset();
+  // This checks our backend snapshot, never triggers a remote Overpass request.
+  setInterval(checkDataset,300000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkDataset();});
 }
 initialize();

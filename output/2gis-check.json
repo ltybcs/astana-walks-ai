@@ -1,0 +1,20 @@
+{
+  "category": "cafe",
+  "observed_at": "2026-10-19T21:48:24.820Z",
+  "quota": "Осталось 15 из 20 запросов за последние 24 часа. Лимит общий для этого демо.",
+  "rendered_cards": 10,
+  "source_links": 10,
+  "source_url": "https://entire-burn-cricket-ashley.trycloudflare.com",
+  "status": "Получено карточек: 10. Это одна страница поиска, а не полный каталог. Осталось запросов за 24 часа: 15.",
+  "scope": "Actual public UI search; records, names, addresses and API responses are not retained in this receipt.",
+  "requests_attempted_by_agent_including_initial_diagnostics": 5,
+  "limit_attempts_per_rolling_24_hours": 20,
+  "remaining_observed": 15,
+  "raw_user_query_or_geolocation_forwarded": false,
+  "secret_in_receipt": false,
+  "records_persisted": false,
+  "limitations": [
+    "One coffee category and one page tested; not an exhaustive catalog or all-category certification.",
+    "Two initial full-page searches failed before correcting the demo limit to ten; attempts were retained in the rolling budget."
+  ]
+}

@@ -13,6 +13,10 @@
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <title>Astana Walks — прогулки по Астане</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/vendor/leaflet/1.9.4/leaflet.css">
+  <link rel="stylesheet" href="/map.css">
+  <script src="/vendor/leaflet/1.9.4/leaflet.js" defer></script>
+  <script src="/map.js" defer></script>
   <script src="/app.js" defer></script>
   <script src="/pwa.js" defer></script>
 </head>
@@ -48,14 +52,29 @@
         </form>
       </section>
       <section class="explorer" aria-labelledby="explorer-title">
-        <div class="map-heading"><div><p class="eyebrow">СХЕМА РАЙОНА</p><h2 id="explorer-title">Рядом с вами</h2></div><span class="map-badge" id="dataset-badge">Загрузка данных…</span></div>
-        <div class="map-panel"><svg id="city-map" viewBox="0 0 720 320" role="img" aria-label="Схема расположения мест и выбранных рекомендаций"></svg><div class="map-caption"><span><i class="legend-dot" aria-hidden="true"></i> Начало и конец прогулки</span><span>Схема по координатам · не навигация</span></div></div>
+        <div class="map-heading"><div><p class="eyebrow">КАРТА АСТАНЫ</p><h2 id="explorer-title">Рядом с вами</h2></div><span class="map-badge" id="dataset-badge">Загрузка данных…</span></div>
+        <p id="dataset-freshness" class="dataset-freshness" role="status"></p>
+        <p id="dataset-refresh" class="dataset-freshness"></p>
+        <div class="map-panel"><div id="city-map" role="region" aria-label="Карта улиц Астаны и найденных мест"></div><div class="map-caption"><span><i class="legend-dot" aria-hidden="true"></i> Начало и конец прогулки</span><span>Линии между местами — схема, не пешеходная навигация</span></div></div>
         <div class="results-header" id="route-results"><div class="section-heading"><span class="step">02</span><h2>Ваш маршрут</h2></div><span id="result-mode">ПОИСК ПО POI</span></div>
         <div id="status" role="status" aria-live="polite" class="status-message">Укажите, что вам интересно. Здесь появятся до трёх остановок и время на прогулку с возвращением.</div>
         <div id="plan-summary" class="plan-summary" hidden></div>
         <p id="generation-note" class="generation-note" hidden></p>
         <div id="results" class="results"></div>
         <details id="source-details" class="source-details" hidden><summary>Источники и подробности подбора</summary><div id="sources"></div><div id="diagnostics"></div></details>
+        <details class="live-places" id="two-gis-panel">
+          <summary>Свежий поиск в 2ГИС</summary>
+          <p>Карточки по всей Астане напрямую из 2ГИС. Этот поиск не учитывает бюджет прогулки. Ваш запрос и точная геолокация в 2ГИС не передаются.</p>
+          <form id="two-gis-form">
+            <label for="two-gis-category">Что искать в 2ГИС</label>
+            <select id="two-gis-category"><option value="cafe">Кофейни</option><option value="park">Парки</option><option value="playground">Детские площадки</option><option value="museum">Музеи</option><option value="attraction">Достопримечательности</option><option value="mall">Торговые центры</option><option value="theatre">Театры</option></select>
+            <button type="submit" id="two-gis-submit" disabled>Найти в 2ГИС</button>
+          </form>
+          <p id="two-gis-status" role="status" aria-live="polite">Общий лимит этого демо — 20 запросов за 24 часа. Результаты не сохраняются в каталог приложения.</p>
+          <p id="two-gis-quota"></p>
+          <div id="two-gis-results"></div>
+          <a href="https://dev.2gis.ru/" target="_blank" rel="noopener noreferrer">Данные и поиск: 2ГИС ↗</a>
+        </details>
       </section>
     </div>
     <details id="how" class="about-panel">

@@ -62,14 +62,20 @@ select:hover,input:hover,textarea:hover {border-color:#7b898a}
 .map-heading .eyebrow {margin-bottom:5px}
 .map-heading h2 {font-size:24px}
 .map-badge {font-size:11px;color:var(--muted);text-align:right;line-height:1.5;padding-bottom:3px}
+.dataset-freshness {font-size:11px;color:var(--muted);line-height:1.6;margin:-8px 0 12px}
+.live-places {margin-top:22px;border-top:1px solid var(--line);padding:16px 0;color:var(--ink)}
+.live-places summary {cursor:pointer;font-weight:600;font-size:14px}
+.live-places p {font-size:12px;line-height:1.7;color:var(--muted);margin:12px 0}
+.live-places form {display:flex;align-items:end;gap:10px;flex-wrap:wrap}
+.live-places form label {width:100%;margin-bottom:0}
+.live-places select {min-height:42px;flex:1;min-width:140px}
+.live-places button {min-height:42px;padding:8px 12px;border:1px solid var(--ink);background:var(--white);color:var(--ink);font-size:12px}
+.live-places button:disabled {opacity:.55;cursor:wait}
+.live-places>a {font-size:11px}
+.live-place {padding:12px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.live-place h3 {font-size:14px;font-weight:600}
+.live-place p {margin:5px 0;font-size:11px}
 .map-panel {overflow:hidden;border:1px solid #d1d8d5;background:var(--map)}
-#city-map {display:block;width:100%;height:auto;aspect-ratio:720 / 286}
-#city-map>line {stroke:#d5ddda;stroke-width:.6}
-#city-map>text:first-of-type {fill:#6c7c7e;font-size:9px;letter-spacing:2px}
-#city-map polyline {stroke:var(--ink);stroke-width:2}
-#city-map circle[fill="#b0c2a5"] {fill:#a0b2af;stroke-width:2;r:4}
-#city-map circle[fill="#23675a"] {fill:var(--accent)}
-#city-map text[fill="#23675a"],#city-map text[fill="#335142"] {fill:var(--ink);font-family:"Segoe UI",Arial,sans-serif;font-size:12px}
 .map-caption {padding:12px 14px;border-top:1px solid #d1d8d5;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 14px;font-size:10px;line-height:1.5;color:#526163}
 .map-caption>span:first-child {display:flex;align-items:center;gap:7px}
 .legend-dot {width:6px;height:6px;border-radius:50%;background:var(--accent)}

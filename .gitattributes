@@ -3,3 +3,6 @@
 # Recorded evidence hashes refer to exact bytes, including line endings.
 output/**/*.json -text
 output/history/qwen3-4b/738-poi/** -text
+
+# Preserve the exact upstream bytes checked by the bundled library's SRI hashes.
+web/vendor/leaflet/1.9.4/** -text

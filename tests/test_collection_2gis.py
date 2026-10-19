@@ -100,6 +100,7 @@ class CollectionTests(unittest.TestCase):
         self.assertEqual(params["point1"], ["71.3,51.22"])
         self.assertEqual(params["point2"], ["71.55,51.02"])
         self.assertEqual(params["locale"], ["ru_KZ"])
+        self.assertEqual(params["page_size"], ["10"])
         self.assertIn("items.point", params["fields"][0])
         self.assertEqual(response_items(result)[0]["name"], "Тестовое кафе")
 
@@ -149,6 +150,49 @@ class CollectionTests(unittest.TestCase):
                 self.assertEqual(main(["--query", "Кофейни", "--pages", "3", "--output", str(output)]), 0)
                 self.assertEqual(fetch.call_count, 1)
                 self.assertNotIn("dummy-key", output.read_text(encoding="utf-8"))
+
+    def test_default_demo_sized_pagination_uses_ten_and_stops_at_total(self):
+        # Synthetic payloads exercise page arithmetic, not live key permissions.
+        with tempfile.TemporaryDirectory() as root:
+            output = Path(root) / "poi.json"
+            def page(key, query, bbox, number, size):
+                self.assertEqual(size, 10)
+                start = (number-1)*size
+                rows = [item(id=str(70000000000000+i)) for i in range(start, min(start+size, 25))]
+                payload = envelope(rows)
+                payload["result"]["total"] = 25
+                return payload
+            with patch.dict("os.environ", {"DGIS_API_KEY": "dummy-key"}), patch("scripts.collect_2gis.fetch_page", side_effect=page) as fetch, patch("scripts.collect_2gis.time.sleep"):
+                self.assertEqual(main(["--query", "Кофейни", "--pages", "5", "--output", str(output)]), 0)
+            self.assertEqual([call.args[3] for call in fetch.call_args_list], [1, 2, 3])
+            document = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(len(document["places"]), 25)
+            self.assertEqual(document["dataset"]["page_size"], 10)
+
+    def test_explicit_subscription_page_size_50_uses_its_own_pagination(self):
+        # The paid size is deliberately explicit and still only a mocked fixture.
+        with tempfile.TemporaryDirectory() as root:
+            output = Path(root) / "poi.json"
+            def page(key, query, bbox, number, size):
+                self.assertEqual(size, 50)
+                start = (number-1)*size
+                rows = [item(id=str(70000000000000+i)) for i in range(start, min(start+size, 60))]
+                payload = envelope(rows)
+                payload["result"]["total"] = 60
+                return payload
+            with patch.dict("os.environ", {"DGIS_API_KEY": "dummy-key"}), patch("scripts.collect_2gis.fetch_page", side_effect=page) as fetch, patch("scripts.collect_2gis.time.sleep"):
+                self.assertEqual(main(["--query", "Кофейни", "--pages", "3", "--page-size", "50", "--output", str(output)]), 0)
+            self.assertEqual([call.args[3] for call in fetch.call_args_list], [1, 2])
+            document = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(len(document["places"]), 60)
+            self.assertEqual(document["dataset"]["page_size"], 50)
+
+    def test_page_size_outside_documented_range_never_reaches_network(self):
+        for value in (0, 51, True, "10"):
+            with self.subTest(value=value), patch("scripts.collect_2gis.build_opener") as opener:
+                with self.assertRaises(CollectionError):
+                    fetch_page("dummy-key", "Кофейни", (51.02, 71.30, 51.22, 71.55), 1, value)
+                opener.assert_not_called()
 
 
 if __name__ == "__main__":

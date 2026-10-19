@@ -1,0 +1,43 @@
+{
+  "scope": "Actual browser DOM and visual checks; map overlay is not street routing.",
+  "public_mobile": {
+    "client_width": 375,
+    "dataset": "OpenStreetMap · 1267 мест",
+    "loaded_tile_images": 8,
+    "map_height": 330,
+    "map_status": "Уличная карта OpenStreetMap. Линии соединяют остановки по прямой и не показывают реальные проходы.",
+    "observed_at": "2026-10-19T21:49:40.452Z",
+    "refresh_status": "Автообновление из OpenStreetMap включено: проверка раз в 24 ч.",
+    "scroll_width": 375,
+    "source_url": "https://entire-burn-cricket-ashley.trycloudflare.com",
+    "width": 390
+  },
+  "desktop_local": {
+    "url": "http://127.0.0.1:8002/",
+    "real_street_tiles_visually_observed": true,
+    "refresh_enabled": false,
+    "screenshot": "output/map-desktop.jpg"
+  },
+  "mobile_screenshot": "output/map-mobile.jpg",
+  "local_extractive_family": {
+    "total_minutes": 55,
+    "result_count": 2,
+    "contains_source_playground": true,
+    "unnamed_label_and_source_visible": true,
+    "mode": "extractive",
+    "physical_child_conditions_verified": false
+  },
+  "custom_origin_check": {
+    "source_url": "http://127.0.0.1:8002/",
+    "public_fixture_only": true,
+    "tile_urls_unchanged_before_opt_in": true,
+    "invalid_coordinates_cleared_markers": true,
+    "invalid_coordinates_disabled_focus_button": true
+  },
+  "limitations": [
+    "Browser viewport emulation, not a new physical phone installation.",
+    "All test starts were public synthetic fixtures; no browser geolocation permission requested.",
+    "Tile outage, popup safety and marker cap have separate offline harness coverage; physical offline map was not certified.",
+    "Route lines are straight segments and do not validate street crossings or accessibility."
+  ]
+}

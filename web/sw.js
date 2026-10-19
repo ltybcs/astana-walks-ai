@@ -1,10 +1,17 @@
 "use strict";
-const SHELL_CACHE = "astana-walks-shell-v1";
+const SHELL_CACHE = "astana-walks-shell-v2";
 const SHELL_PATHS = new Set([
   "/", "/index.html", "/styles.css", "/app.js", "/pwa.js",
   "/manifest.webmanifest", "/favicon.svg",
   "/icons/icon-192.png", "/icons/icon-512.png",
-  "/icons/maskable-512.png", "/icons/apple-touch-icon.png"
+  "/icons/maskable-512.png", "/icons/apple-touch-icon.png",
+  "/map.js", "/map.css",
+  "/vendor/leaflet/1.9.4/leaflet.js", "/vendor/leaflet/1.9.4/leaflet.css",
+  "/vendor/leaflet/1.9.4/images/marker-icon.png",
+  "/vendor/leaflet/1.9.4/images/marker-icon-2x.png",
+  "/vendor/leaflet/1.9.4/images/marker-shadow.png",
+  "/vendor/leaflet/1.9.4/images/layers.png",
+  "/vendor/leaflet/1.9.4/images/layers-2x.png"
 ]);
 
 self.addEventListener("install", event => {

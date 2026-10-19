@@ -1,0 +1,29 @@
+/* App-specific map styles; Leaflet's upstream stylesheet remains unmodified. */
+#city-map {height:360px;min-height:300px;aspect-ratio:auto;background:#e8e9e3;isolation:isolate;z-index:0;font:12px/1.5 "Segoe UI",Arial,sans-serif}
+#city-map:focus-visible {outline-offset:-3px}
+#city-map .leaflet-control-attribution {max-width:calc(100% - 16px);font-size:10px;line-height:1.5;white-space:normal;background:rgba(255,254,250,.94);color:#202f3a}
+#city-map .leaflet-control-attribution a {color:#263f47}
+#city-map .leaflet-control-zoom a {color:#202f3a;background:#fffefa}
+.street-map-tools {padding:13px 14px;background:#f3f3ed;border-top:1px solid #d1d8d5}
+.street-map-focus,.street-map-retry {min-height:40px;padding:8px 12px;border:1px solid #8e9c96;border-radius:2px;color:var(--ink);background:var(--white);font-size:12px;line-height:1.5;text-align:left}
+.street-map-focus:hover,.street-map-retry:hover {border-color:var(--accent);color:var(--accent)}
+.street-map-privacy,.street-map-status,.street-map-count {margin:8px 0 0;font-size:11px;line-height:1.65;color:var(--muted);overflow-wrap:anywhere}
+.street-map-status {color:#364e46}
+.street-map-count {font-size:10px}
+.street-map-retry {margin-top:9px}
+.street-map--unavailable + .street-map-tools .street-map-status {color:#893c2b}
+.street-map-unavailable {padding:24px;min-height:180px!important;height:auto!important;line-height:1.8!important}
+.street-map-marker {border:2px solid #fffefa;border-radius:50%;box-shadow:0 1px 5px #202f3a70;color:#fffefa;text-align:center;font:bold 13px/26px "Segoe UI",Arial,sans-serif}
+.street-map-marker--selected {background:#b74429}
+.street-map-marker--origin {background:#202f3a;box-shadow:0 0 0 5px #fffefa70,0 1px 5px #202f3a70}
+.street-map-marker span {display:block}
+.street-map-popup {display:flex;flex-direction:column;gap:5px;overflow-wrap:anywhere;min-width:120px}
+.street-map-popup strong {font-size:13px;font-weight:600}
+.street-map-popup span {font-size:11px;color:#526163}
+.street-map-popup a {font-size:11px;color:#263f47}
+@media(max-width:760px) {
+  #city-map {height:330px;min-height:280px}
+  .street-map-tools {padding:12px}
+  .street-map-focus {width:100%}
+}
+@media(max-width:370px) {#city-map {height:300px}}

@@ -33,6 +33,7 @@ def main():
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--llm-port", type=int, default=8081)
     parser.add_argument("--local-llm", action="store_true")
+    parser.add_argument("--refresh-poi", action="store_true", help="Enable nonblocking OSM cache refresh with a 24-hour TTL")
     args = parser.parse_args()
     children = []
     env = dict(os.environ)
@@ -46,6 +47,8 @@ def main():
         command = [sys.executable, "-u", "-m", "app.server", "--port", str(args.port)]
         if args.data:
             command.extend(["--data", str(args.data.resolve())])
+        if args.refresh_poi:
+            command.append("--refresh-poi")
         app = subprocess.Popen(command, cwd=ROOT, env=env, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         children.append(app)
         print(f"Open http://127.0.0.1:{args.port} — Ctrl+C to stop", flush=True)

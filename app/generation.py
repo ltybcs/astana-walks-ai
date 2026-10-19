@@ -84,6 +84,8 @@ def recommend(retriever: Retriever, query: str, minutes: int, origin: dict, time
         item = {key: poi[key] for key in ("id", "name", "category", "description", "source_url")}
         item.update({
             "lat": poi["lat"], "lon": poi["lon"],
+            "name_generated": poi.get("name_generated") is True,
+            "source_name": poi.get("source_name", poi["name"]),
             "distance_m": candidate["leg_distance_m"],
             "origin_distance_m": walk_distance_m(origin, poi),
             "walk_minutes": candidate["leg_walk_minutes"],
