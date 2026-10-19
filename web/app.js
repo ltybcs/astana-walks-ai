@@ -161,6 +161,6 @@ async function initialize(){
     $("dataset-badge").title=dataset.collected_at?"Собрано "+new Date(dataset.collected_at).toLocaleDateString("ru-RU")+" · "+(dataset.attribution||""):"Учебные и непроверенные сведения";drawMap();
     if(dataset.attribution)$("data-attribution").textContent=dataset.attribution+" · "+(dataset.license||"Условия источника");
     const licenseLink=safeLink(dataset.license_url);if(licenseLink)$("data-attribution").href=licenseLink;
-  }catch{$("dataset-badge").textContent="Нет связи с сервером";$("status").classList.add("error");$("status").textContent="Запустите сервер: python -m app.server. Затем обновите страницу.";}
+  }catch{$("dataset-badge").textContent="Нет связи с сервисом";$("status").classList.add("error");$("status").textContent="Нет связи с сервисом. Подключитесь к интернету и обновите страницу.";}
 }
 initialize();
