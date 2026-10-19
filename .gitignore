@@ -7,4 +7,6 @@ __pycache__/
 tmp/
 .DS_Store
 data/poi.osm.json
+data/poi.2gis.json
+data/poi.2gis.json.tmp
 *.log
