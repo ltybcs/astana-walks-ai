@@ -24,8 +24,21 @@
       "eligible_scenarios": 4,
       "validated_scenarios": 4,
       "fallback_scenarios": 0,
-      "total_attempts": 6
+      "total_attempts": 4
     }
+  },
+  "evidence": {
+    "manifest": "output/llm-evidence/manifest.json",
+    "actual_config": {
+      "model": "astana-local",
+      "temperature": 0,
+      "seed_supplied": false,
+      "json_mode": "schema",
+      "token_parameter": "max_tokens"
+    },
+    "ordinary_application_code": true,
+    "temperature_override": false,
+    "provider_calls_including_additional_check": 6
   },
   "scenarios": [
     {
@@ -34,15 +47,15 @@
       "llm_status": "validated",
       "llm_attempts": 1,
       "llm_rejections": [],
-      "provider_file": "tmp/live-provider-playground/response-1.json",
+      "provider_file": "output/llm-evidence/response-1.json",
       "clarification": null,
       "recommendations": [
         {
           "id": "osm:way/1467797207",
           "name": "NU Park",
-          "why": "Парк подходит для прогулок на воздухе, соответствует категории 'парк или сад' и находится в Астане.",
-          "provider_action": "Идея: осмотреть зелёную зону парка для отдыха и наблюдения за природой.",
-          "display_action": "Идея: осмотреть зелёную зону парка для отдыха и наблюдения за природой. Перед выходом проверьте доступ и часы по источнику.",
+          "why": "Парк подходит для прогулок на воздухе, соответствует категории 'парк или сад' и предоставляет возможность для отдыха в пешеходной среде.",
+          "provider_action": "Идея: осмотреть зелёную зону парка для поглаживания рук или наблюдения за природой.",
+          "display_action": "Идея: осмотреть зелёную зону парка для поглаживания рук или наблюдения за природой. Перед выходом проверьте доступ и часы по источнику.",
           "citations": [
             "osm:way/1467797207"
           ]
@@ -62,20 +75,18 @@
     {
       "scenario": "Прогулка с ребёнком",
       "mode": "llm-grounded",
-      "llm_status": "validated_after_repair",
-      "llm_attempts": 2,
-      "llm_rejections": [
-        "unsupported_playground_claim"
-      ],
-      "provider_file": "tmp/live-provider-playground/response-3.json",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "provider_file": "output/llm-evidence/response-2.json",
       "clarification": null,
       "recommendations": [
         {
           "id": "osm:way/1196402246",
           "name": "Ботанический сад",
-          "why": "Парк или сад — соответствует интересу в прогулке с ребёнком и на воздухе.",
-          "provider_action": "Посетить ботанический сад — идея: осмотреть растения и прогуляться на воздухе.",
-          "display_action": "Идея: Посетить ботанический сад — идея: осмотреть растения и прогуляться на воздухе. Перед выходом проверьте доступ и часы по источнику.",
+          "why": "Парк или сад соответствует запросу на прогулку с ребёнком, так как он находится в категории 'парк или сад' и предоставляет возможность для отдыха на воздухе.",
+          "provider_action": "Идея: Посетите ботанический сад для прогулки на воздухе и наблюдения за растениями. Убедитесь, что доступ и часы работы соответствуют проверенным данным.",
+          "display_action": "Идея: Посетите ботанический сад для прогулки на воздухе и наблюдения за растениями. Убедитесь, что доступ и часы работы соответствуют проверенным данным. Перед выходом проверьте доступ и часы по источнику.",
           "citations": [
             "osm:way/1196402246"
           ]
@@ -85,20 +96,18 @@
     {
       "scenario": "Два часа у туриста",
       "mode": "llm-grounded",
-      "llm_status": "validated_after_repair",
-      "llm_attempts": 2,
-      "llm_rejections": [
-        "numeric_claim"
-      ],
-      "provider_file": "tmp/live-provider-playground/response-5.json",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "provider_file": "output/llm-evidence/response-3.json",
       "clarification": null,
       "recommendations": [
         {
           "id": "osm:way/230401645",
           "name": "Байтерек",
-          "why": "Памятник в категории 'памятник' соответствует интересу 'знакомство с городом'",
-          "provider_action": "Посмотреть памятник на месте, если доступно",
-          "display_action": "Идея: Посмотреть памятник на месте, если доступно. Перед выходом проверьте доступ и часы по источнику.",
+          "why": "Памятник в категории 'памятник' соответствует запросу 'знакомство с городом' и 'внешний осмотр архитектуры'.",
+          "provider_action": "Идея: Посмотреть памятник на месте, чтобы увидеть архитектурные элементы города.",
+          "display_action": "Идея: Посмотреть памятник на месте, чтобы увидеть архитектурные элементы города. Перед выходом проверьте доступ и часы по источнику.",
           "citations": [
             "osm:way/230401645"
           ]
@@ -106,9 +115,9 @@
         {
           "id": "osm:way/917478479",
           "name": "Астана Опера",
-          "why": "Театр в категории 'театр' соответствует интересу 'знакомство с городом'",
-          "provider_action": "Посмотреть театр на месте, если доступно",
-          "display_action": "Идея: Посмотреть театр на месте, если доступно. Перед выходом проверьте доступ и часы по источнику.",
+          "why": "Театр в категории 'театр' соответствует запросу 'знакомство с городом' и 'внешний осмотр архитектуры'.",
+          "provider_action": "Идея: Посмотреть театр, чтобы увидеть архитектурные элементы города.",
+          "display_action": "Идея: Посмотреть театр, чтобы увидеть архитектурные элементы города. Перед выходом проверьте доступ и часы по источнику.",
           "citations": [
             "osm:way/917478479"
           ]
@@ -116,9 +125,9 @@
         {
           "id": "osm:node/4958412863",
           "name": "Zur Sultan",
-          "why": "Памятник в категории 'памятник' соответствует интересу 'знакомство с городом'",
-          "provider_action": "Посмотреть памятник на месте, если доступно",
-          "display_action": "Идея: Посмотреть памятник на месте, если доступно. Перед выходом проверьте доступ и часы по источнику.",
+          "why": "Памятник в категории 'памятник' соответствует запросу 'знакомство с городом' и 'внешний осмотр архитектуры'.",
+          "provider_action": "Идея: Посмотреть памятник, чтобы увидеть архитектурные элементы города.",
+          "display_action": "Идея: Посмотреть памятник, чтобы увидеть архитектурные элементы города. Перед выходом проверьте доступ и часы по источнику.",
           "citations": [
             "osm:node/4958412863"
           ]
@@ -131,15 +140,15 @@
       "llm_status": "validated",
       "llm_attempts": 1,
       "llm_rejections": [],
-      "provider_file": "tmp/live-provider-playground/response-6.json",
+      "provider_file": "output/llm-evidence/response-4.json",
       "clarification": null,
       "recommendations": [
         {
           "id": "osm:node/4199896989",
           "name": "Avtor",
           "why": "Категория 'бар' соответствует запросу 'короткая остановка во время прогулки' в ночное время.",
-          "provider_action": "Идея: Посетите бар 'Avtor' для отдыха и общения. Вход только после проверки доступа.",
-          "display_action": "Идея: Посетите бар 'Avtor' для отдыха и общения. Вход только после проверки доступа. Перед выходом проверьте доступ и часы по источнику.",
+          "provider_action": "Идея: Посетите бар 'Avtor' для отдыха и разговора. Вход возможен после проверки доступа.",
+          "display_action": "Идея: Посетите бар 'Avtor' для отдыха и разговора. Вход возможен после проверки доступа. Перед выходом проверьте доступ и часы по источнику.",
           "citations": [
             "osm:node/4199896989"
           ]
@@ -156,7 +165,7 @@
       "llm_rejections": [
         "unsupported_location_claim"
       ],
-      "provider_file": "tmp/live-provider-playground/response-8.json",
+      "provider_file": "output/llm-evidence/response-6.json",
       "clarification": null,
       "recommendations": [
         {
@@ -171,5 +180,21 @@
         }
       ]
     }
-  ]
+  ],
+  "manual_review": {
+    "performed_at": "2026-10-19T20:13:54+00:00",
+    "scope": "All accepted why/action texts from the five fixed scenarios and the additional family check were read manually",
+    "quality_pass": false,
+    "constraint_checks_distinct_from_prose_quality": true,
+    "issues": [
+      {
+        "scenario": "30–60 минут возле MEGA",
+        "poi_id": "osm:way/1467797207",
+        "type": "nonsensical_action",
+        "observed_action": "Идея: осмотреть зелёную зону парка для поглаживания рук или наблюдения за природой.",
+        "provider_file": "output/llm-evidence/response-1.json",
+        "note": "The factual guards accepted this text, but its proposed action is nonsensical. Temperature=0 alone did not remove this known small-model quality failure."
+      }
+    ]
+  }
 }

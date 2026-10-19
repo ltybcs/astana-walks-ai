@@ -3,7 +3,27 @@
     "provider": "llama.cpp b11739 (CPU, loopback)",
     "model": "Qwen3-1.7B-Q8_0 / astana-local",
     "live_verified": true,
-    "evidence": "Actual Qwen3-1.7B-Q8_0 via llama.cpp b11739: 5/5 scenarios, 79/79 tests, 4/4 eligible scenarios llm-grounded, 5 provider calls including one bounded repair. Final accepted explanations manually reviewed. See output/evaluation-live.json and output/live-explanations.json."
+    "evidence": "Actual recorded results and accepted narration: output/evaluation-live.json and output/live-explanations.json. Generated metrics are derived from the report."
   },
-  "video_url": null
+  "video_url": null,
+  "screenshot_layout": "detail",
+  "screenshot_crop": {"left": 0.345, "top": 0.08, "right": 0.025, "bottom": 0.23},
+  "mobile_screenshot": "output/demo-mobile.jpg",
+  "narration_evidence": "output/live-explanations.json",
+  "pwa": {
+    "enabled": true,
+    "evidence": "PR #7 c31bc7a and quota fix 90ed954. web/sw.js: shell allowlist, API network-only, no query/non-GET caching. HTTPS resource results: output/https-check.json. Physical installation and launch from icon reported by the user on 2026-10-20, not independently observed.",
+    "demo_url": "https://entire-burn-cricket-ashley.trycloudflare.com/",
+    "https_evidence": "output/https-check.json",
+    "phone_evidence": "output/phone-check.json",
+    "phone_installation": {
+      "user_reported": true,
+      "reported_on": "2026-10-20",
+      "installed": true,
+      "opened_from_icon": true,
+      "os": null,
+      "device_model": null,
+      "offline_tested": false
+    }
+  }
 }

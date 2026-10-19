@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-19T19:58:54+00:00",
+  "generated_at": "2026-10-19T20:12:54+00:00",
   "dataset": {
     "name": "Astana POI / OpenStreetMap",
     "is_demo": false,
@@ -106,11 +106,9 @@
         "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
         "Возрастные ограничения, безопасность, туалеты и условия для ребёнка не подтверждены; проверьте их заранее."
       ],
-      "llm_status": "validated_after_repair",
-      "llm_attempts": 2,
-      "llm_rejections": [
-        "unsupported_playground_claim"
-      ]
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": []
     },
     {
       "name": "Два часа у туриста",
@@ -143,11 +141,9 @@
       "warnings": [
         "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
       ],
-      "llm_status": "validated_after_repair",
-      "llm_attempts": 2,
-      "llm_rejections": [
-        "numeric_claim"
-      ]
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": []
     },
     {
       "name": "Ночная активность",
@@ -201,7 +197,7 @@
       "eligible_scenarios": 4,
       "validated_scenarios": 4,
       "fallback_scenarios": 0,
-      "total_attempts": 6
+      "total_attempts": 4
     }
   },
   "limitations": [
@@ -233,5 +229,34 @@
       },
       "pass": true
     }
-  ]
+  ],
+  "evidence": {
+    "manifest": "output/llm-evidence/manifest.json",
+    "actual_config": {
+      "model": "astana-local",
+      "temperature": 0,
+      "seed_supplied": false,
+      "json_mode": "schema",
+      "token_parameter": "max_tokens"
+    },
+    "ordinary_application_code": true,
+    "temperature_override": false,
+    "provider_calls_including_additional_check": 6
+  },
+  "manual_review": {
+    "performed_at": "2026-10-19T20:13:54+00:00",
+    "scope": "All accepted why/action texts from the five fixed scenarios and the additional family check were read manually",
+    "quality_pass": false,
+    "constraint_checks_distinct_from_prose_quality": true,
+    "issues": [
+      {
+        "scenario": "30–60 минут возле MEGA",
+        "poi_id": "osm:way/1467797207",
+        "type": "nonsensical_action",
+        "observed_action": "Идея: осмотреть зелёную зону парка для поглаживания рук или наблюдения за природой.",
+        "provider_file": "output/llm-evidence/response-1.json",
+        "note": "The factual guards accepted this text, but its proposed action is nonsensical. Temperature=0 alone did not remove this known small-model quality failure."
+      }
+    ]
+  }
 }

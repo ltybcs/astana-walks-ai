@@ -1,0 +1,70 @@
+{
+  "generated_at": "2026-10-19T20:07:11+00:00",
+  "url": "https://entire-burn-cricket-ashley.trycloudflare.com",
+  "kind": "temporary user-authorized public HTTPS demo",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "text/html",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "cache_control": "no-store",
+      "pass": true,
+      "places_count": 738,
+      "llm_configured": true
+    },
+    {
+      "path": "/manifest.webmanifest",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "application/manifest+json",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/sw.js",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "text/javascript",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/icons/icon-512.png",
+      "status": 200,
+      "expected_status": 200,
+      "content_type": "image/png",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/app/server.py",
+      "status": 404,
+      "expected_status": 404,
+      "content_type": "application/json; charset=utf-8",
+      "cache_control": "no-store",
+      "pass": true
+    },
+    {
+      "path": "/v1/models",
+      "status": 404,
+      "expected_status": 404,
+      "content_type": "application/json; charset=utf-8",
+      "cache_control": "no-store",
+      "pass": true
+    }
+  ],
+  "pass": true,
+  "limitations": [
+    "This resource check does not prove installation on a physical phone or semantic quality of generated text.",
+    "The URL depends on this PC and the temporary tunnel process."
+  ]
+}

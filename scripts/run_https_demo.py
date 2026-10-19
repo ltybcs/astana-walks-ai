@@ -120,8 +120,12 @@ def serve(allowed_mail: list[str]) -> int:
         config = directory / "config.yml"
         config.write_text("{}\n", encoding="utf-8")
         process = subprocess.Popen(command(config, allowed_mail), cwd=directory, env=child_environment(directory),
-                                   shell=False, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                                   shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                   text=True, encoding="utf-8", errors="replace",
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         try:
+            for line in process.stdout:
+                print(line, end="", flush=True)
             return process.wait()
         except KeyboardInterrupt:
             return 0

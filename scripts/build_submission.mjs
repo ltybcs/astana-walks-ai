@@ -12,6 +12,7 @@ const outDir = path.resolve(process.argv[4] || "output");
 const buildDir = path.join(workspaceDir, "tmp", "submission");
 const facts = JSON.parse(await fs.readFile(factsPath, "utf8"));
 const runtimeRoot = process.env.CODEX_ARTIFACT_RUNTIME || path.join(process.env.USERPROFILE || "", ".cache", "codex-runtimes", "codex-primary-runtime", "dependencies");
+process.env.RUNTIME_NODE_MODULES ||= path.join(runtimeRoot,"node","node_modules");
 const modulePath = process.env.ARTIFACT_TOOL_MODULE || path.join(runtimeRoot, "node", "node_modules", "@oai", "artifact-tool", "dist", "artifact_tool.mjs");
 let toolkit;
 try { toolkit = await import("@oai/artifact-tool"); }
@@ -27,7 +28,7 @@ await fs.mkdir(path.join(buildDir, "slides"), { recursive: true });
 function text(slide, str, x, y, w, h, size=30, color=C.cream, bold=false, align="left") {
   const s = slide.shapes.add({ geometry: "textbox", position: { left:x, top:y, width:w, height:h }, fill:"none", line:{fill:"none",width:0} });
   s.text = str;
-  s.text.style = { fontFamily:"Arial", fontSize:size, color, bold, alignment:align, verticalAlignment:"top", insets:0, wrap:true };
+  s.text.style = { typeface:"Arial", fontSize:size, color, bold, alignment:align, verticalAlignment:"top", insets:0, wrap:"square" };
   return s;
 }
 function slide(title, light=false) {
@@ -39,6 +40,12 @@ function slide(title, light=false) {
 }
 function note(s, content, sources=[]) {
   s.speakerNotes.text = content + (sources.length ? "\n\nИсточники и доказательства:\n"+sources.join("\n") : "");
+}
+function imageMime(bytes) {
+  if(bytes.length>=3 && bytes[0]===0xff && bytes[1]===0xd8 && bytes[2]===0xff) return "image/jpeg";
+  const png=[0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a];
+  if(bytes.length>=8 && png.every((value,i)=>bytes[i]===value)) return "image/png";
+  throw new Error("Screenshot must contain actual JPEG or PNG bytes; its extension is not trusted.");
 }
 const n=facts.dataset.count;
 const date=facts.dataset.date_label;
@@ -66,9 +73,24 @@ const llm=facts.llm.live_verified ? `${facts.llm.provider} / ${facts.llm.model}`
 {
  const s=slide("Ответ в интерфейсе");
  const bytes=await fs.readFile(facts.screenshot);
- s.images.add({blob:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),contentType:"image/png",alt:"Фактический ответ локального Astana Walks",fit:"contain",position:{left:72,top:158,width:1136,height:454}});
- text(s,"У каждого места: почему, что сделать, время и ссылка на источник",72,630,1070,42,24,C.muted);
- note(s,facts.speech[2],[`Фактический скриншот: ${facts.screenshot_relative}`,`Режим на момент сборки: ${llm}`]);
+ s.images.add({blob:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),contentType:imageMime(bytes),alt:"Фактический ответ локального Astana Walks",fit:"cover",crop:facts.screenshot_crop,position:facts.screenshot_frame});
+ if(facts.screenshot_layout==="detail") {
+   if(facts.mobile_screenshot) {
+     const mobileBytes=await fs.readFile(facts.mobile_screenshot);
+     s.images.add({blob:mobileBytes.buffer.slice(mobileBytes.byteOffset,mobileBytes.byteOffset+mobileBytes.byteLength),contentType:imageMime(mobileBytes),alt:"Фактический мобильный веб-интерфейс. Физическая установка подтверждается отдельно со слов пользователя.",fit:"contain",position:facts.mobile_frame});
+     text(s,"Из проверочного\nпрогона",326,192,238,64,24,C.teal,true);
+     text(s,`«${facts.featured.generated_why}»`,326,274,238,250,26,C.cream);
+     text(s,facts.featured.names[0],326,545,238,42,28,C.cream,true);
+     text(s,`${facts.featured.total_minutes} мин, с возвратом`,326,603,238,35,23,C.muted);
+   } else {
+     text(s,"Из проверочного прогона",72,192,460,56,27,C.teal,true);
+     text(s,`«${facts.featured.generated_why}»`,72,288,460,200,32,C.cream);
+     text(s,facts.featured.names[0],72,522,460,55,35,C.cream,true);
+     text(s,`${facts.featured.total_minutes} мин, с возвратом`,72,590,460,46,27,C.muted);
+   }
+ }
+ text(s,facts.pwa?.phone_installation?.user_reported?"Установка и запуск по иконке подтверждены пользователем":facts.pwa?.enabled?"Мобильный интерфейс с поддержкой PWA":"У каждого места: почему, что сделать, время и ссылка на источник",72,651,1070,32,22,C.muted);
+ note(s,facts.speech[2],[`Фактический скриншот: ${facts.screenshot_relative}`,facts.mobile_screenshot_relative||"",`Режим на момент сборки: ${llm}`,facts.featured.narration_source||"",...(facts.pwa?.enabled?["https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable",facts.pwa.evidence||""]:[])]);
 }
 {
  const s=slide("Как работает RAG");
@@ -79,7 +101,7 @@ const llm=facts.llm.live_verified ? `${facts.llm.provider} / ${facts.llm.model}`
   ["04","Проверка", "Только известные ID\nБюджет с возвратом\nЧестный fallback"]
  ];
  cols.forEach((a,i)=>{const x=72+i*288;text(s,a[0],x,182,235,65,48,C.teal,true);text(s,a[1],x,279,255,65,31,C.cream,true);text(s,a[2],x,374,255,168,26,C.muted);});
- text(s,`Генерация: ${llm}`,72,602,1130,48,25,C.teal);
+ text(s,`Генерация: ${facts.llm.live_verified?facts.llm.model.split(" / ")[0]:"Локальный extractive-режим"}`,72,602,1130,48,25,C.teal);
  note(s,facts.speech[3],["app/retrieval.py","app/generation.py","app/llm.py",facts.llm.evidence||"Живой вызов LLM не подтверждён. Режим указан явно."]);
 }
 {
@@ -87,6 +109,7 @@ const llm=facts.llm.live_verified ? `${facts.llm.provider} / ${facts.llm.model}`
  text(s,String(n),72,181,530,170,128,C.ink,true);
  text(s,"реальных POI",79,370,520,60,37,C.gray);
  text(s,`Сбор: ${date}`,79,485,520,64,27,C.gray);
+ text(s,`${facts.dataset.attribution}\n${facts.dataset.license}`,79,578,530,68,23,C.gray);
  text(s,facts.dataset.source_name,656,195,550,110,36,C.ink,true);
  text(s,"Название, координаты, категория\nОписание и доступные теги\nID источника, ссылка и дата",656,329,550,174,29,C.ink);
  text(s,`${facts.dataset.missing_hours} POI без часов работы\nНеизвестное не становится обещанием`,656,532,550,86,27,C.gray);
@@ -96,13 +119,15 @@ const llm=facts.llm.live_verified ? `${facts.llm.provider} / ${facts.llm.model}`
  const s=slide("Проверка пользовательских сценариев");
  text(s,`${passCount}/${scenarioCount}`,72,161,430,115,92,C.teal,true);
  text(s,`${facts.tests.passed} автоматических тестов пройдено`,557,207,640,65,32,C.cream,true);
- let y=323;
- for(const r of facts.evaluation.scenarios.slice(0,5)) {
-  text(s,r.short_name||r.name,72,y,615,48,27,C.cream);
-  text(s,r.result_label,746,y,407,48,25,C.muted);
-  y+=59;
+ const values=facts.evaluation.scenarios.slice(0,5).map(r=>[r.short_name||r.name,r.result_label]);
+ const table=s.tables.add({rows:5,columns:2,left:72,top:315,width:1136,height:295,columnWidths:[674,462],values});
+ table.styleOptions={headerRow:false,bandedRows:false};
+ table.borders.assign({style:"solid",fill:C.dark,width:0});
+ for(let r=0;r<5;r++)for(let c=0;c<2;c++) {
+   const cell=table.getCell(r,c);cell.fill=C.dark;
+   cell.text.style={typeface:"Arial",fontSize:26,color:c?C.muted:C.cream,verticalAlignment:"middle",insets:0};
  }
- text(s,"Пустой ответ допустим, когда подтверждений недостаточно",72,643,1050,32,22,C.muted);
+ text(s,"Формальные ограничения плана; пустой ответ допустим.\nКачество текста проверяем отдельно.",72,632,1050,55,20,C.muted);
  note(s,facts.speech[5],[facts.evaluation.source,facts.tests.source,"Проверки фиксируют поведение прототипа. Они не измеряют удовлетворённость жителей и безопасность городских маршрутов."]);
 }
 {
@@ -116,7 +141,7 @@ const llm=facts.llm.live_verified ? `${facts.llm.provider} / ${facts.llm.model}`
 {
  const s=slide("Бизнес-гипотеза и развитие");
  text(s,"Пилот для отелей\nи туристических стоек",72,189,640,145,43,C.cream,true);
- text(s,"Проверяем долю выбранных планов\nи полезность объяснений",72,389,620,111,29,C.muted);
+ text(s,"В пилоте: доля выбранных планов\nи полезность объяснений",72,389,620,111,29,C.muted);
  text(s,"Следующие шаги",795,196,400,70,34,C.teal,true);
  text(s,"Пешеходные маршруты\nПроверка часов и свежести\nОценка с жителями\nКазахский и английский",795,310,400,249,27,C.cream);
  text(s,"Коммерческая модель и спрос пока не проверены",72,622,1050,44,25,C.muted);
@@ -124,10 +149,11 @@ const llm=facts.llm.live_verified ? `${facts.llm.provider} / ${facts.llm.model}`
 }
 {
  const s=slide("Материалы проекта",true);
- text(s,"Рабочий прототип\nВоспроизводимый сбор POI\nСценарии и ограничения\nПрезентация и демо",72,192,1110,253,43,C.ink,true);
- text(s,"Ограничения: приблизительный путь, неполные POI,\nнет текущих событий и проверки безопасности",72,499,1110,90,27,C.gray);
- text(s,"github.com/ltybcs/astana-walks-ai",72,630,1060,44,27,C.ink);
- note(s,facts.speech[8],[facts.repository,facts.video_url||"Демо записано локально. Публикация YouTube не подтверждена.",`Снимок материалов: ${facts.generated_at}`]);
+ text(s,`${facts.pwa?.enabled?"Мобильный прототип и PWA":"Рабочий прототип"}\nВоспроизводимый сбор POI\nСценарии и ограничения\nПрезентация и демо`,72,192,1110,253,43,C.ink,true);
+ const temporary=Boolean(facts.pwa?.demo_url);
+ text(s,"Ограничения: приблизительный путь, неполные POI,\nнет текущих событий и проверки безопасности"+(facts.pwa?.enabled?"\nОфлайн: оболочка PWA. Подбор требует сервера":"")+(temporary?"\nДемо зависит от включённых ПК и туннеля":""),72,temporary?472:facts.pwa?.enabled?488:499,1110,temporary?144:facts.pwa?.enabled?126:90,27,C.gray);
+ text(s,temporary?`Временно: ${facts.pwa.demo_url.replace(/^https:\/\//,"").replace(/\/$/,"")}`:"github.com/ltybcs/astana-walks-ai",72,630,1060,44,27,C.ink);
+ note(s,facts.speech[8],[facts.repository,facts.pwa?.demo_url||"",facts.pwa?.https_evidence||"",facts.video_url||"Публикация YouTube не подтверждена.",`Снимок материалов: ${facts.generated_at}`]);
 }
 
 for(const [i,s] of deck.slides.items.entries()) {
@@ -139,8 +165,11 @@ await (await PresentationFile.exportPptx(deck)).save(draft);
 const skillDir=process.env.CODEX_PRESENTATIONS_SKILL || path.join(process.env.USERPROFILE||"", ".codex","plugins","cache","openai-primary-runtime","presentations","26.1017.11052","skills","presentations");
 const finalPath=path.join(outDir,"presentations","astana-walks.pptx");
 await fs.mkdir(path.join(outDir,"build"),{recursive:true});
-const temporaryFinal=path.join(outDir,"build",`validated-${Date.now()}.pptx`);
+const buildStamp=String(Date.now());
+const temporaryFinal=path.join(outDir,"build",`validated-${buildStamp}.pptx`);
+const receiptPath=path.join(buildDir,`presentation-validation-${buildStamp}.json`);
 const {finalizePresentation}=await import(pathToFileURL(path.join(skillDir,"container_tools","artifact_tool_utils.mjs")).href);
-await finalizePresentation({workspaceDir,candidatePath:draft,finalPath:temporaryFinal,pythonExecutable:process.env.CODEX_RUNTIME_PYTHON||path.join(runtimeRoot,"python","python.exe"),integrityValidatorPath:path.join(skillDir,"container_tools","inspect_presentation_package_integrity.py"),layoutValidatorPath:path.join(skillDir,"container_tools","inspect_presentation_layout_geometry.py"),layoutArgs:["--expected-slide-size-emu","12192000,6858000","--validate-heading-fit"],explicitTotalSlideCount:9,requiredNativeTableOwnerSlides:[],requiredNativeChartOwnerSlides:[],fontPolicy:{basis:"design",families:["Arial"]},verifyArtifactToolImport:true,receiptPath:path.join(buildDir,"presentation-validation.json")});
+await finalizePresentation({workspaceDir,candidatePath:draft,finalPath:temporaryFinal,pythonExecutable:process.env.CODEX_RUNTIME_PYTHON||path.join(runtimeRoot,"python","python.exe"),integrityValidatorPath:path.join(skillDir,"container_tools","inspect_presentation_package_integrity.py"),layoutValidatorPath:path.join(skillDir,"container_tools","inspect_presentation_layout_geometry.py"),layoutArgs:["--expected-slide-size-emu","12192000,6858000","--validate-heading-fit","--require-native-table-slide","6"],explicitTotalSlideCount:9,requiredNativeTableOwnerSlides:[6],requiredNativeChartOwnerSlides:[],fontPolicy:{basis:"design",families:["Arial"]},verifyArtifactToolImport:true,receiptPath});
+await fs.copyFile(receiptPath,path.join(buildDir,"presentation-validation.json"));
 await fs.copyFile(temporaryFinal,finalPath);
 console.log(JSON.stringify({pptx:finalPath,slides:9}));

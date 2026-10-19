@@ -24,9 +24,12 @@ RELEASE = "b11739"
 RUNTIME_NAME = f"llama-{RELEASE}-bin-win-cpu-x64.zip"
 RUNTIME_URL = f"https://github.com/ggml-org/llama.cpp/releases/download/{RELEASE}/{RUNTIME_NAME}"
 RUNTIME_SHA256 = "b1e0a14abdb4665c1b821b377ba063b221cec62882c373065cf8fb672988d3ff"
-MODEL_REPO = "Qwen/Qwen3-1.7B-GGUF"
-MODEL_REVISION = "90862c4b9d2787eaed51d12237eafdfe7c5f6077"
-MODEL_NAME = "Qwen3-1.7B-Q8_0.gguf"
+MODEL_REPO = "unsloth/Qwen3-4B-Instruct-2507-GGUF"
+MODEL_REVISION = "a06e946bb6b655725eafa393f4a9745d460374c9"
+MODEL_NAME = "Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
+MODEL_SHA256 = "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597"
+MODEL_SIZE = 2_497_281_120
+BASE_MODEL = "Qwen/Qwen3-4B-Instruct-2507"
 HEADERS = {"User-Agent": "AstanaWalksLocalSetup/1.0"}
 
 def sha256(path: Path) -> str:
@@ -69,6 +72,8 @@ def install():
     model_file = next(item for item in metadata["siblings"] if item["rfilename"] == MODEL_NAME)
     expected = model_file["lfs"]["sha256"]
     size = model_file["lfs"]["size"]
+    if expected != MODEL_SHA256 or size != MODEL_SIZE:
+        raise ValueError("Pinned model metadata differs from the reviewed checksum/size")
     download(RUNTIME_URL, CACHE / RUNTIME_NAME, RUNTIME_SHA256)
     download(f"https://huggingface.co/{MODEL_REPO}/resolve/{MODEL_REVISION}/{MODEL_NAME}", CACHE / MODEL_NAME, expected, size)
     runtime = CACHE / RELEASE
@@ -79,7 +84,7 @@ def install():
             if not target.is_relative_to(runtime.resolve()) or (item.external_attr >> 16) & 0o170000 == 0o120000:
                 raise ValueError("Unsafe archive path")
         archive.extractall(runtime)
-    manifest = {"runtime": RELEASE, "runtime_url": RUNTIME_URL, "runtime_sha256": RUNTIME_SHA256, "model": MODEL_REPO, "model_revision": MODEL_REVISION, "model_file": MODEL_NAME, "model_sha256": expected, "model_size": size, "model_license": metadata.get("cardData", {}).get("license", "See model LICENSE"), "source": f"https://huggingface.co/{MODEL_REPO}"}
+    manifest = {"runtime": RELEASE, "runtime_url": RUNTIME_URL, "runtime_sha256": RUNTIME_SHA256, "model": MODEL_REPO, "base_model": BASE_MODEL, "quantization_publisher": "Unsloth", "model_revision": MODEL_REVISION, "model_file": MODEL_NAME, "model_sha256": expected, "model_size": size, "model_license": metadata.get("cardData", {}).get("license", "See model LICENSE"), "source": f"https://huggingface.co/{MODEL_REPO}"}
     (CACHE / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print("Local model and runtime installed. Weights remain ignored by Git.", flush=True)
 
@@ -90,11 +95,11 @@ def server_command(port: int) -> list[str]:
     model = CACHE / MODEL_NAME
     if len(servers) != 1 or not model.is_file():
         raise ValueError("Run --download first")
-    return [str(servers[0]), "-m", str(model), "--host", "127.0.0.1", "--port", str(port), "-c", "8192", "-np", "1", "-t", "6", "--jinja", "--reasoning", "off", "--chat-template-kwargs", '{"enable_thinking":false}', "--alias", "astana-local"]
+    return [str(servers[0]), "-m", str(model), "--host", "127.0.0.1", "--port", str(port), "-c", "8192", "-np", "1", "-t", "6", "--jinja", "--reasoning", "off", "--alias", "astana-local"]
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--download", action="store_true", help="Download ~1.9 GB from official sources and verify hashes")
+    parser.add_argument("--download", action="store_true", help="Download the pinned ~2.5 GB Unsloth GGUF of Qwen Instruct and verify hashes")
     parser.add_argument("--serve", action="store_true", help="Run the installed model on loopback only")
     parser.add_argument("--port", type=int, default=8081)
     args = parser.parse_args()

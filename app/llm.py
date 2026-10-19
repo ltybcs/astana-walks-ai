@@ -267,7 +267,7 @@ def narrate(selected: list[dict], intent: dict, *, facts_by_id: dict[str, dict],
         elif config.json_mode == "json":
             body["response_format"] = {"type": "json_object"}
         if urlparse(config.base_url).hostname in {"localhost", "127.0.0.1", "::1"}:
-            body["temperature"] = 0.2
+            body["temperature"] = 0
         headers = {"Content-Type": "application/json", "User-Agent": "AstanaWalks/1.0"}
         if config.api_key:
             headers["Authorization"] = "Bearer " + config.api_key
