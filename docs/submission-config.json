@@ -7,9 +7,28 @@
   },
   "video_url": null,
   "screenshot_layout": "detail",
-  "screenshot_crop": {"left": 0.345, "top": 0.05, "right": 0.025, "bottom": 0.23},
+  "screenshot_crop": {"left": 0.325, "top": 0.49, "right": 0.065, "bottom": 0.015},
   "mobile_screenshot": "output/demo-mobile.jpg",
+  "ui_evidence": "output/ui-check.json",
   "narration_evidence": "output/live-explanations.json",
+  "features": {
+    "street_map": {
+      "available": true,
+      "library": "Leaflet",
+      "tile_provider": "OpenStreetMap",
+      "screenshot": "output/map-desktop.jpg",
+      "screenshot_dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+      "crop": {"left": 0.325, "top": 0.098, "right": 0.065, "bottom": 0.552}
+    },
+    "osm_refresh": {"available": true},
+    "two_gis": {"available": true}
+  },
+  "video": {
+    "publication": "user_upload_later",
+    "current_mp4": null,
+    "current_dataset_sha256": null,
+    "previous_snapshot_video": "output/history/qwen3-4b/738-poi/output/video/final/astana-walks-demo.mp4"
+  },
   "pwa": {
     "enabled": true,
     "evidence": "PR #7 c31bc7a and quota fix 90ed954. web/sw.js: shell allowlist, API network-only, no query/non-GET caching. HTTPS resource results: output/https-check.json. Physical installation and launch from icon reported by the user on 2026-10-20, not independently observed.",

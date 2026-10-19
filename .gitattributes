@@ -2,6 +2,11 @@
 
 # Recorded evidence hashes refer to exact bytes, including line endings.
 output/**/*.json -text whitespace=cr-at-eol
+output/speaker-script.md -text whitespace=cr-at-eol
+output/**/*.pdf binary
+output/**/*.pptx binary
+output/**/*.jpg binary
+output/**/*.mp4 binary
 output/history/qwen3-4b/738-poi/** -text
 
 # Preserve the exact upstream bytes checked by the bundled library's SRI hashes.

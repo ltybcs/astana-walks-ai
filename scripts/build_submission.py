@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -43,79 +44,90 @@ def place_count(value):
     return f"{value} "+("место" if value==1 else "места" if 2<=value<=4 else "мест")
 
 
+def protocol_note(protocol):
+    if protocol.get("not_a_new_sequential_full_generation_run"):
+        reused=protocol.get("main_responses_revalidated_offline",0)
+        fresh=len(protocol.get("new_family_provider_calls",[]))
+        accepted=protocol.get("final_accepted_provider_calls",0)
+        total=protocol.get("unique_observed_provider_calls_including_rejected_history",0)
+        return (f'Свидетельства получены в разное время: {reused} основных ответа повторно проверены '
+                f'новым guard без генерации, семейный пресет сгенерирован отдельно ({fresh} вызов). '
+                f'Принято {accepted} ответов; всего наблюдалось {total} уникальных вызовов, включая исторический отказ. '
+                'Это не новый последовательный прогон всех генераций.')
+    return "Результаты относятся к записанной проверке и не гарантируют качество будущих ответов."
+
+
 def speech(f):
-    """Speaker text, deliberately tied to the recorded evidence."""
+    """Ten-slide speech; all run metrics come from the recorded evidence."""
     d, featured = f["dataset"], f["featured"]
-    mode = (f'Модель {f["llm"]["model"]} получила только найденные POI и сформировала объяснения. '
-            if f["llm"]["live_verified"] else
-            "В этой демонстрации работает локальный extractive-режим. Он формирует объяснения по найденным POI. Живой вызов LLM не подтверждён. ")
-    result = [
-        "Здравствуйте. Мы представляем Astana Walks, помощника для коротких прогулок в Астане. "
-        "Он решает первую задачу НИЦ Smart City: учитывает стартовую точку, интересы и время человека, "
-        "ищет подходящие городские места и объясняет рекомендации. Наш пользователь может быть жителем, "
-        "гостем города или туристом, у которого есть свободный час. Ему нужен небольшой понятный план, "
-        "а не ещё один длинный список заведений. Начнём с обычной ситуации возле EXPO.",
-        f'В этом проверочном сценарии человек говорит: «{featured["query"]}». '
-        f'Он выбирает старт возле EXPO и располагает {featured["minutes"]} минутами. '
-        f'Система предлагает {place_count(featured["result_count"])}: {", ".join(featured["names"])}. '
+    summary = f["evaluation"].get("llm_summary") or {}
+    if f["llm"]["live_verified"]:
+        generation = (f'В записанных основных сценариях LLM принята в {summary.get("validated_scenarios", 0)} из '
+                      f'{summary.get("eligible_scenarios", 0)} непустых основных сценариев. '
+                      f'Локальный fallback использован в {summary.get("fallback_scenarios", 0)} случаях. ')
+        if f["evaluation"].get("validation_protocol",{}).get("not_a_new_sequential_full_generation_run"):
+            generation += "Основные ответы повторно проверены новым guard без генерации; семейный пресет сгенерирован отдельно. Это не новый полный последовательный прогон. "
+    else:
+        generation = "В этом прогоне работает обозначенный локальный extractive-режим. Живой вызов LLM не подтверждён. "
+    phone = f.get("pwa", {}).get("phone_installation", {})
+    phone_text = (" Установку предыдущей версии на Android с Chrome и запуск по иконке пользователь подтвердил ранее. "
+                  "Новые функции и работу без сети на физическом телефоне отдельно не проверяли.") if phone.get("user_reported") else ""
+    return [
+        "Здравствуйте. Astana Walks помогает жителю или гостю Астаны выбрать короткую прогулку. "
+        "Мы решаем первую задачу НИЦ Smart City: учитываем старт, интересы и свободное время, "
+        "находим до трёх городских мест и объясняем выбор. Вместо длинного списка человек получает "
+        "небольшой план с возвращением, источниками и понятными ограничениями. Начнём с ситуации возле EXPO.",
+        f'Пользователь говорит: «{featured["query"]}». Старт в этом примере смоделирован. '
+        f'При бюджете {featured["minutes"]} минут найдены {", ".join(featured["names"])}. '
         f'Расчётный план занимает {featured["total_minutes"]} минут вместе с возвращением. '
-        "Мы включаем возврат, чтобы короткая прогулка не закончилась далеко от исходной точки. "
-        "Расстояние рассчитываем приближённо и прямо об этом сообщаем. Реальные переходы, ограждения "
-        "и состояние тротуаров пока требуют отдельной проверки.",
-        "Так выглядит фактический ответ работающего приложения. Пользователь задаёт интересы, время "
-        "и смоделированный старт, затем получает до трёх рекомендаций. У каждого места видно, почему "
-        "оно подходит, сколько займёт посещение и что можно там сделать. Рядом находится ссылка "
-        "на источник. Мы различаем факт из каталога и предложенную идею действия. Например, внешний "
-        "осмотр архитектуры можно предложить, но нельзя объявить текущую выставку без подтверждения. "
-        "Пользователь также видит предупреждения и фактический режим генерации.",
-        f'RAG начинается с данных. Автоматический сборщик получает публичные точки из набора {d["source_name"]}, '
-        "нормализует их и сохраняет происхождение. Затем поиск BM25 сопоставляет текст интересов "
-        "с описаниями и категориями. Мы учитываем расстояние, время суток и обязательные ограничения. "
-        "Планировщик выбирает достижимую последовательность мест и рассчитывает возврат. " + mode +
-        "После генерации приложение проверяет ссылки на найденные места и ограничения плана. "
-        "При отказе провайдера оно показывает локальный ответ и честно меняет название режима.",
-        f'В текущем наборе {d["count"]} реальных POI. Дата сбора: {d["date_label"]}. '
-        "У объектов есть название, координаты, категория и короткое описание. Если источник содержит "
-        "часы работы или подтверждённые свойства, мы сохраняем их вместе с ID источника и ссылкой. "
-        "Автоматический сбор воспроизводим через скрипт и сохранённый снимок данных. Это сведения "
-        "источника, а не наша полевая проверка каждого места. Поэтому отсутствие "
-        f'информации остаётся неизвестностью. Атрибуция: {d["attribution"]}. Условия данных: {d["license"]}.',
-        f'Мы проверили {len(f["evaluation"]["scenarios"])} сценариев из условия хакатона. '
-        f'Автоматический набор содержит {f["tests"]["passed"]} пройденных тестов. '
-        "В сценариях проверяем число рекомендаций, бюджет времени с возвратом, наличие источников "
-        "и соблюдение явных ограничений. Прогулка возле EXPO должна давать конкретные достижимые места. "
-        "Запрос про розетку требует подтверждения источника. Тишина остаётся неизвестной, "
-        "а явное требование только тихого места включает строгий фильтр. Детский сценарий "
-        "не должен обещать безопасность без данных. Для туриста учитывается прогулка, но не дорога "
-        "в аэропорт. Ночью неизвестные часы не превращаются в обещание открытого заведения.",
-        "Локация нужна только для текущего ответа. Приложение не создаёт аккаунт, историю прогулок "
-        "или аналитический профиль. Оно не сохраняет запросы и точные координаты в журнале "
-        "или localStorage. Во внешнюю модель можно передать только признаки интересов и отобранные "
-        "публичные POI. Исходный пользовательский текст, координаты старта, расстояния и расчётные времена "
-        "в этот запрос не включаем. Ключ находится только на backend. Ссылки на источники, "
-        "неизвестные свойства и честные предупреждения помогают человеку оценить совет самостоятельно.",
-        "Бизнес-гипотеза проекта: предложить помощника отелям и туристическим стойкам, где гостю "
-        "часто нужен план на небольшой промежуток времени. Это ещё не подтверждённый спрос. "
-        "В пилоте мы хотим измерить долю выбранных планов и полезность объяснений. Любые будущие "
-        "коммерческие рекомендации потребуют явной маркировки. Развитие начнём с пешеходной "
-        "маршрутизации и более надёжной проверки часов работы. После этого проведём оценку "
-        "с жителями и добавим казахский и английский языки. Эти возможности пока входят в план развития.",
-        "В репозитории находятся работающий прототип, автоматический сборщик, зафиксированный "
-        "набор POI, инструкции запуска и проверок. Мы подготовили документ сценариев и ограничений, "
-        "презентацию и демонстрацию. Основные ограничения сохраняются: путь приблизительный, "
-        "городские данные могут быть неполными, события и безопасность маршрута в реальном времени "
-        "не проверяются. Astana Walks уже показывает, как связать интересы человека, доступное время "
-        "и объяснимые рекомендации из конкретных источников. Спасибо, готовы показать сценарий и ответить на вопросы."
+        "Посещение и обратная дорога входят в бюджет. Расстояние пока геометрическое: мы прямо "
+        "предупреждаем, что переходы, ограды и состояние тротуаров могут изменить реальный путь.",
+        f'На фактическом снимке UI план занимает {f["ui_example"]["total_minutes"]} минуты: здесь выбрана другая публичная точка старта, чем в проверке на {featured["total_minutes"]} минуты. '
+        "В карточке видны объяснение, идея действия, "
+        "расчётное время, источник и режим генерации. Сведения POI отделены от предложенного действия. "
+        "Мобильный интерфейс поддерживает установку PWA. Оболочка доступна без сети, но новый подбор "
+        "требует backend, а ответы API не кэшируются." + phone_text,
+        "Теперь у приложения есть настоящая уличная карта Leaflet с подложкой OpenStreetMap. "
+        "На ней видны места каталога, начало и пронумерованные остановки. Карту можно перемещать "
+        "и масштабировать, а источник открыть из маркера. Линии соединяют остановки по прямой: "
+        "это схема плана, а не пешеходная навигация. При недоступности подложки остаются точки "
+        "и список. Внешний сервис тайлов получает IP и область просмотра.",
+        "RAG начинается с автоматически собранных публичных POI. BM25 и категории сопоставляют "
+        "интересы с описаниями, затем планировщик учитывает расстояние, возврат и обязательные "
+        "ограничения. Модель получает только найденные публичные факты и признаки интересов. "
+        "После генерации проверяются идентификаторы, структура и известные рискованные утверждения. "
+        + generation + "Пустая выдача при отсутствии подтверждённой розетки не требует вызова модели. "
+        "Проверка структуры не гарантирует смысловую достоверность каждой будущей фразы.",
+        f'В поставляемом снимке {d["count"]} реальных OSM POI, собранных {d["date_label"]}. '
+        f'Для {d["missing_hours"]} мест часы не указаны. Мы сохраняем источник, дату, исходный снимок '
+        "и лицензию. Обновление OSM включается по согласию: срок свежести составляет сутки, "
+        "а при сетевой ошибке сохраняется последний целый набор. Отдельный живой поиск 2ГИС "
+        "возвращает одну страницу до десяти карточек по выбранной категории. Лимит — двадцать "
+        "попыток за скользящие сутки, включая ошибки. Эти карточки не сохраняются и не смешиваются с OSM или RAG.",
+        f'Отчёт содержит пять основных сценариев и {f["tests"]["passed"]} пройденных автоматических тестов. '
+        "Проверяются бюджет с возвратом, источники, число рекомендаций и явные ограничения. "
+        "Тишина не считается доказанной по категории кафе. Розетка требует источника. Детская "
+        "категория не доказывает безопасность, а ночной запрос не делает неизвестные часы "
+        "круглосуточными. Дополнительный семейный UI-пресет записан отдельно. Формальный pass "
+        "и ручное чтение объяснений отвечают на разные вопросы.",
+        "Приложение не создаёт аккаунт или историю прогулок и не сохраняет запросы и точные "
+        "координаты в логах или localStorage. Исходный запрос и старт не передаются модели. "
+        "2ГИС получает только фиксированную категорию и границы Астаны; на диске остаются времена "
+        "попыток для лимита. Уличные тайлы раскрывают область просмотра. Временное HTTPS-демо "
+        "передаёт трафик через Cloudflare к локальному backend. Поэтому локальная модель не означает, "
+        "что весь сетевой путь ограничен устройством пользователя.",
+        "Бизнес-гипотеза — помощник для отелей и туристических стоек, где гостю нужен план на "
+        "короткое свободное время. Спрос пока не подтверждён. В пилоте измерим долю выбранных "
+        "планов и полезность объяснений. Следующие шаги — маршрутизация по пешеходным дорогам, "
+        "проверка свежести часов, оценка с жителями и казахский с английским. Будущие платные "
+        "позиции потребуют явной маркировки.",
+        "Для передачи подготовлены исходники, данные с происхождением, сценарии, ограничения "
+        "и материалы запуска. Прежний снимок сохранён отдельно от расширенной версии. "
+        "YouTube-публикацию пользователь решил выполнить самостоятельно позже, поэтому ссылка "
+        "не подменяется вымышленным адресом. Временный сайт зависит от включённого компьютера "
+        "и туннеля. Проект остаётся прототипом: путь приблизителен, полевой проверки и гарантии "
+        "безопасности нет. Спасибо, готовы показать фактический сценарий."
     ]
-    if f.get("pwa",{}).get("enabled"):
-        result[2]+=" Интерфейс ориентирован на телефон, его можно установить как PWA. Для установки на реальном телефоне нужен HTTPS. Офлайн доступна только оболочка. Подбор требует сервера, ответы API в кэш не попадают."
-        if f["pwa"].get("phone_installation",{}).get("user_reported"):
-            phone=f["pwa"]["phone_installation"]
-            platform=", ".join(value for value in [phone.get("os"),phone.get("browser")] if value)
-            result[2]+=f' Пользователь подтвердил установку на телефон{(" ("+platform+")") if platform else ""} и запуск по иконке. Работу без сети на этом устройстве мы не проверяли.'
-        if f["pwa"].get("demo_url"):
-            result[8]+=" Временный HTTPS-сайт доступен, пока работают наш компьютер и туннель."
-    return result
 
 
 def assemble(args):
@@ -214,10 +226,12 @@ def assemble(args):
         if narration.get("dataset",{}).get("sha256")!=sha256(dataset_path):
             raise ValueError("Narration evidence used a different POI snapshot.")
     llm_run=evaluation.get("summary",{}).get("llm")
+    validation_protocol=evaluation.get("evidence",{}).get("validation_protocol",{})
     llm["evidence"]=(f'Actual report: {relative(evaluation_path)}. '
         f'{evaluation["summary"]["scenarios_passed"]}/{evaluation["summary"]["scenarios_total"]} main scenarios, '
         f'{tests["passed"]}/{tests["run"]} tests. '
-        +(f'{llm_run["validated_scenarios"]}/{llm_run["eligible_scenarios"]} eligible scenarios validated, {llm_run["total_attempts"]} provider calls in main scenarios.' if llm_run else "Live LLM not recorded."))
+        +(f'{llm_run["validated_scenarios"]}/{llm_run["eligible_scenarios"]} eligible scenarios validated, {llm_run["total_attempts"]} recorded provider calls in main scenarios. ' if llm_run else "Live LLM not recorded. ")
+        +protocol_note(validation_protocol))
     llm["privacy_note"] = "LLM получает признаки интересов и найденные публичные POI: name, category, description, features. Исходный запрос, origin, координаты, расчётные времена, расстояния и opening_hours не передаются. Числа и расписания отображаются отдельно из backend, а не генерируются в свободном тексте."
     from app.retrieval import Retriever
     from app.generation import recommend
@@ -233,7 +247,63 @@ def assemble(args):
             raise ValueError("Narration evidence and featured plan differ.")
         generated_why=narr_recs[0]["why"]
     if screenshot_layout=="detail" and not generated_why:
-        raise ValueError("Detail layout requires the actual accepted LLM explanation.")
+        raise ValueError("Detail layout requires the actual reviewed explanation from the recorded run.")
+    ui_path=Path(config.get("ui_evidence","output/ui-check.json"))
+    if not ui_path.is_absolute():ui_path=ROOT/ui_path
+    ui_check=read_json(ui_path)
+    if ui_check.get("dataset_sha256")!=sha256(dataset_path):
+        raise ValueError("UI evidence used a different POI snapshot.")
+    if ui_check.get("query")!=first["query"] or ui_check.get("minutes")!=first["minutes"]:
+        raise ValueError("UI screenshot evidence must use the featured query and budget.")
+    ui_minutes=re.search(r"≈\s*(\d+)\s*мин",ui_check.get("plan",""))
+    if not ui_minutes:
+        raise ValueError("UI evidence must record the actual total plan minutes.")
+    ui_shots={shot["path"]:shot for shot in ui_check.get("screenshots",[])}
+    if ui_shots.get(relative(args.screenshot),{}).get("sha256")!=sha256(args.screenshot):
+        raise ValueError("UI evidence screenshot hash is absent or differs.")
+    if mobile_frame and ui_shots.get(relative(mobile_path),{}).get("sha256")!=sha256(mobile_path):
+        raise ValueError("Mobile screenshot hash is absent from UI evidence or differs.")
+    ui_example={"source":relative(ui_path),"sha256":sha256(ui_path),"recorded_at":ui_check["recorded_at"],
+                "query":ui_check["query"],"minutes":ui_check["minutes"],"total_minutes":int(ui_minutes.group(1)),
+                "mode":ui_check.get("rendered_mode"),"origin":ui_check.get("origin"),
+                "scope":ui_check.get("scope"),"limitations":ui_check.get("limitations",[])}
+    features={key:dict(value) for key,value in config.get("features",{}).items()}
+    street=features.get("street_map",{})
+    map_path=None
+    if street.get("available"):
+        if street.get("screenshot_dataset_sha256")!=sha256(dataset_path):
+            raise ValueError("Map screenshot must be confirmed for the current dataset SHA-256.")
+        map_path=Path(street.get("screenshot","output/map-desktop.jpg"))
+        if not map_path.is_absolute():map_path=ROOT/map_path
+        if not map_path.is_file():raise ValueError("A current actual street-map screenshot is required.")
+        if ui_shots.get(relative(map_path),{}).get("sha256")!=sha256(map_path):
+            raise ValueError("Map screenshot hash is absent from UI evidence or differs.")
+        map_crop=street.get("crop",{"left":0,"top":0,"right":0,"bottom":0})
+        if set(map_crop)!={"left","top","right","bottom"} or any(type(v) not in (int,float) or not 0<=v<1 for v in map_crop.values()) or map_crop["left"]+map_crop["right"]>=1 or map_crop["top"]+map_crop["bottom"]>=1:
+            raise ValueError("Street-map screenshot crop is invalid.")
+        with Image.open(map_path) as map_image:
+            mw,mh=map_image.size
+            mf=map_image.format
+        if mf not in {"JPEG","PNG"}:raise ValueError("Map screenshot must contain JPEG or PNG bytes.")
+        cw=mw*(1-map_crop["left"]-map_crop["right"])
+        ch=mh*(1-map_crop["top"]-map_crop["bottom"])
+        scale=min(1136/cw,446/ch)
+        street.update(screenshot_relative=relative(map_path),screenshot_sha256=sha256(map_path),content_type={"JPEG":"image/jpeg","PNG":"image/png"}[mf],crop=map_crop,frame={"left":72+(1136-cw*scale)/2,"top":158+(446-ch*scale)/2,"width":cw*scale,"height":ch*scale})
+        street.pop("screenshot",None)
+        features["street_map"]=street
+    if features.get("osm_refresh",{}).get("available"):
+        from app.data_refresh import TTL_SECONDS, COOLDOWN_SECONDS
+        features["osm_refresh"].update(ttl_hours=TTL_SECONDS//3600,retry_cooldown_hours=COOLDOWN_SECONDS//3600,opt_in=True,public_http_trigger=False)
+    if features.get("two_gis",{}).get("available"):
+        from app.dgis_live import PAGE_SIZE, LIMIT, WINDOW_SECONDS, ATTRIBUTION
+        features["two_gis"].update(page_size=PAGE_SIZE,attempt_limit=LIMIT,window_hours=WINDOW_SECONDS//3600,attribution=dict(ATTRIBUTION),poi_persistence=False,separate_from_osm_and_rag=True)
+    video=dict(config.get("video",{}))
+    if video.get("current_mp4"):
+        video_path=Path(video["current_mp4"])
+        if not video_path.is_absolute():video_path=ROOT/video_path
+        if not video_path.is_file() or video.get("current_dataset_sha256")!=sha256(dataset_path):
+            raise ValueError("Current video must exist and be approved for the current dataset SHA-256.")
+        video.update(current_mp4=relative(video_path),sha256=sha256(video_path))
     local_tz = timezone(timedelta(hours=5))
     collected = datetime.fromisoformat(meta["collected_at"].replace("Z", "+00:00")).astimezone(local_tz)
     rows = []
@@ -256,10 +326,14 @@ def assemble(args):
         "mobile_screenshot_content_type":mobile_mime,"mobile_screenshot_sha256":sha256(mobile_path) if mobile_frame else None,
         "mobile_frame":mobile_frame,
         "dataset":{"count":len(raw["places"]),"missing_hours":sum(not p.get("opening_hours") for p in raw["places"]),"date_label":collected.strftime("%d.%m.%Y"),"path":relative(dataset_path),"sha256":sha256(dataset_path),"source_name":meta.get("source_provider") or meta.get("name","Источник POI"),"source_url":meta.get("license_url") or raw["places"][0]["source_url"],"license_url":meta.get("license_url"),"attribution":meta.get("attribution","Атрибуция не указана"),"license":meta.get("license","Условия в метаданных не указаны"),"metadata":meta},
-        "evaluation":{"source":relative(evaluation_path),"sha256":sha256(evaluation_path),"scenarios":rows,"llm_summary":evaluation.get("summary",{}).get("llm"),"additional_checks":evaluation.get("additional_checks",[])},
+        "evaluation":{"source":relative(evaluation_path),"sha256":sha256(evaluation_path),"scenarios":rows,"llm_summary":evaluation.get("summary",{}).get("llm"),"additional_checks":evaluation.get("additional_checks",[]),"validation_protocol":validation_protocol},
         "tests":{**tests,"source":relative(evaluation_path)},
         "llm":llm,
         "pwa":pwa,
+        "features":features,
+        "map_screenshot":str(map_path) if map_path else None,
+        "video":video,
+        "ui_example":ui_example,
         "featured":{"query":first["query"],"minutes":first["minutes"],"total_minutes":response["plan"]["total_minutes"],"names":[r["name"] for r in recs],"result_count":len(recs),"mode":first["mode"],"generated_why":generated_why,"narration_source":relative(narration_path) if generated_why else None},
     }
     facts["speech"] = speech(facts)
@@ -303,13 +377,16 @@ def document_pdf(f, out):
         story.append(p(t))
     llm_summary=f["evaluation"].get("llm_summary")
     if f["llm"]["live_verified"] and llm_summary:
-        story.append(p(f'В пяти основных сценариях LLM принята в {llm_summary["validated_scenarios"]} из {llm_summary["eligible_scenarios"]} непустых случаев, суммарно {llm_summary["total_attempts"]} запросов к модели. При отклонении ответа допускается одна корректирующая попытка, затем fallback. Это результат конкретного прогона, а не гарантия будущих ответов.',"small"))
+        story.append(p(f'В пяти основных сценариях LLM принята в {llm_summary["validated_scenarios"]} из {llm_summary["eligible_scenarios"]} непустых случаев, записано {llm_summary["total_attempts"]} вызова модели. При отклонении ответа допускается одна корректирующая попытка, затем fallback.',"small"))
+        story.append(p(protocol_note(f["evaluation"].get("validation_protocol",{})),"small"))
     story += [p("Ссылки и происхождение","h2"),p(f'<link href="{f["repository"]}" color="#167C6B">Репозиторий ltybcs/astana-walks-ai</link>'),p(safe(f["dataset"]["attribution"])+". "+safe(f["dataset"]["license"]))]
     if f.get("pwa",{}).get("demo_url"):
         story.append(p(f'<link href="{escape(f["pwa"]["demo_url"])}" color="#167C6B">Временное HTTPS-демо</link> (при включённых ПК и туннеле).'))
     if f["dataset"].get("license_url"):
         story.append(p(f'<link href="{escape(f["dataset"]["license_url"])}" color="#167C6B">Условия использования данных</link>'))
     if f.get("video_url"):story.append(p(f'<link href="{escape(f["video_url"])}" color="#167C6B">Демонстрация на YouTube</link>'))
+    elif f.get("video",{}).get("publication")=="user_upload_later":
+        story.append(p("Пользователь решил загрузить видео на YouTube самостоятельно позже. Ссылка пока отсутствует.","small"))
     story += [p("Сведения POI получены из источника и не являются полевой проверкой каждого объекта. Прототип оценивает время геометрически и не гарантирует проходимость или безопасность маршрута.","small"),PageBreak()]
     story += [p("Пять сценариев из условия","h1"),p("Критерии: 0–3 рекомендации, подтверждённые источники, соблюдение явных ограничений и времени с возвратом. Пустая выдача проходит проверку, если подходящих подтверждённых мест нет.")]
     expected=[
@@ -326,13 +403,25 @@ def document_pdf(f, out):
         story += [p(f'{i+1}. {safe(r["short_name"])}',"h2"),p(f'<b>Запрос:</b> «{safe(r["query"])}»<br/><b>Контекст:</b> {safe(ctx)}'),p(f'<b>Ожидается:</b> {safe(expected[i])}'),p(f'<b>Результат:</b> {safe(r["result_label"])}. Режим {safe(r["mode"])}. Проверка пройдена.',"small")]
     story += [p("Что означает пройденная проверка","h2"),p("Pass фиксирует соблюдение формальных условий конкретного запроса: число пунктов, бюджет, источники и обязательные ограничения. Он не означает, что жители оценили ответ как полезный, что каталог полон или что каждую фразу модели проверил человек."),p("Пустая выдача и генерация","h2"),p("Строгий запрос может не иметь подтверждённых кандидатов. В таком случае приложение объясняет причину и не вызывает модель для выдумывания альтернатив. При наличии кандидатов LLM может подготовить объяснения, но не меняет найденные места и бюджет плана.")]
     for extra in f["evaluation"].get("additional_checks",[]):
-        story += [p("Дополнительная проверка UI-пресета","h2"),p(f'«{safe(extra["query"])}»: {place_count(extra["result_count"])}, {extra["total_minutes"]} мин, режим {safe(extra["mode"])}. {extra.get("llm_attempts",0)} запросов к модели. Эта отдельная проверка не входит в пять основных сценариев и их число обращений к LLM.',"small")]
+        story += [p("Дополнительная проверка UI-пресета","h2"),p(f'«{safe(extra["query"])}»: {place_count(extra["result_count"])}, {extra["total_minutes"]} мин, режим {safe(extra["mode"])}. Обращений к модели: {extra.get("llm_attempts",0)}. Эта отдельная проверка не входит в пять основных сценариев и их число обращений к LLM.',"small")]
+    story.append(p(f'Снимок MEGA в интерфейсе: {f["ui_example"]["total_minutes"]} мин; формальная проверка: {f["featured"]["total_minutes"]} мин. Публичные точки старта различаются. Снимок — отдельный UI-ответ, не часть смешанного протокола оценки.',"small"))
+    features=f.get("features",{})
+    if any(item.get("available") for item in features.values()):
+        story += [PageBreak(),p("Карта и источники онлайн","h1")]
+    if features.get("street_map",{}).get("available"):
+        story += [p("Уличная карта Leaflet / OpenStreetMap","h2"),p("Подложка показывает улицы, маркеры — POI текущего OSM-набора, старт и остановки плана. Связи проведены по прямой и не являются пешеходной маршрутизацией. Внешний сервис тайлов получает IP и область просмотра; приближение к выбранному старту выполняется отдельной кнопкой после уведомления. При сбое подложки остаются точки и список.")]
+    refresh=features.get("osm_refresh",{})
+    if refresh.get("available"):
+        story += [p("Обновление OSM по согласию","h2"),p(f'Фоновое обновление включается локально через --refresh-poi. TTL — {refresh["ttl_hours"]} ч, пауза повторной попытки после ошибки — {refresh["retry_cooldown_hours"]} ч. Проверенный набор заменяется атомарно, при сбое сохраняется последний целый снимок. Кэш публичных OSM POI находится в игнорируемой .local/poi. Публичного HTTP-запуска обновления нет.')]
+    live=features.get("two_gis",{})
+    if live.get("available"):
+        story += [p("Отдельный живой поиск 2ГИС","h2"),p(f'Одна кнопка отправляет один запрос по фиксированной категории и границам Астаны: первая страница, до {live["page_size"]} объектов. Общий лимит — {live["attempt_limit"]} попыток за скользящие {live["window_hours"]} ч, включая ошибки. Нужен серверный ключ. Исходный запрос и личная локация не отправляются. Карточки живут только в памяти ответа, HTTP private/no-store; в файлы, RAG и слой OSM они не попадают. На диске остаётся только счётчик попыток.'),p('<link href="http://dev.2gis.ru" color="#167C6B">2ГИС</link> — самостоятельный источник; его данные не распространяются по ODbL.',"small")]
     if f.get("pwa",{}).get("enabled"):
-        story += [p("Телефон, PWA и офлайн","h2"),p("Мобильная PWA сохраняет статическую оболочку. Подбор требует backend; запросы и ответы API не кэшируются. Для телефона нужен HTTPS, а localhost подходит только для разработки на том же устройстве.")]
+        story += [p("Телефон, PWA и офлайн","h2"),p("PWA сохраняет оболочку. Подбор и живой поиск требуют backend; API не кэшируется. Тайлы карты требуют сети. Для телефона нужен HTTPS, а localhost подходит для разработки на том же устройстве.","small")]
         if f["pwa"].get("phone_installation",{}).get("user_reported"):
             phone=f["pwa"]["phone_installation"]
             platform=", ".join(value for value in [phone.get("os"),phone.get("browser")] if value)
-            story.append(p("Пользователь подтвердил установку по HTTPS и запуск по иконке на настоящем телефоне"+safe((" ("+platform+")") if platform else "")+". Модель устройства не указана. Работа без сети на телефоне не проверена. Другие браузеры в это подтверждение не входят.","small"))
+            story.append(p("Пользователь ранее подтвердил установку предыдущей версии по HTTPS и запуск по иконке на телефоне"+safe((" ("+platform+")") if platform else "")+". Модель устройства не указана; новые функции и работа без сети на физическом телефоне отдельно не проверены.","small"))
         else:
             story.append(p("Установка на физический телефон не подтверждена.","small"))
         if f["pwa"].get("demo_url"):
@@ -355,10 +444,12 @@ def document_pdf(f, out):
     story += [table,p("Модель и данные запроса","h2"),p(f["llm"]["privacy_note"]+" При необходимости API-ключ доступен только backend через окружение. Для внешнего провайдера и хостинга нужно отдельно проверить условия обработки и хранения.")]
     if f.get("pwa",{}).get("demo_url"):
         story.append(p("Во временном HTTPS-демо сетевые запросы проходят через Cloudflare Quick Tunnel к локальному backend; локальная модель остаётся на ПК.","small"))
+    if features.get("street_map",{}).get("available"):
+        story.append(p("Тайлы OpenStreetMap раскрывают внешнему сервису IP и область просмотра. Текст запроса и координаты маркеров отдельными параметрами этому сервису не отправляются.","small"))
     story += [p("Коммерческие рекомендации","h2"),p("Спрос и бизнес-модель пока не проверены. Предполагаемый пилот: отели и туристические стойки. Любая будущая платная позиция должна иметь явную маркировку, не подменяя релевантность скрытым продвижением.")]
     story += [PageBreak(),p("Повторение проверки","h1"),p("Команды выполняются из корня проекта. Для запуска прототипа сторонние Python-пакеты не нужны. Финальная сборка материалов требует ReportLab, Pillow, pypdf и @oai/artifact-tool.")]
     llm_flag=" --llm" if f["llm"]["live_verified"] else ""
-    commands=["python -m unittest discover -s tests -v",f'python -m app.evaluate --data {f["dataset"]["path"]} --output output/evaluation.json --run-tests{llm_flag}',f'python -m app.server --data {f["dataset"]["path"]}',"python scripts/collect_osm.py --help"]
+    commands=["python -m unittest discover -s tests -v",f'python -m app.evaluate --data {f["dataset"]["path"]} --output tmp/evaluation-check.json --run-tests{llm_flag}',f'python -m app.server --data {f["dataset"]["path"]}',"python scripts/collect_osm.py --help"]
     for command in commands:story.append(p(safe(command),"small"))
     story += [p("Источник фактических метрик","h2"),p(safe(f["evaluation"]["source"])),p("SHA-256 отчёта: "+f["evaluation"]["sha256"],"small")]
     https_evidence=f.get("pwa",{}).get("https_resource_check")
@@ -372,6 +463,10 @@ def document_pdf(f, out):
     story += [p("Дополнительные автоматические проверки","h2"),p("Валидация JSON и координат, строгие фильтры, неизвестные свойства, пустая выдача, ошибки LLM и защитная проверка статических путей. Итоговые числа относятся к приложенному отчёту, а не к предполагаемой городской полноте данных.")]
     story += [p("Перед внешним размещением","h2"),p("Нужны производственный HTTP-сервер, ограничения нагрузки, HTTPS, эксплуатационные проверки и проверка свежести данных. Текущий сервер предназначен для локального демо. Не публикуйте .env, ключи и журналы с запросами или точными координатами.")]
     story += [p("Материалы для жюри","h2"),p("Редактируемая презентация PowerPoint, PDF слайдов, этот документ, сценарий выступления и видеодемонстрация. Ссылки на итоговую публикацию должны проверяться отдельно с правами получателя.")]
+    if f.get("video",{}).get("current_mp4"):
+        story.append(p("Актуальный локальный ролик: "+safe(f["video"]["current_mp4"])+". Пользователь загрузит его на YouTube самостоятельно; локальный файл не заменяет публикацию.","small"))
+    elif f.get("video",{}).get("previous_snapshot_video"):
+        story.append(p("Ролик версии с 738 POI сохранён как история. Актуальный тейк в конфиге этой сборки не указан; YouTube-ссылка остаётся пустой.","small"))
     def page(c,doc):
         w,h=A4
         c.setFillColor(HexColor(CREAM));c.rect(0,0,w,h,fill=1,stroke=0)
@@ -421,11 +516,11 @@ def main():
     facts_path=build/"facts.json"
     facts_path.write_text(json.dumps(f,ensure_ascii=False,indent=2),encoding="utf-8")
     document_pdf(f,pdfs/"astana-walks-scenarios.pdf")
-    speech_lines=["# Astana Walks: речь на 6 минут 30 секунд","","Темп и длительность ориентировочны. Проведите репетицию перед выступлением.",""]
-    timings=["0:00–0:35","0:35–1:10","1:10–2:10","2:10–2:55","2:55–3:30","3:30–4:15","4:15–4:55","4:55–5:40","5:40–6:30"]
+    speech_lines=["# Astana Walks: речь на 6 минут 45 секунд","","Темп и длительность ориентировочны. Проведите репетицию перед выступлением.",""]
+    timings=["0:00–0:30","0:30–1:05","1:05–1:55","1:55–2:35","2:35–3:20","3:20–4:10","4:10–4:55","4:55–5:40","5:40–6:10","6:10–6:45"]
     for i,t in enumerate(f["speech"]):speech_lines += [f"## Слайд {i+1}, {timings[i]}","",t,""]
     (args.output/"speaker-script.md").write_text("\n".join(speech_lines),encoding="utf-8")
-    public_facts={k:v for k,v in f.items() if k not in {"screenshot","mobile_screenshot","speech"}}
+    public_facts={k:v for k,v in f.items() if k not in {"screenshot","mobile_screenshot","map_screenshot","speech"}}
     (args.output/"submission-facts.json").write_text(json.dumps(public_facts,ensure_ascii=False,indent=2),encoding="utf-8")
     if not args.skip_deck:
         runtime=Path(os.environ.get("CODEX_ARTIFACT_RUNTIME",str(Path.home()/".cache/codex-runtimes/codex-primary-runtime/dependencies")))
