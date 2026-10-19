@@ -52,7 +52,14 @@ const date=facts.dataset.date_label;
 const scenarioCount=facts.evaluation.scenarios.length;
 const passCount=facts.evaluation.scenarios.filter(x=>x.passed).length;
 const demo=facts.featured;
+const mapFeature=facts.features?.street_map;
+const liveFeature=facts.features?.two_gis;
 const llm=facts.llm.live_verified ? `${facts.llm.provider} / ${facts.llm.model}` : "Локальный extractive-режим";
+function excerpt(value,limit=120) {
+ if(value.length<=limit) return value;
+ const end=value.lastIndexOf(" ",limit);
+ return value.slice(0,end>0?end:limit)+"…";
+}
 
 {
  const s=slide("");
@@ -79,18 +86,26 @@ const llm=facts.llm.live_verified ? `${facts.llm.provider} / ${facts.llm.model}`
      const mobileBytes=await fs.readFile(facts.mobile_screenshot);
      s.images.add({blob:mobileBytes.buffer.slice(mobileBytes.byteOffset,mobileBytes.byteOffset+mobileBytes.byteLength),contentType:imageMime(mobileBytes),alt:"Фактический мобильный веб-интерфейс. Физическая установка подтверждается отдельно со слов пользователя.",fit:"contain",position:facts.mobile_frame});
      text(s,"Из проверочного\nпрогона",326,192,238,64,24,C.teal,true);
-     text(s,`«${facts.featured.generated_why}»`,326,274,238,250,26,C.cream);
+     text(s,`«${excerpt(facts.featured.generated_why)}»`,326,274,238,250,26,C.cream);
      text(s,facts.featured.names[0],326,545,238,42,28,C.cream,true);
-     text(s,`${facts.featured.total_minutes} мин, с возвратом`,326,603,238,35,23,C.muted);
+     text(s,`UI: ${facts.ui_example.total_minutes} мин, с возвратом`,326,603,238,35,21,C.muted);
    } else {
      text(s,"Из проверочного прогона",72,192,460,56,27,C.teal,true);
      text(s,`«${facts.featured.generated_why}»`,72,288,460,200,32,C.cream);
      text(s,facts.featured.names[0],72,522,460,55,35,C.cream,true);
-     text(s,`${facts.featured.total_minutes} мин, с возвратом`,72,590,460,46,27,C.muted);
+     text(s,`UI: ${facts.ui_example.total_minutes} мин, с возвратом`,72,590,460,46,27,C.muted);
    }
  }
- text(s,facts.pwa?.phone_installation?.user_reported?"Установка и запуск по иконке подтверждены пользователем":facts.pwa?.enabled?"Мобильный интерфейс с поддержкой PWA":"У каждого места: почему, что сделать, время и ссылка на источник",72,651,1070,32,22,C.muted);
- note(s,facts.speech[2],[`Фактический скриншот: ${facts.screenshot_relative}`,facts.mobile_screenshot_relative||"",`Режим на момент сборки: ${llm}`,facts.featured.narration_source||"",...(facts.pwa?.enabled?["https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable",facts.pwa.evidence||""]:[])]);
+ text(s,`UI: ${facts.ui_example.total_minutes} мин; проверка: ${facts.featured.total_minutes} мин — разные публичные точки старта`,72,651,1070,32,22,C.muted);
+ note(s,facts.speech[2],[`Фактический скриншот: ${facts.screenshot_relative}`,facts.mobile_screenshot_relative||"",`Режим показанного сценария: ${facts.ui_example.mode}`,`UI: ${facts.ui_example.total_minutes} мин; evaluator: ${facts.featured.total_minutes} мин. Разные публичные старты.`,facts.ui_example.source,`Настроенная генерация: ${llm}`,facts.featured.narration_source||"",`Полное проверенное объяснение: ${facts.featured.generated_why||""}`,...(facts.pwa?.enabled?["https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable",facts.pwa.evidence||""]:[])]);
+}
+{
+ const s=slide("Настоящая уличная карта");
+ if(!facts.map_screenshot || !mapFeature?.frame) throw new Error("A current, dataset-confirmed map screenshot is required for this deck.");
+ const bytes=await fs.readFile(facts.map_screenshot);
+ s.images.add({blob:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),contentType:imageMime(bytes),alt:"Фактическая карта Leaflet/OpenStreetMap с местами текущего OSM-набора",fit:"cover",crop:mapFeature.crop,position:mapFeature.frame});
+ text(s,"Точки — из OSM. Прямые связи между остановками не являются навигацией.\nВнешний сервис тайлов получает IP и область просмотра.",72,624,1050,60,20,C.muted);
+ note(s,facts.speech[3],[mapFeature.screenshot_relative,facts.dataset.path,facts.dataset.attribution,"web/map.js","Прямые отрезки не являются дорожным графом; тайлы требуют сети."]);
 }
 {
  const s=slide("Как работает RAG");
@@ -101,19 +116,22 @@ const llm=facts.llm.live_verified ? `${facts.llm.provider} / ${facts.llm.model}`
   ["04","Проверка", "Только известные ID\nБюджет с возвратом\nЧестный fallback"]
  ];
  cols.forEach((a,i)=>{const x=72+i*288;text(s,a[0],x,182,235,65,48,C.teal,true);text(s,a[1],x,279,255,65,31,C.cream,true);text(s,a[2],x,374,255,168,26,C.muted);});
- text(s,`Генерация: ${facts.llm.live_verified?facts.llm.model.split(" / ")[0]:"Локальный extractive-режим"}`,72,602,1130,48,25,C.teal);
- note(s,facts.speech[3],["app/retrieval.py","app/generation.py","app/llm.py",facts.llm.evidence||"Живой вызов LLM не подтверждён. Режим указан явно."]);
+ text(s,`Генерация: ${facts.llm.live_verified?facts.llm.model.split(" / ")[0]:"Локальный extractive-режим"}`,72,590,1130,42,24,C.teal);
+ const run=facts.evaluation.llm_summary;
+ text(s,facts.llm.live_verified&&run?`В свидетельствах: LLM ${run.validated_scenarios}/${run.eligible_scenarios} непустых, fallback ${run.fallback_scenarios}`:"Live LLM не подтверждена; локальный режим обозначен явно",72,643,1050,32,21,C.muted);
+ note(s,facts.speech[4],["app/retrieval.py","app/generation.py","app/llm.py",facts.llm.evidence||"Живой вызов LLM не подтверждён. Режим указан явно."]);
 }
 {
- const s=slide("Данные и происхождение",true);
+ const s=slide("Данные и обновление",true);
  text(s,String(n),72,181,530,170,128,C.ink,true);
  text(s,"реальных POI",79,370,520,60,37,C.gray);
- text(s,`Сбор: ${date}`,79,485,520,64,27,C.gray);
+ text(s,`${facts.dataset.missing_hours} без часов работы`,79,447,520,42,24,C.gray);
+ text(s,`Сбор: ${date}`,79,506,520,48,25,C.gray);
  text(s,`${facts.dataset.attribution}\n${facts.dataset.license}`,79,578,530,68,23,C.gray);
- text(s,facts.dataset.source_name,656,195,550,110,36,C.ink,true);
- text(s,"Название, координаты, категория\nОписание и доступные теги\nID источника, ссылка и дата",656,329,550,174,29,C.ink);
- text(s,`${facts.dataset.missing_hours} POI без часов работы\nНеизвестное не становится обещанием`,656,532,550,86,27,C.gray);
- note(s,facts.speech[4],[facts.dataset.path,facts.dataset.source_url,facts.dataset.attribution,facts.dataset.license,`SHA-256 набора: ${facts.dataset.sha256}`]);
+ text(s,facts.dataset.source_name,656,195,550,110,34,C.ink,true);
+ text(s,"Снимок OSM с датой и источниками\nОбновление по согласию, TTL 24 ч\nПри сбое — последний целый набор\n2ГИС: отдельные живые карточки",656,329,550,174,25,C.ink);
+ text(s,liveFeature?`2ГИС: до ${liveFeature.page_size} карточек за запрос\n${liveFeature.attempt_limit} попыток / ${liveFeature.window_hours} ч, без POI-кэша`:"2ГИС не включён в эту сборку",656,532,550,100,24,C.gray);
+ note(s,facts.speech[5],[facts.dataset.path,facts.dataset.source_url,facts.dataset.attribution,facts.dataset.license,`SHA-256 набора: ${facts.dataset.sha256}`,"app/data_refresh.py","app/dgis_live.py"]);
 }
 {
  const s=slide("Проверка пользовательских сценариев");
@@ -128,15 +146,15 @@ const llm=facts.llm.live_verified ? `${facts.llm.provider} / ${facts.llm.model}`
    cell.text.style={typeface:"Arial",fontSize:26,color:c?C.muted:C.cream,verticalAlignment:"middle",insets:0};
  }
  text(s,"Формальные ограничения плана; пустой ответ допустим.\nКачество текста проверяем отдельно.",72,632,1050,55,20,C.muted);
- note(s,facts.speech[5],[facts.evaluation.source,facts.tests.source,"Проверки фиксируют поведение прототипа. Они не измеряют удовлетворённость жителей и безопасность городских маршрутов."]);
+ note(s,facts.speech[6],[facts.evaluation.source,facts.tests.source,"Проверки фиксируют поведение прототипа. Они не измеряют удовлетворённость жителей и безопасность городских маршрутов."]);
 }
 {
  const s=slide("Приватность и доверие",true);
  text(s,"Локация для одного ответа",72,195,1110,64,42,C.ink,true);
- text(s,"Без аккаунта, истории прогулок и аналитики\nЗапросы и координаты не сохраняются приложением",72,300,1090,112,31,C.ink);
+ text(s,"Запросы и координаты не сохраняются приложением\nВнешние тайлы получают IP и область просмотра",72,300,1090,112,31,C.ink);
  text(s,"POI-факт отдельно от идеи действия",72,466,1100,62,36,C.ink,true);
  text(s,"Нет обещания «открыто сейчас», тишины или розетки\nбез подтверждения в источнике",72,558,1110,94,28,C.gray);
- note(s,facts.speech[6],["docs/PRIVACY.md", "app/server.py", "app/llm.py", facts.llm.privacy_note]);
+ note(s,facts.speech[7],["docs/PRIVACY.md", "app/server.py", "app/llm.py", "web/map.js",facts.llm.privacy_note]);
 }
 {
  const s=slide("Бизнес-гипотеза и развитие");
@@ -145,15 +163,15 @@ const llm=facts.llm.live_verified ? `${facts.llm.provider} / ${facts.llm.model}`
  text(s,"Следующие шаги",795,196,400,70,34,C.teal,true);
  text(s,"Пешеходные маршруты\nПроверка часов и свежести\nОценка с жителями\nКазахский и английский",795,310,400,249,27,C.cream);
  text(s,"Коммерческая модель и спрос пока не проверены",72,622,1050,44,25,C.muted);
- note(s,facts.speech[7],["docs/CONCEPT.md","Бизнес-модель и пилот — гипотезы команды. Выручка и спрос не измерялись."]);
+ note(s,facts.speech[8],["docs/CONCEPT.md","Бизнес-модель и пилот — гипотезы команды. Выручка и спрос не измерялись."]);
 }
 {
  const s=slide("Материалы проекта",true);
- text(s,`${facts.pwa?.enabled?"Мобильный прототип и PWA":"Рабочий прототип"}\nВоспроизводимый сбор POI\nСценарии и ограничения\nПрезентация и демо`,72,192,1110,253,43,C.ink,true);
+ text(s,`Карта, мобильный прототип и PWA\nАвтосбор и снимки данных\nСценарии, презентация и инструкции\n${facts.video_url?"Видео: ссылка YouTube в материалах":"Видео: пользователь загрузит позже"}`,72,192,1110,253,39,C.ink,true);
  const temporary=Boolean(facts.pwa?.demo_url);
  text(s,"Ограничения: приблизительный путь, неполные POI,\nнет текущих событий и проверки безопасности"+(facts.pwa?.enabled?"\nОфлайн: оболочка PWA. Подбор требует сервера":"")+(temporary?"\nДемо зависит от включённых ПК и туннеля":""),72,temporary?472:facts.pwa?.enabled?488:499,1110,temporary?144:facts.pwa?.enabled?126:90,27,C.gray);
  text(s,temporary?`Временно: ${facts.pwa.demo_url.replace(/^https:\/\//,"").replace(/\/$/,"")}`:"github.com/ltybcs/astana-walks-ai",72,630,1060,44,27,C.ink);
- note(s,facts.speech[8],[facts.repository,facts.pwa?.demo_url||"",facts.pwa?.https_evidence||"",facts.video_url||"Публикация YouTube не подтверждена.",`Снимок материалов: ${facts.generated_at}`]);
+ note(s,facts.speech[9],[facts.repository,facts.pwa?.demo_url||"",facts.pwa?.https_evidence||"",facts.video_url||"Пользователь выбрал самостоятельную загрузку позже; публикация YouTube не подтверждена.",`Снимок материалов: ${facts.generated_at}`]);
 }
 
 for(const [i,s] of deck.slides.items.entries()) {
@@ -169,7 +187,8 @@ const buildStamp=String(Date.now());
 const temporaryFinal=path.join(outDir,"build",`validated-${buildStamp}.pptx`);
 const receiptPath=path.join(buildDir,`presentation-validation-${buildStamp}.json`);
 const {finalizePresentation}=await import(pathToFileURL(path.join(skillDir,"container_tools","artifact_tool_utils.mjs")).href);
-await finalizePresentation({workspaceDir,candidatePath:draft,finalPath:temporaryFinal,pythonExecutable:process.env.CODEX_RUNTIME_PYTHON||path.join(runtimeRoot,"python","python.exe"),integrityValidatorPath:path.join(skillDir,"container_tools","inspect_presentation_package_integrity.py"),layoutValidatorPath:path.join(skillDir,"container_tools","inspect_presentation_layout_geometry.py"),layoutArgs:["--expected-slide-size-emu","12192000,6858000","--validate-heading-fit","--require-native-table-slide","6"],explicitTotalSlideCount:9,requiredNativeTableOwnerSlides:[6],requiredNativeChartOwnerSlides:[],fontPolicy:{basis:"design",families:["Arial"]},verifyArtifactToolImport:true,receiptPath});
+await finalizePresentation({workspaceDir,candidatePath:draft,finalPath:temporaryFinal,pythonExecutable:process.env.CODEX_RUNTIME_PYTHON||path.join(runtimeRoot,"python","python.exe"),integrityValidatorPath:path.join(skillDir,"container_tools","inspect_presentation_package_integrity.py"),layoutValidatorPath:path.join(skillDir,"container_tools","inspect_presentation_layout_geometry.py"),layoutArgs:["--expected-slide-size-emu","12192000,6858000","--validate-heading-fit","--require-native-table-slide","7"],explicitTotalSlideCount:10,requiredNativeTableOwnerSlides:[7],requiredNativeChartOwnerSlides:[],fontPolicy:{basis:"design",families:["Arial"]},verifyArtifactToolImport:true,receiptPath});
 await fs.copyFile(receiptPath,path.join(buildDir,"presentation-validation.json"));
+await fs.copyFile(receiptPath,path.join(outDir,"presentations","validation.json"));
 await fs.copyFile(temporaryFinal,finalPath);
-console.log(JSON.stringify({pptx:finalPath,slides:9}));
+console.log(JSON.stringify({pptx:finalPath,slides:10}));

@@ -1,26 +1,26 @@
 {
-  "generated_at": "2026-10-20T01:51:50+05:00",
+  "generated_at": "2026-10-20T03:12:28+05:00",
   "repository": "https://github.com/ltybcs/astana-walks-ai",
   "video_url": null,
   "screenshot_relative": "output/demo-ui.jpg",
   "screenshot_content_type": "image/jpeg",
-  "screenshot_sha256": "0a854b342e062ee2c9f00f1db2fd13acbdd3dbcdc80494d060a518116347adb0",
+  "screenshot_sha256": "3d6113a60706f8c7930c11aed962acb8a618017a471a58ab312a445601eb3937",
   "screenshot_crop": {
-    "left": 0.345,
-    "top": 0.05,
-    "right": 0.025,
-    "bottom": 0.23
+    "left": 0.325,
+    "top": 0.49,
+    "right": 0.065,
+    "bottom": 0.015
   },
   "screenshot_frame": {
-    "left": 628.4887282338309,
-    "top": 148.0,
-    "width": 551.0225435323383,
-    "height": 493.0
+    "left": 600.0,
+    "top": 214.63377049180332,
+    "width": 608.0,
+    "height": 359.73245901639336
   },
   "screenshot_layout": "detail",
   "mobile_screenshot_relative": "output/demo-mobile.jpg",
   "mobile_screenshot_content_type": "image/jpeg",
-  "mobile_screenshot_sha256": "719945a0524ed8324a1b1922f4d7f65c8799cad8c2e5230cdc0547108c71a421",
+  "mobile_screenshot_sha256": "35dcdece600f0e69e11ad8a28b5bb2b1affaf37eefc11d7f5a7174eb6205af1a",
   "mobile_frame": {
     "left": 77.93534482758622,
     "top": 170,
@@ -28,11 +28,11 @@
     "height": 454.99999999999994
   },
   "dataset": {
-    "count": 738,
-    "missing_hours": 492,
+    "count": 1267,
+    "missing_hours": 1010,
     "date_label": "20.10.2026",
     "path": "data/poi.astana.json",
-    "sha256": "eb5ebd1a3bd13bbae5ce5005a663a3ac0a0dbcb94b9dabfaa4d774f9610bee08",
+    "sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
     "source_name": "Astana POI / OpenStreetMap",
     "source_url": "https://www.openstreetmap.org/copyright",
     "license_url": "https://www.openstreetmap.org/copyright",
@@ -42,17 +42,20 @@
       "name": "Astana POI / OpenStreetMap",
       "version": 1,
       "is_demo": false,
-      "collected_at": "2026-10-19T19:17:45+00:00",
-      "collection_method": "replay_normalization",
-      "source_file": "astana-response.json",
+      "collected_at": "2026-10-19T21:30:22+00:00",
+      "collection_method": "overpass_batch",
       "endpoint": "https://overpass-api.de/api/interpreter",
       "bbox": [
-        51.02,
-        71.3,
-        51.22,
-        71.55
+        51.0,
+        71.2,
+        51.32,
+        71.7
       ],
-      "source_snapshot_at": "2026-10-19T19:15:01Z",
+      "geographic_scope": "Bounded Astana urban-area rectangle, not an administrative boundary or exhaustive inventory",
+      "query_profile": "astana_walk_v2",
+      "unnamed_count": 478,
+      "label_policy": "name_generated=true and source_name=null identify category/OSM-ID display labels, not official names; source_tags retain actual OSM values only",
+      "source_snapshot_at": "2026-10-19T21:29:20Z",
       "attribution": "© OpenStreetMap contributors",
       "license": "ODbL 1.0",
       "license_url": "https://www.openstreetmap.org/copyright",
@@ -60,16 +63,18 @@
         "Не проверено на месте",
         "Не является информацией об открытии сейчас",
         "Отсутствующие теги означают неизвестность",
-        "Геометрия way/relation представлена центром объекта"
+        "Геометрия way/relation представлена центром объекта",
+        "Названия безымянных площадок/парков — явно отмеченные подписи категории и OSM ID"
       ],
-      "raw_snapshot": "data/snapshots/astana-2026-10-20.overpass.json",
-      "query_file": "data/snapshots/astana-2026-10-20.overpassql",
-      "collection_process": "Fetched automatically with scripts.collect_osm.collect(DEFAULT_ENDPOINT, DEFAULT_BBOX), then normalized using the CLI --input; raw source snapshot retained."
+      "source_file": null,
+      "raw_snapshot": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+      "query_file": "data/snapshots/astana-2026-10-19T213022966728Z.overpassql",
+      "raw_snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239"
     }
   },
   "evaluation": {
     "source": "output/evaluation.json",
-    "sha256": "30defa0f6f81f13c16cf744ced599f32faf7b4d7517150d3c5127d576c14428e",
+    "sha256": "31b9960af32be5a3be89c007731bd0caa64ce8b711af5845a23cd8511f1a9033",
     "scenarios": [
       {
         "name": "30–60 минут возле MEGA",
@@ -270,25 +275,59 @@
           "lon": 71.4252
         },
         "minutes": 60,
-        "result_count": 1,
-        "total_minutes": 34,
+        "result_count": 2,
+        "total_minutes": 55,
         "mode": "llm-grounded",
         "llm_status": "validated",
         "llm_attempts": 1,
         "llm_rejections": [],
         "checks": {
           "budget": true,
-          "expected_snapshot_plan_34min": true,
+          "expected_snapshot_plan_55min": true,
           "category_only": true,
           "sources": true
         },
-        "pass": true
+        "pass": true,
+        "observed_started_at": "2026-10-19T22:02:16+00:00",
+        "observed_completed_at": "2026-10-19T22:02:49+00:00",
+        "runtime_session": "37574"
       }
-    ]
+    ],
+    "validation_protocol": {
+      "type": "mixed_timestamp_guard_revalidation_and_new_family_generation",
+      "main_generation_runtime_session": "68810",
+      "family_generation_runtime_session": "37574",
+      "main_provider_calls_reused_without_regeneration": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "main_responses_revalidated_offline": 4,
+      "historical_manual_rejected_family_call": 5,
+      "new_family_provider_calls": [
+        6
+      ],
+      "new_family_generation_attempts": 1,
+      "unique_observed_provider_calls_including_rejected_history": 6,
+      "final_accepted_provider_calls": 5,
+      "current_raw_files_include_guard_rejected_attempts": false,
+      "historical_rejected_raw_preserved": true,
+      "not_a_new_sequential_full_generation_run": true,
+      "prompt_and_decoding_unchanged": true,
+      "only_guard_change": "Own-source park/garden containment evidence on nonpark POI",
+      "guard_revalidation_receipt": "output/llm-evidence/revalidation.json",
+      "tests_receipt": "output/llm-evidence/tests-receipt.json",
+      "old_failed_family_review": "output/history/qwen3-4b/1267-initial/20261019T214240Z/manual-review.json",
+      "main_generation_source_report_generated_at": "2026-10-19T21:44:06+00:00",
+      "main_original_archive": "output/history/qwen3-4b/1267-initial/20261019T214240Z/original",
+      "new_family_request_identical_to_historical_family_request": true,
+      "temperature_zero_is_not_a_determinism_guarantee": true
+    }
   },
   "tests": {
-    "run": 87,
-    "passed": 87,
+    "run": 131,
+    "passed": 131,
     "failed": 0,
     "errors": 0,
     "skipped": 0,
@@ -301,7 +340,7 @@
     "provider": "llama.cpp b11739 (CPU, loopback)",
     "model": "Qwen3-4B-Instruct-2507 Q4_K_M (Unsloth) / astana-local",
     "live_verified": true,
-    "evidence": "Actual report: output/evaluation-live.json. 5/5 main scenarios, 87/87 tests. 4/4 eligible scenarios validated, 4 provider calls in main scenarios.",
+    "evidence": "Actual report: output/evaluation-live.json. 5/5 main scenarios, 131/131 tests. 4/4 eligible scenarios validated, 4 recorded provider calls in main scenarios. Свидетельства получены в разное время: 4 основных ответа повторно проверены новым guard без генерации, семейный пресет сгенерирован отдельно (1 вызов). Принято 5 ответов; всего наблюдалось 6 уникальных вызовов, включая исторический отказ. Это не новый последовательный прогон всех генераций.",
     "privacy_note": "LLM получает признаки интересов и найденные публичные POI: name, category, description, features. Исходный запрос, origin, координаты, расчётные времена, расстояния и opening_hours не передаются. Числа и расписания отображаются отдельно из backend, а не генерируются в свободном тексте."
   },
   "pwa": {
@@ -311,11 +350,11 @@
     "https_evidence": "output/https-check.json",
     "phone_evidence": "output/phone-check.json",
     "https_resource_check": {
-      "passed": 7,
-      "total": 7,
-      "generated_at": "2026-10-19T20:44:32+00:00",
+      "passed": 16,
+      "total": 16,
+      "generated_at": "2026-10-19T22:04:45+00:00",
       "source": "output/https-check.json",
-      "sha256": "9bca8ed95281fad70a654eea05dad062001540b3290dfd7b8bec4e51b04e6333"
+      "sha256": "a11d438f4bf561046e7b50a08a674455303cf158190ac68ac927577d23079343"
     },
     "phone_installation": {
       "user_reported": true,
@@ -329,6 +368,74 @@
       "source": "output/phone-check.json",
       "sha256": "97d1a14995316c328f9fe1ed44d60869553beda816a2fac3b464fa3e5f1c7503"
     }
+  },
+  "features": {
+    "street_map": {
+      "available": true,
+      "library": "Leaflet",
+      "tile_provider": "OpenStreetMap",
+      "screenshot_dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+      "crop": {
+        "left": 0.325,
+        "top": 0.098,
+        "right": 0.065,
+        "bottom": 0.552
+      },
+      "screenshot_relative": "output/map-desktop.jpg",
+      "screenshot_sha256": "4e86aa16fe316545011ead4ed25fc09b12997b52f90fe321e2e1c760fec9886b",
+      "content_type": "image/jpeg",
+      "frame": {
+        "left": 106.95242678399552,
+        "top": 158.0,
+        "width": 1066.095146432009,
+        "height": 446.0
+      }
+    },
+    "osm_refresh": {
+      "available": true,
+      "ttl_hours": 24,
+      "retry_cooldown_hours": 1,
+      "opt_in": true,
+      "public_http_trigger": false
+    },
+    "two_gis": {
+      "available": true,
+      "page_size": 10,
+      "attempt_limit": 20,
+      "window_hours": 24,
+      "attribution": {
+        "text": "2ГИС",
+        "url": "http://dev.2gis.ru"
+      },
+      "poi_persistence": false,
+      "separate_from_osm_and_rag": true
+    }
+  },
+  "video": {
+    "publication": "user_upload_later",
+    "current_mp4": null,
+    "current_dataset_sha256": null,
+    "previous_snapshot_video": "output/history/qwen3-4b/738-poi/output/video/final/astana-walks-demo.mp4"
+  },
+  "ui_example": {
+    "source": "output/ui-check.json",
+    "sha256": "5c727272f245f6e8c6773efc070d6082bdd72544451f50eca289d1b95d517ea8",
+    "recorded_at": "2026-10-19T22:06:31.100Z",
+    "query": "У меня 45 минут возле Mega, хочу короткую прогулку",
+    "minutes": 45,
+    "total_minutes": 44,
+    "mode": "RAG + LLM",
+    "origin": {
+      "lat": 51.0898,
+      "lon": 71.4078,
+      "label": "MEGA Silk Way / EXPO UI preset"
+    },
+    "scope": "One featured MEGA45 live UI response after deployment95902 plus responsive layout and manual install guidance; not the five-scenario evaluator or physical phone.",
+    "limitations": [
+      "The UI preset start 51.0898,71.4078 differs from the formal evaluator start 51.0892,71.4074, giving44 rather than42minutes; both results remain literal.",
+      "This is one additional UI generation outside the six-call mixed evaluation protocol; no provider raw-capture or formal-call count is claimed.",
+      "Browser viewport screenshots do not certify a physical phone or offline map."
+    ]
   },
   "featured": {
     "query": "У меня 45 минут возле Mega, хочу короткую прогулку",
