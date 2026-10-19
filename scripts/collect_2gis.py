@@ -165,7 +165,9 @@ def fetch_page(key, query, bbox, page):
         response_items(payload)
         return payload
     except HTTPError as error:
-        raise CollectionError(f"Places API: HTTP {error.code}. Проверьте ключ, права и лимит запросов.") from None
+        code = error.code
+        error.close()
+        raise CollectionError(f"Places API: HTTP {code}. Проверьте ключ, права и лимит запросов.") from None
     except (URLError, TimeoutError, OSError):
         raise CollectionError("Places API недоступен: сетевая ошибка или таймаут.") from None
     except (ValueError, UnicodeError) as error:
