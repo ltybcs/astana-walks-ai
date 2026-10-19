@@ -1,13 +1,13 @@
 {
   "llm": {
     "provider": "llama.cpp b11739 (CPU, loopback)",
-    "model": "Qwen3-1.7B-Q8_0 / astana-local",
+    "model": "Qwen3-4B-Instruct-2507 Q4_K_M (Unsloth) / astana-local",
     "live_verified": true,
     "evidence": "Actual recorded results and accepted narration: output/evaluation-live.json and output/live-explanations.json. Generated metrics are derived from the report."
   },
   "video_url": null,
   "screenshot_layout": "detail",
-  "screenshot_crop": {"left": 0.345, "top": 0.08, "right": 0.025, "bottom": 0.23},
+  "screenshot_crop": {"left": 0.345, "top": 0.05, "right": 0.025, "bottom": 0.23},
   "mobile_screenshot": "output/demo-mobile.jpg",
   "narration_evidence": "output/live-explanations.json",
   "pwa": {

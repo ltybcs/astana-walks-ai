@@ -1,8 +1,7 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-19T20:13:16+00:00",
-  "source": "Actual ordinary application requests and provider responses from fixed public evaluation scenarios plus a public family preset; sequential, no parameter override",
-  "privacy": "Request bodies contain structured interest labels and public POI name/category/description/features only. No raw user query, origin label, coordinates, API key or authorization headers are included.",
+  "generated_at": "2026-10-19T20:47:38+00:00",
+  "privacy": "Only structured intent and public POI name/category/description/features. No raw user query, origin label, coordinates, keys or authorization headers are captured.",
   "dataset": {
     "name": "Astana POI / OpenStreetMap",
     "is_demo": false,
@@ -11,11 +10,38 @@
     "sha256": "eb5ebd1a3bd13bbae5ce5005a663a3ac0a0dbcb94b9dabfaa4d774f9610bee08"
   },
   "actual_config": {
-    "model": "astana-local",
+    "model_alias": "astana-local",
     "temperature": 0,
     "seed_supplied": false,
     "json_mode": "schema",
-    "token_parameter": "max_tokens"
+    "token_parameter": "max_tokens",
+    "timeout_seconds": 120
+  },
+  "model": {
+    "installed_manifest": {
+      "runtime": "b11739",
+      "runtime_url": "https://github.com/ggml-org/llama.cpp/releases/download/b11739/llama-b11739-bin-win-cpu-x64.zip",
+      "runtime_sha256": "b1e0a14abdb4665c1b821b377ba063b221cec62882c373065cf8fb672988d3ff",
+      "model": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+      "base_model": "Qwen/Qwen3-4B-Instruct-2507",
+      "quantization_publisher": "Unsloth",
+      "model_revision": "a06e946bb6b655725eafa393f4a9745d460374c9",
+      "model_file": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+      "model_sha256": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+      "model_size": 2497281120,
+      "model_license": "apache-2.0",
+      "source": "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF"
+    },
+    "installed_manifest_sha256": "fd2a4c276e09d1fcfc3ba62a98eab4498eef5a2c27168ad4c606567e68e60119",
+    "weights_file_size_verified": 2497281120,
+    "weights_sha256_verified": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+    "endpoint_launch_confirmation": {
+      "confirmed_by": "Codex A / root",
+      "evidence": "Parent stopped the old server, setup --download verified the exact installed 4B SHA-256, and launched these exact weights through scripts/run_demo.py --local-llm session9942, which passed model health before candidate execution",
+      "launch_time_utc": "2026-10-19 20:44 UTC (minute precision, parent report)",
+      "runtime_session": "9942",
+      "api_identity_limit": "The provider API exposes alias astana-local only; installation manifest, full weight checksum and parent-confirmed launch establish the recorded model provenance"
+    }
   },
   "calls": [
     {
@@ -23,128 +49,101 @@
       "request_file": "request-1.json",
       "response_file": "response-1.json",
       "request_sha256": "c8f273176e4f14545cb5db82db8094a07e1d363fc23e0388646c6bfd5be970d3",
-      "response_sha256": "575e0a85b003d5c1b03a9bf24dc152002e087b3d124668ef2299ea916b8ccc9d",
       "temperature": 0,
       "seed_supplied": false,
-      "model": "astana-local"
+      "request_model_alias": "astana-local",
+      "outcome": "response_received",
+      "response_sha256": "3a3a657e75a51fd7a517912a68d4f818c17b9b16bc646d05853c2c4b2f60f935",
+      "elapsed_seconds": 23.45,
+      "response_model_alias": "astana-local"
     },
     {
       "call": 2,
       "request_file": "request-2.json",
       "response_file": "response-2.json",
       "request_sha256": "a28c3d88343aa89b604c2fea40b31f5d0eb0c352f6d14453c8f54960ef41b091",
-      "response_sha256": "edef0dd576316cb7acf45cd7906210ead454897a9be136c0fa03784f18d85528",
       "temperature": 0,
       "seed_supplied": false,
-      "model": "astana-local"
+      "request_model_alias": "astana-local",
+      "outcome": "response_received",
+      "response_sha256": "33b62409a67e248e1764d9ab2dd07e52db657ed8cd22f2ba8eba95623951ddae",
+      "elapsed_seconds": 16.53,
+      "response_model_alias": "astana-local"
     },
     {
       "call": 3,
       "request_file": "request-3.json",
       "response_file": "response-3.json",
       "request_sha256": "96cf1b9500163d5993eb60295c4cc4de5e4ea034d34e60e2db3a3c5b888e9d73",
-      "response_sha256": "60348640d68a9ded02eabe56e3dc2cf44ac78cb391875fe18997e47540f35fd6",
       "temperature": 0,
       "seed_supplied": false,
-      "model": "astana-local"
+      "request_model_alias": "astana-local",
+      "outcome": "response_received",
+      "response_sha256": "5972943f20597024132011d8ff0a86310dc054e31413d28e69c5fce58bfc02d5",
+      "elapsed_seconds": 41.5,
+      "response_model_alias": "astana-local"
     },
     {
       "call": 4,
       "request_file": "request-4.json",
       "response_file": "response-4.json",
       "request_sha256": "29d3933c004bf1add5f94e9bd4740219c80c8ec0bfd0dca157f71859ea488982",
-      "response_sha256": "61fad68f8acefea8783dcdea153c1f01b60abb8dd02a4828af47454b2d944c7a",
       "temperature": 0,
       "seed_supplied": false,
-      "model": "astana-local"
+      "request_model_alias": "astana-local",
+      "outcome": "response_received",
+      "response_sha256": "52bb2dacfe239ce241e27d8e4996c98c1a0334ff075ee3606f618dbbd0047dbb",
+      "elapsed_seconds": 17.38,
+      "response_model_alias": "astana-local"
     },
     {
       "call": 5,
       "request_file": "request-5.json",
       "response_file": "response-5.json",
       "request_sha256": "be0c1d153b2cb9ce40b39701a5a0301627427777817c12ffdab46134e190f6bf",
-      "response_sha256": "441f909742a798fcf38abc65ad821f0ea808115c6a9a3312004eb06f676441f8",
       "temperature": 0,
       "seed_supplied": false,
-      "model": "astana-local"
-    },
-    {
-      "call": 6,
-      "request_file": "request-6.json",
-      "response_file": "response-6.json",
-      "request_sha256": "8bb1a530ed21874f108d62c1dd43ce1766986f62e08e7c276cc20684ca9314f3",
-      "response_sha256": "950f7584452d083fe92451cce9dd9d4736d93448e71fd151079300915520ac14",
-      "temperature": 0,
-      "seed_supplied": false,
-      "model": "astana-local"
-    }
-  ],
-  "scenario_results": [
-    {
-      "scenario": "30–60 минут возле MEGA",
-      "mode": "llm-grounded",
-      "llm_status": "validated",
-      "llm_attempts": 1,
-      "llm_rejections": [],
-      "provider_file": "output/llm-evidence/response-1.json"
-    },
-    {
-      "scenario": "Тихий кофе и розетка",
-      "mode": "extractive",
-      "llm_status": "no_candidates",
-      "llm_attempts": 0,
-      "llm_rejections": [],
-      "provider_file": null
-    },
-    {
-      "scenario": "Прогулка с ребёнком",
-      "mode": "llm-grounded",
-      "llm_status": "validated",
-      "llm_attempts": 1,
-      "llm_rejections": [],
-      "provider_file": "output/llm-evidence/response-2.json"
-    },
-    {
-      "scenario": "Два часа у туриста",
-      "mode": "llm-grounded",
-      "llm_status": "validated",
-      "llm_attempts": 1,
-      "llm_rejections": [],
-      "provider_file": "output/llm-evidence/response-3.json"
-    },
-    {
-      "scenario": "Ночная активность",
-      "mode": "llm-grounded",
-      "llm_status": "validated",
-      "llm_attempts": 1,
-      "llm_rejections": [],
-      "provider_file": "output/llm-evidence/response-4.json"
-    },
-    {
-      "scenario": "Дополнительный фактический семейный пресет",
-      "mode": "llm-grounded",
-      "llm_status": "validated_after_repair",
-      "llm_attempts": 2,
-      "llm_rejections": [
-        "unsupported_location_claim"
-      ],
-      "provider_file": "output/llm-evidence/response-6.json"
+      "request_model_alias": "astana-local",
+      "outcome": "response_received",
+      "response_sha256": "aa20553a30673cd7b3923591ef51d47a6034bd09010ea2836e1f7eb65181e560",
+      "elapsed_seconds": 16.49,
+      "response_model_alias": "astana-local"
     }
   ],
   "manual_review": {
-    "performed_at": "2026-10-19T20:13:54+00:00",
-    "scope": "All accepted why/action texts from the five fixed scenarios and the additional family check were read manually",
-    "quality_pass": false,
-    "constraint_checks_distinct_from_prose_quality": true,
-    "issues": [
+    "status": "approved_by_two_readers",
+    "quality_pass": true,
+    "reviewers": [
       {
-        "scenario": "30–60 минут возле MEGA",
-        "poi_id": "osm:way/1467797207",
-        "type": "nonsensical_action",
-        "observed_action": "Идея: осмотреть зелёную зону парка для поглаживания рук или наблюдения за природой.",
-        "provider_file": "output/llm-evidence/response-1.json",
-        "note": "The factual guards accepted this text, but its proposed action is nonsensical. Temperature=0 alone did not remove this known small-model quality failure."
+        "reviewer": "Codex B / rag_backend",
+        "reviewed_at": "2026-10-19T20:48:38+00:00",
+        "quality_pass": true,
+        "accepted_recommendations_read": 7,
+        "scope": "Read all seven accepted why/action pairs and the coffee/socket abstention; checked diagnostics and all five raw request/response hashes. This is a review of these observed outputs, not a guarantee for every future generation.",
+        "notes": [
+          "No prior nonsense about stroking hands; no promised sockets, playground equipment, current opening, numeric route claims or safety in the accepted prose.",
+          "MEGA 'walk along a path in the park' is a category-derived activity suggestion. The dataset does not establish a specific path or its surface; actual access and route remain unverified.",
+          "Family 'place for children' relates the requested interest to the park category. It is not evidence of children's infrastructure, age suitability or safety; the application retains explicit warnings."
+        ]
+      },
+      {
+        "reviewer": "Codex A / root",
+        "recorded_at": "2026-10-19T20:49:18+00:00",
+        "quality_pass": true,
+        "accepted_recommendations_read": 7,
+        "scope": "Independently read the complete candidate live-explanations and all five raw responses; explicitly authorized reviewed promotion",
+        "notes": [
+          "All seven why/action pairs are coherent and tied to categories/interests; no prior nonsense or duplicated Idea prefix.",
+          "Architecture suggestions relate monument/theatre categories to external architectural observation.",
+          "A path in MEGA is a typical proposed activity, not confirmed infrastructure; family suitability/safety is unproven; this approval is no guarantee for future answers."
+        ]
       }
-    ]
+    ],
+    "note": "Two independent readers approved these specific observed outputs with the documented limits; automatic checks alone did not grant this approval."
+  },
+  "application_sha256": {
+    "app/llm.py": "733d480fdac4c33e6c47f58245710a9b9985215cd5bd4861575ffdea1ffb910d",
+    "app/generation.py": "56eff5301387430ced1e6584d35d0e6fbe3036fbf56ec4d27f327418d90e9d3d",
+    "app/retrieval.py": "642ab81c1f9dfec27497b1d9650e61b16fa3df4476782a58182a22e4cf936da2"
   }
 }

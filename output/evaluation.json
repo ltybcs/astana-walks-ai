@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-19T20:52:16+00:00",
+  "dataset": {
+    "name": "Astana POI / OpenStreetMap",
+    "is_demo": false,
+    "places_count": 738,
+    "path": "data/poi.astana.json",
+    "sha256": "eb5ebd1a3bd13bbae5ce5005a663a3ac0a0dbcb94b9dabfaa4d774f9610bee08"
+  },
+  "live_llm_requested": false,
+  "live_llm_used": false,
+  "scenarios": [
+    {
+      "name": "30–60 минут возле MEGA",
+      "query": "У меня 45 минут возле Mega, хочу короткую прогулку",
+      "start": {
+        "label": "MEGA Silk Way",
+        "lat": 51.0892,
+        "lon": 71.4074
+      },
+      "minutes": 45,
+      "result_count": 1,
+      "total_minutes": 42,
+      "mode": "extractive",
+      "pass": true,
+      "checks": {
+        "budget": true,
+        "limit": true,
+        "sources": true,
+        "physical_deduplication": true,
+        "constraints": true,
+        "useful_result_or_explained_abstention": true
+      },
+      "outcome": "recommendations",
+      "clarification": null,
+      "poi_ids": [
+        "osm:way/1467797207"
+      ],
+      "warnings": [
+        "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
+      ],
+      "llm_status": "disabled",
+      "llm_attempts": 0,
+      "llm_rejections": []
+    },
+    {
+      "name": "Тихий кофе и розетка",
+      "query": "Хочу тихий кофе с розеткой",
+      "start": {
+        "label": "MEGA Silk Way",
+        "lat": 51.0892,
+        "lon": 71.4074
+      },
+      "minutes": 60,
+      "result_count": 0,
+      "total_minutes": 0,
+      "mode": "extractive",
+      "pass": true,
+      "checks": {
+        "budget": true,
+        "limit": true,
+        "sources": true,
+        "physical_deduplication": true,
+        "constraints": true,
+        "useful_result_or_explained_abstention": true
+      },
+      "outcome": "explained_abstention",
+      "clarification": "Нет подходящего места с подтверждённой в источнике розеткой. Увеличьте время, выберите другую отправную точку или уточните условия; неизвестные свойства не считаются подтверждёнными.",
+      "poi_ids": [],
+      "warnings": [
+        "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+        "Тишина меняется в течение дня. Уровень шума не подтверждён, если это явно не указано источником."
+      ],
+      "llm_status": "disabled",
+      "llm_attempts": 0,
+      "llm_rejections": []
+    },
+    {
+      "name": "Прогулка с ребёнком",
+      "query": "Погулять с ребёнком на свежем воздухе",
+      "start": {
+        "label": "Ботанический сад",
+        "lat": 51.1053,
+        "lon": 71.4121
+      },
+      "minutes": 60,
+      "result_count": 1,
+      "total_minutes": 32,
+      "mode": "extractive",
+      "pass": true,
+      "checks": {
+        "budget": true,
+        "limit": true,
+        "sources": true,
+        "physical_deduplication": true,
+        "constraints": true,
+        "useful_result_or_explained_abstention": true
+      },
+      "outcome": "recommendations",
+      "clarification": null,
+      "poi_ids": [
+        "osm:way/1196402246"
+      ],
+      "warnings": [
+        "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+        "Возрастные ограничения, безопасность, туалеты и условия для ребёнка не подтверждены; проверьте их заранее."
+      ],
+      "llm_status": "disabled",
+      "llm_attempts": 0,
+      "llm_rejections": []
+    },
+    {
+      "name": "Два часа у туриста",
+      "query": "Я турист, хочу познакомиться с архитектурой Астаны",
+      "start": {
+        "label": "Бәйтерек",
+        "lat": 51.1283,
+        "lon": 71.4305
+      },
+      "minutes": 120,
+      "result_count": 3,
+      "total_minutes": 111,
+      "mode": "extractive",
+      "pass": true,
+      "checks": {
+        "budget": true,
+        "limit": true,
+        "sources": true,
+        "physical_deduplication": true,
+        "constraints": true,
+        "useful_result_or_explained_abstention": true
+      },
+      "outcome": "recommendations",
+      "clarification": null,
+      "poi_ids": [
+        "osm:way/230401645",
+        "osm:way/917478479",
+        "osm:node/4958412863"
+      ],
+      "warnings": [
+        "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
+      ],
+      "llm_status": "disabled",
+      "llm_attempts": 0,
+      "llm_rejections": []
+    },
+    {
+      "name": "Ночная активность",
+      "query": "Ночью хочу найти активность рядом",
+      "start": {
+        "label": "Бәйтерек",
+        "lat": 51.1283,
+        "lon": 71.4305
+      },
+      "minutes": 60,
+      "result_count": 1,
+      "total_minutes": 46,
+      "mode": "extractive",
+      "pass": true,
+      "checks": {
+        "budget": true,
+        "limit": true,
+        "sources": true,
+        "physical_deduplication": true,
+        "constraints": true,
+        "useful_result_or_explained_abstention": true
+      },
+      "outcome": "recommendations",
+      "clarification": null,
+      "poi_ids": [
+        "osm:node/4199896989"
+      ],
+      "warnings": [
+        "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+        "Ночной запрос: отобраны только точки, где источник явно указал 24/7; актуальный доступ, освещение и безопасность не проверены."
+      ],
+      "llm_status": "disabled",
+      "llm_attempts": 0,
+      "llm_rejections": []
+    }
+  ],
+  "summary": {
+    "scenarios_total": 5,
+    "scenarios_passed": 5,
+    "tests": {
+      "run": 87,
+      "passed": 87,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "success": true,
+      "failure_tests": [],
+      "error_tests": []
+    },
+    "llm": {
+      "eligible_scenarios": 4,
+      "validated_scenarios": 0,
+      "fallback_scenarios": 4,
+      "total_attempts": 0
+    }
+  },
+  "limitations": [
+    "Проверяются сценарные ограничения и источники, а не полное качество городских рекомендаций.",
+    "Пустой ответ при неподтверждённой розетке или режиме 24/7 — честное воздержание.",
+    "Нет полевой проверки POI, дорожного графа и гарантии семантической достоверности свободного текста."
+  ]
+}
