@@ -1,6 +1,6 @@
 # Передача второму Codex
 
-Репозиторий: https://github.com/ltybcs/astana-walks-ai (private). Для доступа Scirtor должен принять приглашение GitHub.
+Репозиторий: https://github.com/ltybcs/astana-walks-ai (private). Scirtor добавлен с ролью write; доступ подтверждён GitHub API 20 октября 2026.
 
 ## Первый запуск
 
