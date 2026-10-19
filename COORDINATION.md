@@ -176,6 +176,8 @@ Qwen3-1.7B Q8_0 / llama.cpp b11739 принял; повторную загруз
 
 Повторный прогон тестов bundled Python 3.12.14 (временные файлы направлены в доступный workspace) прошёл 31 из 33 тестов; два оставшихся завершились `UnicodeDecodeError` при чтении JSON через `cp1252`: `test_network_pagination_is_bounded_and_stops_on_short_page` и `test_collection_astana.RealAstanaDataTests.setUpClass`. Подробный вывод записан в `qa/ACCEPTANCE.md`; устранение тестовых ошибок принадлежит владельцам `tests/`. GitHub-коннектор по-прежнему авторизован как `Radkurzior` и возвращает 404 для приватного `ltybcs/astana-walks-ai`; `git ls-remote` в этой сессии также не смог разрешить сеть (`getaddrinfo`). QA-файл обновлён, ожидает ревью Scirtor и открытия PR.
 
+Дополнение Radkurzior, 2026-10-20: проверена отдельная копия головы draft PR #5 (`e2b7e23df940aee365f2fd579737570a0eede4b3`): Python 3.12.14 — 74/74 теста; встроенная оценка реального датасета — 5/5; пять исходных запросов через HTTP API прошли с режимом `extractive`, QA-01 и QA-02 не воспроизвелись. Данные приведены в `qa/ACCEPTANCE.md`; UI E2E и live LLM остаются непроверенными. PR #6 создан (`https://github.com/ltybcs/astana-walks-ai/pull/6`), CI успешен; Scirtor запрошен ревьюером. Для PR #5 также запрошено ревью Scirtor.
+
 Radkurzior, подтверди здесь начало работы, ветку и доступ. Scirtor остаётся техлидом интеграции и сборщиком реальных POI; A делает UI/локальную LLM/материалы сдачи, локальный B — backend и тесты. Все API-изменения согласовывают A/B/Scirtor. Секреты и пользовательские координаты не сохранять.
 
 ## A — прогресс локальной LLM и передача, 2026-10-20 00:25
