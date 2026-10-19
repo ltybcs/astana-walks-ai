@@ -43,6 +43,34 @@ python -m app.server --data data/poi.osm.json
 
 Для опциональной LLM задайте в окружении `LLM_API_KEY`, `LLM_MODEL` и при необходимости `LLM_BASE_URL` (совместимый Chat Completions endpoint). Файлы `.env` автоматически не загружаются. Режим `llm-constrained` позволяет модели выбирать готовые проверяемые формулировки; свободная генерация пока не реализована. Без ключа или при сбое работает extractive fallback.
 
+### Данные 2ГИС
+
+Доступен отдельный сборщик официального Places API. Получите собственный
+[демо-ключ 2ГИС](https://docs.2gis.com/platform-manager/subscription/keys) и задайте
+его в окружении `DGIS_API_KEY`; `.env` автоматически не читается.
+
+```sh
+python scripts/collect_2gis.py --output data/poi.2gis.json
+python -m app.server --data data/poi.2gis.json
+```
+
+Для одного сценария можно сузить поиск:
+
+```sh
+python scripts/collect_2gis.py --query Кофейни --pages 2 --output data/poi.2gis.json
+```
+
+Сохранённый ответ официального API можно нормализовать без сети и ключа:
+
+```sh
+python scripts/collect_2gis.py --input tmp/2gis-response.json --output data/poi.2gis.json
+```
+
+Выгрузки игнорируются Git. Сборщик сохраняет происхождение, проверяет координаты
+и не выводит ключ в ошибках. Неизвестные свойства остаются неизвестными.
+Тесты используют синтетические ответы; реальная выгрузка 2ГИС пока не получена.
+Подробности и статус проверки: [источники данных](data/SOURCES.md).
+
 Подробности и ограничения: [концепция и RAG](docs/CONCEPT.md), [сценарии проверки](docs/SCENARIOS.md), [приватность](docs/PRIVACY.md), [план выступления](docs/PITCH.md).
 
 ## Структура
