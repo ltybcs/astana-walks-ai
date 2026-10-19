@@ -506,7 +506,7 @@
       "visually_inspected": true
     }
   ],
-  "observed_responses_sha256": "e50af9954651db5913b6e0fc3af2144d6a8dd16bf84320fa2a600d26a0197b0c",
+  "observed_responses_sha256": "5741af21de17a85afee0f1a4c14391f46f6534e1293d8c2c710015fc1b183005",
   "verification": {
     "full_final_decode": "passed; ffmpeg decoded every frame with no reported errors",
     "audio": false,
