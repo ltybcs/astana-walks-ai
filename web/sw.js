@@ -37,15 +37,18 @@ self.addEventListener("fetch", event => {
   // Do not cache arbitrary paths, query strings or non-GET requests.
   if (request.method !== "GET" || url.search || !SHELL_PATHS.has(url.pathname)) return;
   event.respondWith((async () => {
-    const cache = await caches.open(SHELL_CACHE);
+    let cache;
+    try { cache = await caches.open(SHELL_CACHE); } catch { /* Network still works without storage. */ }
+    let response;
     try {
-      const response = await fetch(request);
-      if (response.ok && response.type !== "opaque") {
-        await cache.put(url.pathname, response.clone());
-      }
-      return response;
+      response = await fetch(request);
     } catch {
-      return await cache.match(url.pathname) || Response.error();
+      return cache && await cache.match(url.pathname) || Response.error();
     }
+    if (cache && response.ok && response.type !== "opaque") {
+      // Quota/storage failures must never replace a successful network response.
+      try { await cache.put(url.pathname, response.clone()); } catch { /* Best effort. */ }
+    }
+    return response;
   })());
 });
