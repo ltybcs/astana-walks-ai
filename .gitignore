@@ -8,3 +8,5 @@ tmp/
 .DS_Store
 data/poi.osm.json
 *.log
+.local/
+output/build/

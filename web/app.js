@@ -9,11 +9,14 @@ const scenarios = {
   walk: {query:"Хочу прогуляться на свежем воздухе и посмотреть город",minutes:"60",origin:"mega"},
   coffee: {query:"Хочу тихое кафе с кофе и розеткой, чтобы поработать",minutes:"60",origin:"baiterek"},
   family: {query:"Гуляю с ребёнком, ищу детскую площадку или парк",minutes:"60",origin:"river"},
-  tourist: {query:"Я турист, хочу посмотреть достопримечательности и архитектуру",minutes:"120",origin:"baiterek"}
+  tourist: {query:"Я турист, хочу посмотреть достопримечательности и архитектуру",minutes:"120",origin:"baiterek"},
+  night: {query:"Хочу ночную прогулку рядом, только места с явно указанным режимом 24/7",minutes:"60",origin:"baiterek",time:"night"}
 };
 let places = [];
 let lastRecommendations = [];
 let requestCounter = 0;
+let activeController = null;
+let datasetInfo = {};
 const categoryNames = {park:"Парк",museum:"Музей",cafe:"Кафе",attraction:"Достопримечательность",playground:"Детская площадка",viewpoint:"Смотровая площадка",walk:"Прогулка",monument:"Монумент",promenade:"Прогулочная зона",mall:"Торговый центр",theatre:"Театр",bar:"Бар",restaurant:"Ресторан"};
 function originValue() {
   if ($("origin").value !== "custom") return origins[$("origin").value];
@@ -32,7 +35,7 @@ function safeLink(url) {
 }
 function sourceLink(url, label) {
   const href = safeLink(url);
-  if (!href) return el("span","source-link","Учебные данные · источник не проверен");
+  if (!href) return el("span","source-link","Ссылка на источник недоступна");
   const link=el("a","source-link",label); link.href=href;link.target="_blank";link.rel="noopener noreferrer";return link;
 }
 function svgNode(tag, attrs, content) {
@@ -45,7 +48,7 @@ function drawMap() {
   const svg=$("city-map"); svg.replaceChildren();
   let origin; try{origin=originValue();}catch{return;}
   const shown=lastRecommendations.length?lastRecommendations:places;
-  const points=shown.filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+  const points=shown.filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon)).sort((a,b)=>Math.hypot(a.lat-origin.lat,(a.lon-origin.lon)*.63)-Math.hypot(b.lat-origin.lat,(b.lon-origin.lon)*.63)).slice(0,100);
   const bounds=[origin,...points];
   let minLat=Math.min(...bounds.map(p=>p.lat))-.004,maxLat=Math.max(...bounds.map(p=>p.lat))+.004;
   let minLon=Math.min(...bounds.map(p=>p.lon))-.007,maxLon=Math.max(...bounds.map(p=>p.lon))+.007;
@@ -80,6 +83,8 @@ function renderRecommendations(data) {
     meta.append(el("span",null,categoryNames[p.category]||p.category||"Место"),el("span",null,"≈ "+distanceText+" от предыдущей точки"),el("span",null,(p.visit_minutes||"—")+" мин на посещение"));body.append(meta);
     if(p.why)body.append(el("p",null,p.why));
     if(p.action)body.append(el("p","action","Что сделать: "+p.action));
+    const generated=String(p.explanation_source||data.mode||"").includes("llm");
+    body.append(el("p","evidence-label",generated?"Объяснение и идея — LLM · сведения о месте — POI":"Объяснение по базе POI · идея действия — шаблон"));
     if(p.opening_note)body.append(el("p","opening",p.opening_note));
     body.append(sourceLink(p.source_url,"Источник места ↗"));list.append(card);
   });
@@ -88,36 +93,53 @@ function renderRecommendations(data) {
   $("status").textContent=warnings.join(" ")||(!lastRecommendations.length?"Подходящих мест пока нет. Попробуйте другую локацию или больше времени.":"");
   const plan=data.plan;$("plan-summary").hidden=!plan||!lastRecommendations.length;
   if(plan)$("plan-summary").textContent="≈ "+plan.total_minutes+" мин всего · "+plan.walk_minutes+" мин пешком · "+plan.visit_minutes+" мин в местах · возврат к старту учтён";
-  $("result-mode").textContent=String(data.mode).startsWith("llm-constrained")?"RAG + LLM · ВЫБОР ФОРМУЛИРОВОК":"ПОИСК + ШАБЛОННЫЙ ОТВЕТ";
+  const llmMode=String(data.mode).startsWith("llm-grounded");
+  $("result-mode").textContent=llmMode?"RAG + LLM":"ПОИСК + ШАБЛОННЫЙ ОТВЕТ";
+  $("generation-note").hidden=!lastRecommendations.length;
+  $("generation-note").textContent=llmMode?"LLM сформулировала объяснения по найденным источникам. Факты, расстояние и время рассчитаны приложением; проверка текста снижает риск ошибок, но не исключает их.":"Работает локальный ответ по базе POI. Свободная генерация LLM в этом ответе не использовалась.";
   const sources=$("sources");sources.replaceChildren();
   sources.append(el("p",null,"Использованы: введённые координаты, запрос, время прогулки и выбранное время суток. Часы и свойства мест требуют проверки. Сгенерированная идея действия не подтверждает наличие услуги."));
   for(const s of data.sources||[])if(s&&typeof s==="object")sources.append(sourceLink(s.source_url||s.url,s.name||s.title||s.id||"Источник"));
+  if(datasetInfo.collected_at)sources.append(el("p",null,"Сбор данных: "+new Date(datasetInfo.collected_at).toLocaleString("ru-RU")+". "+(datasetInfo.attribution||"")));
+  const diagnostics=$("diagnostics");diagnostics.replaceChildren();
+  if(data.diagnostics){
+    const d=data.diagnostics;
+    const count=typeof d.candidates_count==="number"?d.candidates_count:data.retrieved_count;
+    if(Number.isFinite(count))diagnostics.append(el("p",null,"Найдено кандидатов перед планированием: "+count+". Пустой ответ означает нехватку подходящих подтверждённых данных в выбранном бюджете."));
+  }
   $("source-details").hidden=false;drawMap();
 }
-$("origin").addEventListener("change",()=>{$("coordinates").hidden=$("origin").value!=="custom";lastRecommendations=[];drawMap();});
+function invalidateResults(){
+  requestCounter++;if(activeController)activeController.abort();
+  lastRecommendations=[];$("results").replaceChildren();$("plan-summary").hidden=true;$("generation-note").hidden=true;$("source-details").hidden=true;
+  $("status").classList.remove("error");$("status").textContent="Параметры изменены. Нажмите «Найти мою прогулку», чтобы обновить рекомендации.";drawMap();
+}
+$("origin").addEventListener("change",()=>{$("coordinates").hidden=$("origin").value!=="custom";invalidateResults();});
+for(const id of ["query","minutes","time-of-day","latitude","longitude"])$(id).addEventListener("change",invalidateResults);
 for(const button of document.querySelectorAll("[data-scenario]"))button.addEventListener("click",()=>{
-  const preset=scenarios[button.dataset.scenario];$("query").value=preset.query;$("minutes").value=preset.minutes;$("origin").value=preset.origin;$("coordinates").hidden=true;
+  const preset=scenarios[button.dataset.scenario];$("query").value=preset.query;$("minutes").value=preset.minutes;$("origin").value=preset.origin;$("time-of-day").value=preset.time||"day";$("coordinates").hidden=true;
   for(const other of document.querySelectorAll("[data-scenario]"))other.classList.toggle("active",other===button);
-  lastRecommendations=[];drawMap();
+  invalidateResults();
 });
 $("planner-form").addEventListener("submit",async(event)=>{
   event.preventDefault();const requestId=++requestCounter;const button=$("submit-button");button.disabled=true;button.firstElementChild.textContent="Подбираем места…";
   $("status").textContent="Сопоставляем интересы, расстояния и ваш запас времени…";$("status").classList.remove("error");
-  $("results").replaceChildren();$("plan-summary").hidden=true;$("source-details").hidden=true;
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
+  $("results").replaceChildren();$("plan-summary").hidden=true;$("source-details").hidden=true;$("generation-note").hidden=true;
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),125000);activeController=controller;
   try{
     const response=await fetch("/api/recommend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:$("query").value,minutes:Number($("minutes").value),origin:originValue(),time_of_day:$("time-of-day").value}),signal:controller.signal});
     const data=await response.json();if(!response.ok)throw new Error(typeof data.error==="string"?data.error:"Не удалось обработать запрос.");
     if(requestId===requestCounter)renderRecommendations(data);
-  }catch(error){$("status").classList.add("error");$("status").textContent=error.name==="AbortError"?"Запрос занял слишком много времени. Попробуйте снова.":error.message;lastRecommendations=[];drawMap();}
-  finally{clearTimeout(timer);button.disabled=false;button.firstElementChild.textContent="Найти мою прогулку";}
+  }catch(error){if(requestId===requestCounter){$("status").classList.add("error");$("status").textContent=error.name==="AbortError"?"Запрос занял слишком много времени. Попробуйте снова.":error.message;lastRecommendations=[];drawMap();}}
+  finally{clearTimeout(timer);if(activeController===controller)activeController=null;button.disabled=false;button.firstElementChild.textContent="Найти мою прогулку";}
 });
 async function initialize(){
   drawMap();try{
     const response=await fetch("/api/places");if(!response.ok)throw new Error("Данные недоступны");const data=await response.json();places=data.places||[];
-    const dataset=data.dataset||{};const isDemo=dataset.is_demo!==false;
-    $("dataset-badge").textContent=isDemo?"Учебные POI · "+places.length+" мест":"OpenStreetMap · "+places.length+" мест";
-    $("dataset-badge").title=JSON.stringify(dataset);drawMap();
+    const dataset=data.dataset||{};datasetInfo=dataset;const isDemo=dataset.is_demo!==false;
+    const provider=/2gis|2гис/i.test(dataset.name||"")?"2ГИС":/openstreetmap|osm/i.test(dataset.name||"")?"OpenStreetMap":"Реальные POI";
+    $("dataset-badge").textContent=isDemo?"Учебные POI · "+places.length+" мест":provider+" · "+places.length+" мест";
+    $("dataset-badge").title=dataset.collected_at?"Собрано "+new Date(dataset.collected_at).toLocaleDateString("ru-RU")+" · "+(dataset.attribution||""):"Учебные и непроверенные сведения";drawMap();
   }catch{$("dataset-badge").textContent="Нет связи с сервером";$("status").classList.add("error");$("status").textContent="Запустите сервер: python -m app.server. Затем обновите страницу.";}
 }
 initialize();
