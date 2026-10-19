@@ -1,6 +1,6 @@
 """Make a captioned MP4 from actual UI scenario screenshots, without fake UI.
 
-Input JSON: {"title": "...", "scenes": [{"image": "...png", "caption": "...",
+Input JSON: {"title": "...", "scenes": [{"image": "...jpg", "caption": "...",
 "seconds": 13}]}. Image paths are relative to the manifest. No audio is added.
 This is a slideshow of recorded app states, not a continuous screen recording.
 """
