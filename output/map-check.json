@@ -16,7 +16,22 @@
     "url": "http://127.0.0.1:8002/",
     "real_street_tiles_visually_observed": true,
     "refresh_enabled": false,
-    "screenshot": "output/map-desktop.jpg"
+    "scope": "Earlier local QA observation; the current desktop screenshot is the separately observed public view below."
+  },
+  "public_desktop": {
+    "source_url": "https://entire-burn-cricket-ashley.trycloudflare.com/",
+    "observed_at": "2026-10-19T22:03:04.604Z",
+    "width": 1440,
+    "height": 1050,
+    "client_width": 1425,
+    "scroll_width": 1425,
+    "tile_images": 10,
+    "loaded_tile_images": 10,
+    "attribution": "Leaflet | © OpenStreetMap contributors",
+    "real_street_tiles_visually_observed": true,
+    "refresh_enabled": true,
+    "screenshot": "output/map-desktop.jpg",
+    "recommendation_generated_for_this_capture": false
   },
   "mobile_screenshot": "output/map-mobile.jpg",
   "local_extractive_family": {

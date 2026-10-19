@@ -1,0 +1,278 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-19T21:44:06+00:00",
+  "dataset": {
+    "name": "Astana POI / OpenStreetMap",
+    "is_demo": false,
+    "places_count": 1267,
+    "path": "data/poi.astana.json",
+    "sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e"
+  },
+  "live_llm_requested": true,
+  "live_llm_used": true,
+  "scenarios": [
+    {
+      "name": "30–60 минут возле MEGA",
+      "query": "У меня 45 минут возле Mega, хочу короткую прогулку",
+      "start": {
+        "label": "MEGA Silk Way",
+        "lat": 51.0892,
+        "lon": 71.4074
+      },
+      "minutes": 45,
+      "result_count": 1,
+      "total_minutes": 42,
+      "mode": "llm-grounded",
+      "pass": true,
+      "checks": {
+        "budget": true,
+        "limit": true,
+        "sources": true,
+        "physical_deduplication": true,
+        "constraints": true,
+        "useful_result_or_explained_abstention": true
+      },
+      "outcome": "recommendations",
+      "clarification": null,
+      "poi_ids": [
+        "osm:way/1467797207"
+      ],
+      "warnings": [
+        "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
+      ],
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": []
+    },
+    {
+      "name": "Тихий кофе и розетка",
+      "query": "Хочу тихий кофе с розеткой",
+      "start": {
+        "label": "MEGA Silk Way",
+        "lat": 51.0892,
+        "lon": 71.4074
+      },
+      "minutes": 60,
+      "result_count": 0,
+      "total_minutes": 0,
+      "mode": "extractive",
+      "pass": true,
+      "checks": {
+        "budget": true,
+        "limit": true,
+        "sources": true,
+        "physical_deduplication": true,
+        "constraints": true,
+        "useful_result_or_explained_abstention": true
+      },
+      "outcome": "explained_abstention",
+      "clarification": "Нет подходящего места с подтверждённой в источнике розеткой. Увеличьте время, выберите другую отправную точку или уточните условия; неизвестные свойства не считаются подтверждёнными.",
+      "poi_ids": [],
+      "warnings": [
+        "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+        "Тишина меняется в течение дня. Уровень шума не подтверждён, если это явно не указано источником."
+      ],
+      "llm_status": "no_candidates",
+      "llm_attempts": 0,
+      "llm_rejections": []
+    },
+    {
+      "name": "Прогулка с ребёнком",
+      "query": "Погулять с ребёнком на свежем воздухе",
+      "start": {
+        "label": "Ботанический сад",
+        "lat": 51.1053,
+        "lon": 71.4121
+      },
+      "minutes": 60,
+      "result_count": 1,
+      "total_minutes": 32,
+      "mode": "llm-grounded",
+      "pass": true,
+      "checks": {
+        "budget": true,
+        "limit": true,
+        "sources": true,
+        "physical_deduplication": true,
+        "constraints": true,
+        "useful_result_or_explained_abstention": true
+      },
+      "outcome": "recommendations",
+      "clarification": null,
+      "poi_ids": [
+        "osm:way/1196402246"
+      ],
+      "warnings": [
+        "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+        "Возрастные ограничения, безопасность, туалеты и условия для ребёнка не подтверждены; проверьте их заранее."
+      ],
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": []
+    },
+    {
+      "name": "Два часа у туриста",
+      "query": "Я турист, хочу познакомиться с архитектурой Астаны",
+      "start": {
+        "label": "Бәйтерек",
+        "lat": 51.1283,
+        "lon": 71.4305
+      },
+      "minutes": 120,
+      "result_count": 3,
+      "total_minutes": 111,
+      "mode": "llm-grounded",
+      "pass": true,
+      "checks": {
+        "budget": true,
+        "limit": true,
+        "sources": true,
+        "physical_deduplication": true,
+        "constraints": true,
+        "useful_result_or_explained_abstention": true
+      },
+      "outcome": "recommendations",
+      "clarification": null,
+      "poi_ids": [
+        "osm:way/230401645",
+        "osm:way/917478479",
+        "osm:node/4958412863"
+      ],
+      "warnings": [
+        "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
+      ],
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": []
+    },
+    {
+      "name": "Ночная активность",
+      "query": "Ночью хочу найти активность рядом",
+      "start": {
+        "label": "Бәйтерек",
+        "lat": 51.1283,
+        "lon": 71.4305
+      },
+      "minutes": 60,
+      "result_count": 1,
+      "total_minutes": 46,
+      "mode": "llm-grounded",
+      "pass": true,
+      "checks": {
+        "budget": true,
+        "limit": true,
+        "sources": true,
+        "physical_deduplication": true,
+        "constraints": true,
+        "useful_result_or_explained_abstention": true
+      },
+      "outcome": "recommendations",
+      "clarification": null,
+      "poi_ids": [
+        "osm:node/4199896989"
+      ],
+      "warnings": [
+        "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+        "Ночной запрос: отобраны только точки, где источник явно указал 24/7; актуальный доступ, освещение и безопасность не проверены."
+      ],
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": []
+    }
+  ],
+  "summary": {
+    "scenarios_total": 5,
+    "scenarios_passed": 5,
+    "tests": {
+      "run": 124,
+      "passed": 124,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "success": true,
+      "failure_tests": [],
+      "error_tests": []
+    },
+    "llm": {
+      "eligible_scenarios": 4,
+      "validated_scenarios": 4,
+      "fallback_scenarios": 0,
+      "total_attempts": 4
+    }
+  },
+  "limitations": [
+    "Проверяются сценарные ограничения и источники, а не полное качество городских рекомендаций.",
+    "Пустой ответ при неподтверждённой розетке или режиме 24/7 — честное воздержание.",
+    "Нет полевой проверки POI, дорожного графа и гарантии семантической достоверности свободного текста."
+  ],
+  "additional_checks": [
+    {
+      "name": "Дополнительный фактический семейный пресет",
+      "query": "Гуляю с ребёнком, ищу детскую площадку или парк",
+      "start": {
+        "lat": 51.1546,
+        "lon": 71.4252
+      },
+      "minutes": 60,
+      "result_count": 2,
+      "total_minutes": 55,
+      "mode": "llm-grounded",
+      "llm_status": "validated",
+      "llm_attempts": 1,
+      "llm_rejections": [],
+      "checks": {
+        "budget": true,
+        "expected_snapshot_plan_55min": true,
+        "category_only": true,
+        "sources": true
+      },
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "manifest": "tmp/qwen3-4b-1267-candidate-20261019T214240Z/llm-evidence/manifest.json",
+    "actual_config": {
+      "model_alias": "astana-local",
+      "temperature": 0,
+      "seed_supplied": false,
+      "json_mode": "schema",
+      "token_parameter": "max_tokens",
+      "timeout_seconds": 120
+    },
+    "model": {
+      "installed_manifest": {
+        "runtime": "b11739",
+        "runtime_url": "https://github.com/ggml-org/llama.cpp/releases/download/b11739/llama-b11739-bin-win-cpu-x64.zip",
+        "runtime_sha256": "b1e0a14abdb4665c1b821b377ba063b221cec62882c373065cf8fb672988d3ff",
+        "model": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+        "base_model": "Qwen/Qwen3-4B-Instruct-2507",
+        "quantization_publisher": "Unsloth",
+        "model_revision": "a06e946bb6b655725eafa393f4a9745d460374c9",
+        "model_file": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+        "model_sha256": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+        "model_size": 2497281120,
+        "model_license": "apache-2.0",
+        "source": "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF"
+      },
+      "installed_manifest_sha256": "fd2a4c276e09d1fcfc3ba62a98eab4498eef5a2c27168ad4c606567e68e60119",
+      "weights_file_size_verified": 2497281120,
+      "weights_sha256_verified": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+      "endpoint_launch_confirmation": {
+        "confirmed_by": "Codex A / root",
+        "runtime_session": "68810",
+        "launch": "scripts/run_demo.py --data data/poi.astana.json --local-llm --refresh-poi",
+        "evidence": "Parent confirmed the fresh 1267-POI launcher is serving 8000/8081 with the same verified pinned 4B install before assigning the exclusive LLM slot",
+        "api_identity_limit": "Provider responses expose alias astana-local only; installed model identity is recorded through exact manifest/file SHA and parent-confirmed launch"
+      }
+    },
+    "ordinary_application_code": true,
+    "temperature_override": false,
+    "provider_calls_including_additional_check": 5
+  },
+  "manual_review": {
+    "status": "pending_two_independent_readings",
+    "quality_pass": null,
+    "reviewers": [],
+    "note": "Automatic constraint/tests success does not approve prose. Every accepted why/action must be read by Codex B and the parent before promotion."
+  }
+}

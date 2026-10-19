@@ -117,6 +117,41 @@ class NarrationQualityTests(unittest.TestCase):
         self.facts["p"]["description"] = "Источник указывает интерактивные экспонаты."
         self.assertIsNotNone(validate_narration(self.good, self.facts))
 
+    @patch.dict("os.environ", {"LLM_MODEL": "test", "LLM_API_KEY": "fake"}, clear=True)
+    def test_observed_playground_location_is_rejected_and_repair_is_diagnosed(self):
+        self.facts["p"].update({"name": "Без названия: детская площадка (OSM way/1131138292)", "category": "playground", "description": "По источнику — детская площадка."})
+        unsafe = deepcopy(self.good)
+        unsafe["recommendations"][0].update({"why": "Детская площадка соответствует интересу в прогулке с ребёнком и наличии условий для детей", "action": "Идея: посмотреть на детскую площадку в парке"})
+        self.assertEqual(validate_narration_with_reason(unsafe, self.facts)[1], "unsupported_location_claim")
+        repaired = deepcopy(unsafe)
+        repaired["recommendations"][0]["action"] = "Идея: осмотреть детскую площадку после проверки доступа."
+        responses = [io.BytesIO(json.dumps({"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(value)}}]}).encode()) for value in (unsafe, repaired)]
+        diagnostics = {}
+        with patch("app.llm.open_url", side_effect=responses):
+            result, status = narrate([{"id": "p"}], {}, facts_by_id=self.facts, diagnostics=diagnostics)
+        self.assertIsNotNone(result)
+        self.assertEqual(status, "validated_after_repair")
+        self.assertEqual(diagnostics, {"attempts": 2, "rejections": ["unsupported_location_claim"]})
+
+    def test_park_location_requires_own_source_evidence_or_park_category(self):
+        self.facts["p"].update({"name": "Площадка", "category": "playground", "description": "По источнику — детская площадка."})
+        for location in ("в парке", "в саду"):
+            self.good["recommendations"][0]["action"] = "Идея: осмотреть площадку " + location + "."
+            with self.subTest(location=location):
+                self.assertEqual(validate_narration_with_reason(self.good, self.facts)[1], "unsupported_location_claim")
+                self.facts["p"]["description"] = "Источник: площадка находится " + location + "."
+                self.assertIsNotNone(validate_narration(self.good, self.facts))
+                self.facts["p"]["description"] = "Расположение " + location + " не подтверждено."
+                self.assertIsNone(validate_narration(self.good, self.facts))
+                self.facts["p"]["category"] = "park"
+                self.assertIsNotNone(validate_narration(self.good, self.facts))
+                self.facts["p"].update({"category": "playground", "description": "По источнику — детская площадка."})
+
+    def test_literal_source_name_with_park_location_is_preserved(self):
+        self.facts["p"].update({"name": "Кафе в парке", "category": "cafe", "description": "По источнику — кафе."})
+        self.good["recommendations"][0]["action"] = "Идея: осмотреть «Кафе в парке» после проверки доступа."
+        self.assertIsNotNone(validate_narration(self.good, self.facts))
+
     def test_deterministic_access_reminder_starts_a_new_sentence(self):
         self.assertEqual(_finish_sentence("Идея: наблюдать за природой"), "Идея: наблюдать за природой.")
         self.assertEqual(_finish_sentence("Идея: осмотреть парк."), "Идея: осмотреть парк.")

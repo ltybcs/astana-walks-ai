@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-19T20:47:38+00:00",
+  "generated_at": "2026-10-19T21:50:41+00:00",
   "privacy": "Only structured intent and public POI name/category/description/features. No raw user query, origin label, coordinates, keys or authorization headers are captured.",
   "dataset": {
     "name": "Astana POI / OpenStreetMap",
     "is_demo": false,
-    "places_count": 738,
+    "places_count": 1267,
     "path": "data/poi.astana.json",
-    "sha256": "eb5ebd1a3bd13bbae5ce5005a663a3ac0a0dbcb94b9dabfaa4d774f9610bee08"
+    "sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e"
   },
   "actual_config": {
     "model_alias": "astana-local",
@@ -37,11 +37,27 @@
     "weights_sha256_verified": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
     "endpoint_launch_confirmation": {
       "confirmed_by": "Codex A / root",
-      "evidence": "Parent stopped the old server, setup --download verified the exact installed 4B SHA-256, and launched these exact weights through scripts/run_demo.py --local-llm session9942, which passed model health before candidate execution",
-      "launch_time_utc": "2026-10-19 20:44 UTC (minute precision, parent report)",
-      "runtime_session": "9942",
-      "api_identity_limit": "The provider API exposes alias astana-local only; installation manifest, full weight checksum and parent-confirmed launch establish the recorded model provenance"
-    }
+      "runtime_session": "37574",
+      "launch": "scripts/run_demo.py --data data/poi.astana.json --local-llm --refresh-poi",
+      "evidence": "Parent confirmed READY after a clean stop of session68810 and restart of the same verified pinned 4B model at approximately 2026-10-19T21:49Z. Main calls1–4 originate from68810; only family calls use37574.",
+      "api_identity_limit": "Provider shows alias astana-local; exact model identity is recorded by installed manifest/file SHA and parent-confirmed launcher."
+    },
+    "endpoint_launch_confirmations": [
+      {
+        "confirmed_by": "Codex A / root",
+        "runtime_session": "68810",
+        "launch": "scripts/run_demo.py --data data/poi.astana.json --local-llm --refresh-poi",
+        "evidence": "Parent confirmed the fresh 1267-POI launcher is serving 8000/8081 with the same verified pinned 4B install before assigning the exclusive LLM slot",
+        "api_identity_limit": "Provider responses expose alias astana-local only; installed model identity is recorded through exact manifest/file SHA and parent-confirmed launch"
+      },
+      {
+        "confirmed_by": "Codex A / root",
+        "runtime_session": "37574",
+        "launch": "scripts/run_demo.py --data data/poi.astana.json --local-llm --refresh-poi",
+        "evidence": "Parent confirmed READY after a clean stop of session68810 and restart of the same verified pinned 4B model at approximately 2026-10-19T21:49Z. Main calls1–4 originate from68810; only family calls use37574.",
+        "api_identity_limit": "Provider shows alias astana-local; exact model identity is recorded by installed manifest/file SHA and parent-confirmed launcher."
+      }
+    ]
   },
   "calls": [
     {
@@ -53,9 +69,14 @@
       "seed_supplied": false,
       "request_model_alias": "astana-local",
       "outcome": "response_received",
-      "response_sha256": "3a3a657e75a51fd7a517912a68d4f818c17b9b16bc646d05853c2c4b2f60f935",
-      "elapsed_seconds": 23.45,
-      "response_model_alias": "astana-local"
+      "response_sha256": "5d21facd1eb98024d5a7fa6d6cce26e33379eccf532115e3befddd246be2c21d",
+      "elapsed_seconds": 21.15,
+      "response_model_alias": "astana-local",
+      "role": "main_reused_after_offline_guard_validation",
+      "runtime_session": "68810",
+      "generation_guard_sha256": "733d480fdac4c33e6c47f58245710a9b9985215cd5bd4861575ffdea1ffb910d",
+      "revalidated_guard_sha256": "f2a1cd73fb21caae8c1f3dbfdf8173a1eb71190714b5f1882cd4002541c78b4e",
+      "validation_outcome": "accepted_after_offline_guard_validation"
     },
     {
       "call": 2,
@@ -66,9 +87,14 @@
       "seed_supplied": false,
       "request_model_alias": "astana-local",
       "outcome": "response_received",
-      "response_sha256": "33b62409a67e248e1764d9ab2dd07e52db657ed8cd22f2ba8eba95623951ddae",
-      "elapsed_seconds": 16.53,
-      "response_model_alias": "astana-local"
+      "response_sha256": "f2fb6a0a0a025e49e11c246a2b635964d9c6c7d462281c8eda60d14aeafa20b3",
+      "elapsed_seconds": 14.02,
+      "response_model_alias": "astana-local",
+      "role": "main_reused_after_offline_guard_validation",
+      "runtime_session": "68810",
+      "generation_guard_sha256": "733d480fdac4c33e6c47f58245710a9b9985215cd5bd4861575ffdea1ffb910d",
+      "revalidated_guard_sha256": "f2a1cd73fb21caae8c1f3dbfdf8173a1eb71190714b5f1882cd4002541c78b4e",
+      "validation_outcome": "accepted_after_offline_guard_validation"
     },
     {
       "call": 3,
@@ -79,9 +105,14 @@
       "seed_supplied": false,
       "request_model_alias": "astana-local",
       "outcome": "response_received",
-      "response_sha256": "5972943f20597024132011d8ff0a86310dc054e31413d28e69c5fce58bfc02d5",
-      "elapsed_seconds": 41.5,
-      "response_model_alias": "astana-local"
+      "response_sha256": "e7b7be05c33b4999b0eec4e48b3fe583eb29cd4900945603f410b38f309a166d",
+      "elapsed_seconds": 36.46,
+      "response_model_alias": "astana-local",
+      "role": "main_reused_after_offline_guard_validation",
+      "runtime_session": "68810",
+      "generation_guard_sha256": "733d480fdac4c33e6c47f58245710a9b9985215cd5bd4861575ffdea1ffb910d",
+      "revalidated_guard_sha256": "f2a1cd73fb21caae8c1f3dbfdf8173a1eb71190714b5f1882cd4002541c78b4e",
+      "validation_outcome": "accepted_after_offline_guard_validation"
     },
     {
       "call": 4,
@@ -92,58 +123,117 @@
       "seed_supplied": false,
       "request_model_alias": "astana-local",
       "outcome": "response_received",
-      "response_sha256": "52bb2dacfe239ce241e27d8e4996c98c1a0334ff075ee3606f618dbbd0047dbb",
-      "elapsed_seconds": 17.38,
-      "response_model_alias": "astana-local"
+      "response_sha256": "8463e12eed9c78aa42a2609e0df9d7e176de9d43b795c94fd979fdfabeffa170",
+      "elapsed_seconds": 14.46,
+      "response_model_alias": "astana-local",
+      "role": "main_reused_after_offline_guard_validation",
+      "runtime_session": "68810",
+      "generation_guard_sha256": "733d480fdac4c33e6c47f58245710a9b9985215cd5bd4861575ffdea1ffb910d",
+      "revalidated_guard_sha256": "f2a1cd73fb21caae8c1f3dbfdf8173a1eb71190714b5f1882cd4002541c78b4e",
+      "validation_outcome": "accepted_after_offline_guard_validation"
     },
     {
-      "call": 5,
-      "request_file": "request-5.json",
-      "response_file": "response-5.json",
-      "request_sha256": "be0c1d153b2cb9ce40b39701a5a0301627427777817c12ffdab46134e190f6bf",
+      "call": 6,
+      "request_file": "request-6.json",
+      "request_sha256": "633f407864f30a3550813179aaac55d10010a9b0a8f1500ef6712e8bc467e84a",
+      "response_file": "response-6.json",
       "temperature": 0,
       "seed_supplied": false,
       "request_model_alias": "astana-local",
+      "role": "new_family_primary",
+      "runtime_session": "37574",
       "outcome": "response_received",
-      "response_sha256": "aa20553a30673cd7b3923591ef51d47a6034bd09010ea2836e1f7eb65181e560",
-      "elapsed_seconds": 16.49,
-      "response_model_alias": "astana-local"
+      "started_at": "2026-10-19T22:02:16+00:00",
+      "response_sha256": "982eb804e3f5e7c754759243a969b76603e80d186c3614f1efefbd6220fce9ef",
+      "response_model_alias": "astana-local",
+      "elapsed_seconds": 32.22,
+      "completed_at": "2026-10-19T22:02:49+00:00",
+      "validation_outcome": "accepted"
     }
   ],
   "manual_review": {
     "status": "approved_by_two_readers",
     "quality_pass": true,
+    "recorded_at": "2026-10-19T22:04:01+00:00",
     "reviewers": [
       {
-        "reviewer": "Codex B / rag_backend",
-        "reviewed_at": "2026-10-19T20:48:38+00:00",
-        "quality_pass": true,
-        "accepted_recommendations_read": 7,
-        "scope": "Read all seven accepted why/action pairs and the coffee/socket abstention; checked diagnostics and all five raw request/response hashes. This is a review of these observed outputs, not a guarantee for every future generation.",
-        "notes": [
-          "No prior nonsense about stroking hands; no promised sockets, playground equipment, current opening, numeric route claims or safety in the accepted prose.",
-          "MEGA 'walk along a path in the park' is a category-derived activity suggestion. The dataset does not establish a specific path or its surface; actual access and route remain unverified.",
-          "Family 'place for children' relates the requested interest to the park category. It is not evidence of children's infrastructure, age suitability or safety; the application retains explicit warnings."
-        ]
+        "name": "Codex B / rag_backend",
+        "result": "pass",
+        "scope": "Read all eight actual why/provider_action/display_action pairs, checked sources and exact raw response mapping; newly generated family action no longer asserts park containment."
       },
       {
-        "reviewer": "Codex A / root",
-        "recorded_at": "2026-10-19T20:49:18+00:00",
-        "quality_pass": true,
-        "accepted_recommendations_read": 7,
-        "scope": "Independently read the complete candidate live-explanations and all five raw responses; explicitly authorized reviewed promotion",
-        "notes": [
-          "All seven why/action pairs are coherent and tied to categories/interests; no prior nonsense or duplicated Idea prefix.",
-          "Architecture suggestions relate monument/theatre categories to external architectural observation.",
-          "A path in MEGA is a typical proposed activity, not confirmed infrastructure; family suitability/safety is unproven; this approval is no guarantee for future answers."
-        ]
+        "name": "Codex A / root",
+        "result": "pass",
+        "scope": "Explicit independent approval received after rereading all eight pairs and revalidation receipt; main six pairs and new family two pairs have no new blocking factual claims."
       }
     ],
-    "note": "Two independent readers approved these specific observed outputs with the documented limits; automatic checks alone did not grant this approval."
+    "limits": [
+      "Approval applies only to these observed responses; future free narration is not guaranteed semantically complete or factually correct.",
+      "The phrase ‘наличием условий для детей’ is accepted as a broad connection of the playground category with the interest, not proof of age suitability, safety, access or extra infrastructure; the grammatical defect is preserved verbatim.",
+      "The NU Park path/trail action is a proposed typical activity, not source verification of a particular path; child conditions and physical safety remain unverified.",
+      "Four main responses are reused verbatim and revalidated offline after one source guard change. One separately observed family response follows a model restart; this is explicitly not a wholly new sequential generation run.",
+      "Six unique observed calls comprise five accepted response calls and one excluded historical family response with quality_pass=false. Reused main responses are not counted again."
+    ]
   },
   "application_sha256": {
-    "app/llm.py": "733d480fdac4c33e6c47f58245710a9b9985215cd5bd4861575ffdea1ffb910d",
-    "app/generation.py": "56eff5301387430ced1e6584d35d0e6fbe3036fbf56ec4d27f327418d90e9d3d",
+    "app/llm.py": "f2a1cd73fb21caae8c1f3dbfdf8173a1eb71190714b5f1882cd4002541c78b4e",
+    "app/generation.py": "a6bbf94a08b2c3be05f5eded32297275a5defd478c2c75d001b7cba49d6fcb5c",
     "app/retrieval.py": "642ab81c1f9dfec27497b1d9650e61b16fa3df4476782a58182a22e4cf936da2"
+  },
+  "excluded_historical_calls": [
+    {
+      "call": 5,
+      "reason": "manual rejection plus new guard unsupported_location_claim",
+      "runtime_session": "68810",
+      "request_file": "output/history/qwen3-4b/1267-initial/20261019T214240Z/original/llm-evidence/request-5.json",
+      "response_file": "output/history/qwen3-4b/1267-initial/20261019T214240Z/original/llm-evidence/response-5.json",
+      "request_sha256": "633f407864f30a3550813179aaac55d10010a9b0a8f1500ef6712e8bc467e84a",
+      "response_sha256": "bc5fbdac8e769a2a322bffbd483a915396b98ad99c78334585b0e36206e50981",
+      "review": "output/history/qwen3-4b/1267-initial/20261019T214240Z/manual-review.json"
+    }
+  ],
+  "support_files": [
+    {
+      "file": "revalidation.json",
+      "sha256": "a1961a8aa140922f404ce4bf66cf9d1d5202847558e56308463c5b8e445fb570"
+    },
+    {
+      "file": "tests-receipt.json",
+      "sha256": "7037895a7ded7c93c95be187848681f7cf5f43fe8329b2f7723eaf0cecad0e2f"
+    },
+    {
+      "file": "privacy-check.json",
+      "sha256": "69356ca443f52ba84c5e127c80d80eb118bc82e70df84b6e6d86c42cc731ae10"
+    }
+  ],
+  "validation_protocol": {
+    "type": "mixed_timestamp_guard_revalidation_and_new_family_generation",
+    "main_generation_runtime_session": "68810",
+    "family_generation_runtime_session": "37574",
+    "main_provider_calls_reused_without_regeneration": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "main_responses_revalidated_offline": 4,
+    "historical_manual_rejected_family_call": 5,
+    "new_family_provider_calls": [
+      6
+    ],
+    "new_family_generation_attempts": 1,
+    "unique_observed_provider_calls_including_rejected_history": 6,
+    "final_accepted_provider_calls": 5,
+    "current_raw_files_include_guard_rejected_attempts": true,
+    "not_a_new_sequential_full_generation_run": true,
+    "prompt_and_decoding_unchanged": true,
+    "only_guard_change": "Own-source park/garden containment evidence on nonpark POI",
+    "guard_revalidation_receipt": "output/llm-evidence/revalidation.json",
+    "tests_receipt": "output/llm-evidence/tests-receipt.json",
+    "old_failed_family_review": "output/history/qwen3-4b/1267-initial/20261019T214240Z/manual-review.json",
+    "main_generation_source_report_generated_at": "2026-10-19T21:44:06+00:00",
+    "main_original_archive": "output/history/qwen3-4b/1267-initial/20261019T214240Z/original",
+    "new_family_request_identical_to_historical_family_request": true,
+    "temperature_zero_is_not_a_determinism_guarantee": true
   }
 }

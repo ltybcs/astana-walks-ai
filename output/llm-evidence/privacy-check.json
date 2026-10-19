@@ -1,0 +1,44 @@
+{
+  "recorded_at": "2026-10-19T22:04:01+00:00",
+  "checks": [
+    {
+      "call": 1,
+      "exact_raw_checksums_match": true,
+      "new_guard_valid": true,
+      "public_fact_payload_only": true
+    },
+    {
+      "call": 2,
+      "exact_raw_checksums_match": true,
+      "new_guard_valid": true,
+      "public_fact_payload_only": true
+    },
+    {
+      "call": 3,
+      "exact_raw_checksums_match": true,
+      "new_guard_valid": true,
+      "public_fact_payload_only": true
+    },
+    {
+      "call": 4,
+      "exact_raw_checksums_match": true,
+      "new_guard_valid": true,
+      "public_fact_payload_only": true
+    },
+    {
+      "call": 6,
+      "exact_raw_checksums_match": true,
+      "new_guard_valid": true,
+      "public_fact_payload_only": true
+    }
+  ],
+  "request_headers_captured": false,
+  "raw_query_or_origin_in_provider_payload": false,
+  "body_fields": [
+    "intent",
+    "retrieved_poi_facts.name/category/description/features"
+  ],
+  "new_family_request_identical_to_historical_family_request": true,
+  "provider_raw_json_edited": false,
+  "unique_observed_provider_calls": 6
+}

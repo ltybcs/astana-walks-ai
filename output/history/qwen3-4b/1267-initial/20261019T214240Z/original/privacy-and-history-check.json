@@ -1,0 +1,8 @@
+{
+  "raw_pairs_verified": 5,
+  "original_query_coordinates_auth_absent": true,
+  "temperature": 0,
+  "historical_files_verified": 46,
+  "current_dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+  "manual_quality_status": "pending unsupported-location review"
+}

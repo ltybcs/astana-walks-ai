@@ -183,6 +183,14 @@ def _text_rejection(text: object, facts: dict) -> str | None:
     for location in ("в центре", "на левом берегу", "на правом берегу", "на берегу реки"):
         if location in value and location not in source_text:
             return "unsupported_location_claim"
+    # A playground category does not establish containment in a nearby park.
+    # Only this POI's own category/source text can support that relationship;
+    # literal proper names were already removed from the generated prose.
+    if facts.get("category") != "park":
+        for location in (r"\bв\s+парке\b", r"\bв\s+саду\b"):
+            evidence = any(re.search(location, sentence) and not re.search(uncertainty + r"|\bнет\b|отсутств\w*|\bбез\b", sentence) for sentence in re.split(r"[.!?;\n]+", source_text))
+            if re.search(location, value) and not evidence:
+                return "unsupported_location_claim"
     return None
 
 

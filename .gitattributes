@@ -1,7 +1,7 @@
 * text=auto eol=lf
 
 # Recorded evidence hashes refer to exact bytes, including line endings.
-output/**/*.json -text
+output/**/*.json -text whitespace=cr-at-eol
 output/history/qwen3-4b/738-poi/** -text
 
 # Preserve the exact upstream bytes checked by the bundled library's SRI hashes.
