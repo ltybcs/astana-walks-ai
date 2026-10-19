@@ -9,6 +9,8 @@ const entries = new Map();
 const cacheWrites = [];
 const networkRequests = [];
 let networkFails = false;
+let cacheWritesFail = false;
+let cacheOpenFails = false;
 let claimed = false;
 const cache = {
   async addAll(requests) {
@@ -21,6 +23,7 @@ const cache = {
     }
   },
   async put(path, response) {
+    if (cacheWritesFail) throw new Error("Quota exceeded");
     cacheWrites.push(path);
     entries.set(path, response);
   },
@@ -29,7 +32,10 @@ const cache = {
 vm.runInNewContext(fs.readFileSync("web/sw.js", "utf8"), {
   self: {location: {origin}, clients: {claim: async () => { claimed = true; }},
     addEventListener: (type, handler) => { handlers[type] = handler; }},
-  caches: {open: async () => cache, keys: async () => ["unrelated-app-cache", "astana-walks-shell-v1"],
+  caches: {open: async () => {
+      if (cacheOpenFails) throw new Error("Storage unavailable");
+      return cache;
+    }, keys: async () => ["unrelated-app-cache", "astana-walks-shell-v1"],
     delete: async key => { assert.notEqual(key, "unrelated-app-cache"); }},
   URL, Response,
   Request: class extends Request {
@@ -68,6 +74,12 @@ function request(path, method = "GET") {
   const shell = request("/styles.css");
   assert.equal(await (await shell.pending).text(), "network-only");
   assert.deepEqual(cacheWrites, ["/styles.css"]);
+  cacheWritesFail = true;
+  assert.equal(await (await request("/index.html").pending).text(), "network-only");
+  cacheWritesFail = false;
+  cacheOpenFails = true;
+  assert.equal(await (await request("/pwa.js").pending).text(), "network-only");
+  cacheOpenFails = false;
   networkFails = true;
   const offline = await request("/").pending;
   assert.equal(await offline.text(), "saved-shell:/");
