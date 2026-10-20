@@ -1,0 +1,16 @@
+{
+  "budget_status": "fits",
+  "mode": "Исходный ответ Google",
+  "route_attribution_count": 2,
+  "selected_place_id": "ChIJBZWlvhnGhiARn_G8Kfrrwc0",
+  "source_count": 5,
+  "whole_output_displayed": true,
+  "case": "mega45",
+  "input": "У меня 45 минут возле Mega, хочу короткую прогулку",
+  "source_commit": "72dcbd48da4700946615d75ef2cc089cd850b2a6",
+  "accepted_live_recommendation": false,
+  "before_http_attempts": 40,
+  "after_http_attempts": 46,
+  "local_model_status": "Not exposed in UI; no accepted Qwen answer. Exact cause unverified.",
+  "scope": "Actual browser fallback. No provider text persisted. Not a successful AI recommendation."
+}

@@ -1,0 +1,15 @@
+{
+  "budget_verified": false,
+  "directions_visible": false,
+  "route_attribution_count": 0,
+  "source_count": 3,
+  "case": "mega45",
+  "input": "У меня 45 минут возле Mega, хочу короткую прогулку",
+  "source_commit": "28dddc419800b79adfa1f5e45387e4deb5d66c31",
+  "mode": "google-grounding-summary",
+  "budget_status": "unverified",
+  "accepted_live_recommendation": false,
+  "before_http_attempts": 52,
+  "after_http_attempts": 56,
+  "scope": "Current-source Google response had no eligible nearby stop. No route or model calls, no output archive. Negative result retained; not counted as an AI pass."
+}

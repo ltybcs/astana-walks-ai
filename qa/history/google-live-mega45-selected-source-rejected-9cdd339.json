@@ -1,0 +1,17 @@
+{
+  "budget_status": "fits",
+  "mode": "Исходный ответ Google",
+  "route_attribution_count": 2,
+  "selected_place_id": "ChIJBZWlvhnGhiARn_G8Kfrrwc0",
+  "source_count": 5,
+  "whole_output_displayed": true,
+  "case": "mega45",
+  "input": "У меня 45 минут возле Mega, хочу короткую прогулку",
+  "source_commit": "9cdd3399330310359f55b776e3780088decafeb5",
+  "accepted_live_recommendation": false,
+  "before_http_attempts": 46,
+  "after_http_attempts": 52,
+  "local_model_status": "selected_source_missing",
+  "scope": "Actual browser result; model completed but selected-source citation guard rejected it. No provider text persisted.",
+  "model_seconds": 55.156
+}

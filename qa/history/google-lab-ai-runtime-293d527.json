@@ -1,0 +1,844 @@
+{
+  "synthetic_public_scenarios": true,
+  "records": [
+    {
+      "case": "coffee",
+      "synthetic_public_scenario": true,
+      "started_at": "2026-10-20T07:08:11.136353+00:00",
+      "elapsed_seconds": 0.082804,
+      "request": {
+        "query": "У меня 60 минут возле Байтерека, хочу тихое кафе с кофе и розеткой"
+      },
+      "status": 200,
+      "no_store": true,
+      "response_sha256": "6010bbabe9f576b3a529c96c341c66a18682d15e6d3893056bffc15e36dc7930",
+      "response": {
+        "recommendations": [],
+        "warnings": [
+          "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+          "Тишина меняется в течение дня. Уровень шума не подтверждён, если это явно не указано источником."
+        ],
+        "mode": "extractive",
+        "sources": [],
+        "plan": {
+          "total_minutes": 0,
+          "walk_minutes": 0,
+          "visit_minutes": 0,
+          "return_walk_minutes": 0,
+          "budget_minutes": 60,
+          "distance_m": 0,
+          "returns_to_origin": true,
+          "method": "haversine × 1.3; 75 м/мин; без дорожного графа"
+        },
+        "retrieved_count": 0,
+        "dataset": {
+          "name": "Astana POI / OpenStreetMap",
+          "version": 1,
+          "is_demo": false,
+          "collected_at": "2026-10-19T21:30:22+00:00",
+          "collection_method": "overpass_batch",
+          "endpoint": "https://overpass-api.de/api/interpreter",
+          "bbox": [
+            51.0,
+            71.2,
+            51.32,
+            71.7
+          ],
+          "geographic_scope": "Bounded Astana urban-area rectangle, not an administrative boundary or exhaustive inventory",
+          "query_profile": "astana_walk_v2",
+          "unnamed_count": 478,
+          "label_policy": "name_generated=true and source_name=null identify category/OSM-ID display labels, not official names; source_tags retain actual OSM values only",
+          "source_snapshot_at": "2026-10-19T21:29:20Z",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "ODbL 1.0",
+          "license_url": "https://www.openstreetmap.org/copyright",
+          "limitations": [
+            "Не проверено на месте",
+            "Не является информацией об открытии сейчас",
+            "Отсутствующие теги означают неизвестность",
+            "Геометрия way/relation представлена центром объекта",
+            "Названия безымянных площадок/парков — явно отмеченные подписи категории и OSM ID"
+          ],
+          "source_file": null,
+          "raw_snapshot": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+          "query_file": "data/snapshots/astana-2026-10-19T213022966728Z.overpassql",
+          "raw_snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239",
+          "source": "OSM",
+          "dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+          "lab_enrichment": "Exact raw OSM tag join; no provider requests or invented names"
+        },
+        "diagnostics": {
+          "llm_status": "no_candidates",
+          "llm_attempts": 0,
+          "llm_rejections": [],
+          "filtered": {
+            "category": 923,
+            "socket": 337,
+            "duplicate_source": 6
+          },
+          "ranking_policy": "bounded BM25 + walking distance + request context; diversity; alias/proximity deduplication 80m; no paid boosts",
+          "intent": {
+            "coffee": true,
+            "socket": true,
+            "quiet": true,
+            "strict_quiet": false,
+            "child": false,
+            "tourist": false,
+            "architecture": false,
+            "night": false,
+            "accessible": false,
+            "outdoor": false,
+            "preferred_categories": [
+              "cafe"
+            ],
+            "excluded_categories": [],
+            "time_of_day": "day",
+            "general_suggestion": false
+          },
+          "validation_note": "Фразы сформированы из категории, источника и расчёта маршрута.",
+          "lab_index_sha256": "73be2d4a48f7e56b3656648c3b0998c8b8b56533059d4e1942535660de58ebbf"
+        },
+        "clarification": "Нет подходящего места с подтверждённой в источнике розеткой. Увеличьте время, выберите другую отправную точку или уточните условия; неизвестные свойства не считаются подтверждёнными.",
+        "resolved_context": {
+          "origin": {
+            "lat": 51.1283,
+            "lon": 71.4305,
+            "label": "Байтерек — публичная точка"
+          },
+          "origin_id": "baiterek",
+          "minutes": 60,
+          "time_of_day": "day",
+          "origin_source": "query_landmark",
+          "minutes_source": "query",
+          "time_of_day_source": "default_day"
+        }
+      }
+    },
+    {
+      "case": "conflict",
+      "synthetic_public_scenario": true,
+      "started_at": "2026-10-20T07:08:11.628779+00:00",
+      "elapsed_seconds": 0.085726,
+      "request": {
+        "query": "У меня 45 минут возле Mega, хочу короткую прогулку",
+        "minutes": 60
+      },
+      "status": 400,
+      "no_store": true,
+      "response_sha256": "862de97c6cac80f7b850fe646fe28058639a75b578f1407935c4712a89594772",
+      "response": {
+        "error": "Время в сообщении отличается от выбранного бюджета. Согласуйте их.",
+        "code": "context_conflict",
+        "fields": [
+          "minutes"
+        ]
+      }
+    },
+    {
+      "case": "family",
+      "synthetic_public_scenario": true,
+      "started_at": "2026-10-20T07:05:40.603687+00:00",
+      "elapsed_seconds": 33.382841,
+      "request": {
+        "query": "У меня 60 минут у набережной Есиля, гуляю с ребёнком, хочу парк или детскую площадку"
+      },
+      "status": 200,
+      "no_store": true,
+      "response_sha256": "e3aef597b9737336c19930b74ce11b5f9cd90377a5e7318b404020ad5e3cc015",
+      "response": {
+        "recommendations": [
+          {
+            "id": "osm:way/1131138292",
+            "name": "Без названия: детская площадка (OSM way/1131138292)",
+            "category": "playground",
+            "description": "По данным OpenStreetMap: детская площадка. Актуальное состояние и возможность посещения не проверены.",
+            "source_url": "https://www.openstreetmap.org/way/1131138292",
+            "lat": 51.1541436,
+            "lon": 71.423445,
+            "name_generated": true,
+            "source_name": null,
+            "distance_m": 173,
+            "origin_distance_m": 173,
+            "walk_minutes": 3,
+            "leg_distance_m": 173,
+            "visit_minutes": 20,
+            "why": "Детская площадка соответствует интересу в прогулке с ребёнком и наличии условий для детей",
+            "action": "Идея: посетить детскую площадку для короткой остановки с ребёнком. Перед выходом проверьте доступ и часы по источнику.",
+            "confidence": "source_reported",
+            "opening_note": "Часы и доступ сейчас не подтверждены; проверьте перед посещением.",
+            "source_id": "osm:way/1131138292",
+            "citations": [
+              "osm:way/1131138292"
+            ],
+            "explanation_source": "llm-grounded",
+            "fact_keys": [
+              "name",
+              "category",
+              "description",
+              "features"
+            ],
+            "source": "OSM",
+            "access_evidence": "unknown",
+            "cuisine": null,
+            "operator": null,
+            "raw_provenance": {
+              "snapshot_path": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+              "snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239",
+              "osm_id": "osm:way/1131138292",
+              "source_updated_at": "2023-01-12T11:24:26Z"
+            }
+          },
+          {
+            "id": "osm:relation/15957444",
+            "name": "Парк Астана",
+            "category": "park",
+            "description": "По данным OpenStreetMap: парк или сад. Актуальное состояние и возможность посещения не проверены.",
+            "source_url": "https://www.openstreetmap.org/relation/15957444",
+            "lat": 51.1548152,
+            "lon": 71.4195693,
+            "name_generated": false,
+            "source_name": "Парк Астана",
+            "distance_m": 365,
+            "origin_distance_m": 512,
+            "walk_minutes": 5,
+            "leg_distance_m": 365,
+            "visit_minutes": 20,
+            "why": "Парк или сад предоставляет пространство для прогулки на воздухе и соответствует запросу на городскую прогулочную территорию",
+            "action": "Идея: сделать короткую остановку на территории парка Астана. Перед выходом проверьте доступ и часы по источнику.",
+            "confidence": "source_reported",
+            "opening_note": "Часы и доступ сейчас не подтверждены; проверьте перед посещением.",
+            "source_id": "osm:relation/15957444",
+            "citations": [
+              "osm:relation/15957444"
+            ],
+            "explanation_source": "llm-grounded",
+            "fact_keys": [
+              "name",
+              "category",
+              "description",
+              "features"
+            ],
+            "source": "OSM",
+            "access_evidence": "unknown",
+            "cuisine": null,
+            "operator": null,
+            "raw_provenance": {
+              "snapshot_path": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+              "snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239",
+              "osm_id": "osm:relation/15957444",
+              "source_updated_at": "2025-12-23T08:44:44Z"
+            }
+          }
+        ],
+        "warnings": [
+          "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+          "Возрастные ограничения, безопасность, туалеты и условия для ребёнка не подтверждены; проверьте их заранее."
+        ],
+        "mode": "llm-grounded",
+        "sources": [
+          {
+            "id": "osm:way/1131138292",
+            "title": "Без названия: детская площадка (OSM way/1131138292)",
+            "url": "https://www.openstreetmap.org/way/1131138292",
+            "collected_at": "2026-10-19T21:30:22+00:00",
+            "verification": "source_reported_not_field_verified"
+          },
+          {
+            "id": "osm:relation/15957444",
+            "title": "Парк Астана",
+            "url": "https://www.openstreetmap.org/relation/15957444",
+            "collected_at": "2026-10-19T21:30:22+00:00",
+            "verification": "source_reported_not_field_verified"
+          }
+        ],
+        "plan": {
+          "total_minutes": 55,
+          "walk_minutes": 15,
+          "visit_minutes": 40,
+          "return_walk_minutes": 7,
+          "budget_minutes": 60,
+          "distance_m": 1050,
+          "returns_to_origin": true,
+          "method": "haversine × 1.3; 75 м/мин; без дорожного графа"
+        },
+        "retrieved_count": 39,
+        "dataset": {
+          "name": "Astana POI / OpenStreetMap",
+          "version": 1,
+          "is_demo": false,
+          "collected_at": "2026-10-19T21:30:22+00:00",
+          "collection_method": "overpass_batch",
+          "endpoint": "https://overpass-api.de/api/interpreter",
+          "bbox": [
+            51.0,
+            71.2,
+            51.32,
+            71.7
+          ],
+          "geographic_scope": "Bounded Astana urban-area rectangle, not an administrative boundary or exhaustive inventory",
+          "query_profile": "astana_walk_v2",
+          "unnamed_count": 478,
+          "label_policy": "name_generated=true and source_name=null identify category/OSM-ID display labels, not official names; source_tags retain actual OSM values only",
+          "source_snapshot_at": "2026-10-19T21:29:20Z",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "ODbL 1.0",
+          "license_url": "https://www.openstreetmap.org/copyright",
+          "limitations": [
+            "Не проверено на месте",
+            "Не является информацией об открытии сейчас",
+            "Отсутствующие теги означают неизвестность",
+            "Геометрия way/relation представлена центром объекта",
+            "Названия безымянных площадок/парков — явно отмеченные подписи категории и OSM ID"
+          ],
+          "source_file": null,
+          "raw_snapshot": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+          "query_file": "data/snapshots/astana-2026-10-19T213022966728Z.overpassql",
+          "raw_snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239",
+          "source": "OSM",
+          "dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+          "lab_enrichment": "Exact raw OSM tag join; no provider requests or invented names"
+        },
+        "diagnostics": {
+          "llm_status": "validated",
+          "llm_attempts": 1,
+          "llm_rejections": [],
+          "filtered": {
+            "category": 743,
+            "duplicate_source": 6,
+            "budget": 478
+          },
+          "ranking_policy": "bounded BM25 + walking distance + request context; diversity; alias/proximity deduplication 80m; no paid boosts",
+          "intent": {
+            "coffee": false,
+            "socket": false,
+            "quiet": false,
+            "strict_quiet": false,
+            "child": true,
+            "tourist": false,
+            "architecture": false,
+            "night": false,
+            "accessible": false,
+            "outdoor": true,
+            "preferred_categories": [
+              "park",
+              "playground",
+              "promenade"
+            ],
+            "excluded_categories": [],
+            "time_of_day": "day",
+            "general_suggestion": false
+          },
+          "validation_note": "Структура, ссылки и защищённые свойства проверены; полная семантическая достоверность свободного текста не гарантируется.",
+          "lab_index_sha256": "73be2d4a48f7e56b3656648c3b0998c8b8b56533059d4e1942535660de58ebbf"
+        },
+        "resolved_context": {
+          "origin": {
+            "lat": 51.1546,
+            "lon": 71.4252,
+            "label": "Набережная Есиля — публичная точка"
+          },
+          "origin_id": "river",
+          "minutes": 60,
+          "time_of_day": "day",
+          "origin_source": "query_landmark",
+          "minutes_source": "query",
+          "time_of_day_source": "default_day"
+        }
+      }
+    },
+    {
+      "case": "incomplete",
+      "synthetic_public_scenario": true,
+      "started_at": "2026-10-20T07:08:11.865202+00:00",
+      "elapsed_seconds": 0.079552,
+      "request": {
+        "query": "Хочу прогуляться"
+      },
+      "status": 422,
+      "no_store": true,
+      "response_sha256": "52b7fd386f7d2bacb8fa11529a258a1d95b2043ff9b77093eed8384387152670",
+      "response": {
+        "error": "Уточните старт и точный бюджет прогулки: их нельзя определить из сообщения.",
+        "code": "needs_context",
+        "fields": [
+          "minutes",
+          "origin"
+        ]
+      }
+    },
+    {
+      "case": "mega",
+      "synthetic_public_scenario": true,
+      "started_at": "2026-10-20T07:04:27.633263+00:00",
+      "elapsed_seconds": 25.936356,
+      "request": {
+        "query": "У меня 45 минут возле Mega, хочу короткую прогулку"
+      },
+      "status": 200,
+      "no_store": true,
+      "response_sha256": "63a32cbb7cab77795e7a2c0983a4cc6e6967fafe78be2f144ecb55a1b04dcfda",
+      "response": {
+        "recommendations": [
+          {
+            "id": "osm:way/1467797207",
+            "name": "NU Park",
+            "category": "park",
+            "description": "По данным OpenStreetMap: парк или сад. Актуальное состояние и возможность посещения не проверены.",
+            "source_url": "https://www.openstreetmap.org/way/1467797207",
+            "lat": 51.0872699,
+            "lon": 71.3994394,
+            "name_generated": false,
+            "source_name": "NU Park",
+            "distance_m": 775,
+            "origin_distance_m": 775,
+            "walk_minutes": 11,
+            "leg_distance_m": 775,
+            "visit_minutes": 20,
+            "why": "Парк соответствует интересу в прогулке на воздухе",
+            "action": "Идея: остановиться и пройти по тропинке в парке. Перед выходом проверьте доступ и часы по источнику.",
+            "confidence": "source_reported",
+            "opening_note": "Часы и доступ сейчас не подтверждены; проверьте перед посещением.",
+            "source_id": "osm:way/1467797207",
+            "citations": [
+              "osm:way/1467797207"
+            ],
+            "explanation_source": "llm-grounded",
+            "fact_keys": [
+              "name",
+              "category",
+              "description"
+            ],
+            "source": "OSM",
+            "access_evidence": "unknown",
+            "cuisine": null,
+            "operator": null,
+            "raw_provenance": {
+              "snapshot_path": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+              "snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239",
+              "osm_id": "osm:way/1467797207",
+              "source_updated_at": "2026-01-17T14:16:58Z"
+            }
+          }
+        ],
+        "warnings": [
+          "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
+        ],
+        "mode": "llm-grounded",
+        "sources": [
+          {
+            "id": "osm:way/1467797207",
+            "title": "NU Park",
+            "url": "https://www.openstreetmap.org/way/1467797207",
+            "collected_at": "2026-10-19T21:30:22+00:00",
+            "verification": "source_reported_not_field_verified"
+          }
+        ],
+        "plan": {
+          "total_minutes": 42,
+          "walk_minutes": 22,
+          "visit_minutes": 20,
+          "return_walk_minutes": 11,
+          "budget_minutes": 45,
+          "distance_m": 1550,
+          "returns_to_origin": true,
+          "method": "haversine × 1.3; 75 м/мин; без дорожного графа"
+        },
+        "retrieved_count": 19,
+        "dataset": {
+          "name": "Astana POI / OpenStreetMap",
+          "version": 1,
+          "is_demo": false,
+          "collected_at": "2026-10-19T21:30:22+00:00",
+          "collection_method": "overpass_batch",
+          "endpoint": "https://overpass-api.de/api/interpreter",
+          "bbox": [
+            51.0,
+            71.2,
+            51.32,
+            71.7
+          ],
+          "geographic_scope": "Bounded Astana urban-area rectangle, not an administrative boundary or exhaustive inventory",
+          "query_profile": "astana_walk_v2",
+          "unnamed_count": 478,
+          "label_policy": "name_generated=true and source_name=null identify category/OSM-ID display labels, not official names; source_tags retain actual OSM values only",
+          "source_snapshot_at": "2026-10-19T21:29:20Z",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "ODbL 1.0",
+          "license_url": "https://www.openstreetmap.org/copyright",
+          "limitations": [
+            "Не проверено на месте",
+            "Не является информацией об открытии сейчас",
+            "Отсутствующие теги означают неизвестность",
+            "Геометрия way/relation представлена центром объекта",
+            "Названия безымянных площадок/парков — явно отмеченные подписи категории и OSM ID"
+          ],
+          "source_file": null,
+          "raw_snapshot": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+          "query_file": "data/snapshots/astana-2026-10-19T213022966728Z.overpassql",
+          "raw_snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239",
+          "source": "OSM",
+          "dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+          "lab_enrichment": "Exact raw OSM tag join; no provider requests or invented names"
+        },
+        "diagnostics": {
+          "llm_status": "validated",
+          "llm_attempts": 1,
+          "llm_rejections": [],
+          "filtered": {
+            "outdoor": 679,
+            "budget": 562,
+            "duplicate_source": 6
+          },
+          "ranking_policy": "bounded BM25 + walking distance + request context; diversity; alias/proximity deduplication 80m; no paid boosts",
+          "intent": {
+            "coffee": false,
+            "socket": false,
+            "quiet": false,
+            "strict_quiet": false,
+            "child": false,
+            "tourist": false,
+            "architecture": false,
+            "night": false,
+            "accessible": false,
+            "outdoor": true,
+            "preferred_categories": [],
+            "excluded_categories": [],
+            "time_of_day": "day",
+            "general_suggestion": false
+          },
+          "validation_note": "Структура, ссылки и защищённые свойства проверены; полная семантическая достоверность свободного текста не гарантируется.",
+          "lab_index_sha256": "73be2d4a48f7e56b3656648c3b0998c8b8b56533059d4e1942535660de58ebbf"
+        },
+        "resolved_context": {
+          "origin": {
+            "lat": 51.0892,
+            "lon": 71.4074,
+            "label": "MEGA Silk Way — публичная точка"
+          },
+          "origin_id": "mega",
+          "minutes": 45,
+          "time_of_day": "day",
+          "origin_source": "query_landmark",
+          "minutes_source": "query",
+          "time_of_day_source": "default_day"
+        }
+      }
+    },
+    {
+      "case": "night",
+      "synthetic_public_scenario": true,
+      "started_at": "2026-10-20T07:08:11.374016+00:00",
+      "elapsed_seconds": 0.105994,
+      "request": {
+        "query": "У меня 60 минут возле Байтерека, хочу ночную прогулку, только места с режимом 24/7"
+      },
+      "status": 200,
+      "no_store": true,
+      "response_sha256": "85cff059efed1c2c4dab4e4cb772d70a07989cc3cda1f5c00ee720b5fd58947b",
+      "response": {
+        "recommendations": [],
+        "warnings": [
+          "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены.",
+          "Ночной запрос: отобраны только точки, где источник явно указал 24/7; актуальный доступ, освещение и безопасность не проверены."
+        ],
+        "mode": "extractive",
+        "sources": [],
+        "plan": {
+          "total_minutes": 0,
+          "walk_minutes": 0,
+          "visit_minutes": 0,
+          "return_walk_minutes": 0,
+          "budget_minutes": 60,
+          "distance_m": 0,
+          "returns_to_origin": true,
+          "method": "haversine × 1.3; 75 м/мин; без дорожного графа"
+        },
+        "retrieved_count": 0,
+        "dataset": {
+          "name": "Astana POI / OpenStreetMap",
+          "version": 1,
+          "is_demo": false,
+          "collected_at": "2026-10-19T21:30:22+00:00",
+          "collection_method": "overpass_batch",
+          "endpoint": "https://overpass-api.de/api/interpreter",
+          "bbox": [
+            51.0,
+            71.2,
+            51.32,
+            71.7
+          ],
+          "geographic_scope": "Bounded Astana urban-area rectangle, not an administrative boundary or exhaustive inventory",
+          "query_profile": "astana_walk_v2",
+          "unnamed_count": 478,
+          "label_policy": "name_generated=true and source_name=null identify category/OSM-ID display labels, not official names; source_tags retain actual OSM values only",
+          "source_snapshot_at": "2026-10-19T21:29:20Z",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "ODbL 1.0",
+          "license_url": "https://www.openstreetmap.org/copyright",
+          "limitations": [
+            "Не проверено на месте",
+            "Не является информацией об открытии сейчас",
+            "Отсутствующие теги означают неизвестность",
+            "Геометрия way/relation представлена центром объекта",
+            "Названия безымянных площадок/парков — явно отмеченные подписи категории и OSM ID"
+          ],
+          "source_file": null,
+          "raw_snapshot": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+          "query_file": "data/snapshots/astana-2026-10-19T213022966728Z.overpassql",
+          "raw_snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239",
+          "source": "OSM",
+          "dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+          "lab_enrichment": "Exact raw OSM tag join; no provider requests or invented names"
+        },
+        "diagnostics": {
+          "llm_status": "no_candidates",
+          "llm_attempts": 0,
+          "llm_rejections": [],
+          "filtered": {
+            "outdoor": 679,
+            "night": 577,
+            "duplicate_source": 6,
+            "budget": 4
+          },
+          "ranking_policy": "bounded BM25 + walking distance + request context; diversity; alias/proximity deduplication 80m; no paid boosts",
+          "intent": {
+            "coffee": false,
+            "socket": false,
+            "quiet": false,
+            "strict_quiet": false,
+            "child": false,
+            "tourist": false,
+            "architecture": false,
+            "night": true,
+            "accessible": false,
+            "outdoor": true,
+            "preferred_categories": [],
+            "excluded_categories": [],
+            "time_of_day": "night",
+            "general_suggestion": false
+          },
+          "validation_note": "Фразы сформированы из категории, источника и расчёта маршрута.",
+          "lab_index_sha256": "73be2d4a48f7e56b3656648c3b0998c8b8b56533059d4e1942535660de58ebbf"
+        },
+        "clarification": "нет подходящей точки с явно указанным режимом 24/7. Увеличьте время, выберите другую отправную точку или уточните условия; неизвестные свойства не считаются подтверждёнными.",
+        "resolved_context": {
+          "origin": {
+            "lat": 51.1283,
+            "lon": 71.4305,
+            "label": "Байтерек — публичная точка"
+          },
+          "origin_id": "baiterek",
+          "minutes": 60,
+          "time_of_day": "night",
+          "origin_source": "query_landmark",
+          "minutes_source": "query",
+          "time_of_day_source": "query"
+        }
+      }
+    },
+    {
+      "case": "tourist",
+      "synthetic_public_scenario": true,
+      "started_at": "2026-10-20T07:06:25.391230+00:00",
+      "elapsed_seconds": 28.771181,
+      "request": {
+        "query": "У меня 2 часа возле Байтерека, я турист и хочу посмотреть архитектуру"
+      },
+      "status": 200,
+      "no_store": true,
+      "response_sha256": "bca10bebc9b0baa4f29850797198aa0cebfbb6a6a9874acc5be6d1bf49872d75",
+      "response": {
+        "recommendations": [
+          {
+            "id": "osm:way/230401645",
+            "name": "Байтерек",
+            "category": "monument",
+            "description": "По данным OpenStreetMap: памятник. Адрес в источнике: Нұржол желек жолы, 14. Актуальное состояние и возможность посещения не проверены. Тег доступа в OSM, не проверка входа сейчас: yes.",
+            "source_url": "https://www.openstreetmap.org/way/230401645",
+            "lat": 51.1282882,
+            "lon": 71.4304546,
+            "name_generated": false,
+            "source_name": "Байтерек",
+            "distance_m": 5,
+            "origin_distance_m": 5,
+            "walk_minutes": 1,
+            "leg_distance_m": 5,
+            "visit_minutes": 15,
+            "why": "Памятник соответствует интересу к архитектуре города",
+            "action": "Идея: остановиться и рассмотреть архитектурные детали Байтерека. Перед выходом проверьте доступ и часы по источнику.",
+            "confidence": "source_reported",
+            "opening_note": "Часы и доступ сейчас не подтверждены; проверьте перед посещением.",
+            "source_id": "osm:way/230401645",
+            "citations": [
+              "osm:way/230401645"
+            ],
+            "explanation_source": "llm-grounded",
+            "fact_keys": [
+              "name",
+              "category"
+            ],
+            "source": "OSM",
+            "access_evidence": "yes",
+            "cuisine": null,
+            "operator": null,
+            "raw_provenance": {
+              "snapshot_path": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+              "snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239",
+              "osm_id": "osm:way/230401645",
+              "source_updated_at": "2026-08-09T20:44:02Z"
+            }
+          },
+          {
+            "id": "osm:way/1460537088",
+            "name": "Astana Musical",
+            "category": "theatre",
+            "description": "По данным OpenStreetMap: театр. Адрес в источнике: Мәңгілік Ел даңғылы, 10/1. Актуальное состояние и возможность посещения не проверены.",
+            "source_url": "https://www.openstreetmap.org/way/1460537088",
+            "lat": 51.1227533,
+            "lon": 71.4417645,
+            "name_generated": false,
+            "source_name": "Astana Musical",
+            "distance_m": 1302,
+            "origin_distance_m": 1299,
+            "walk_minutes": 18,
+            "leg_distance_m": 1302,
+            "visit_minutes": 15,
+            "why": "Театр связан с культурным визуальным опытом города",
+            "action": "Идея: пройти мимо и осмотреть внешний вид здания Astana Musical. Перед выходом проверьте доступ и часы по источнику.",
+            "confidence": "source_reported",
+            "opening_note": "Часы и доступ сейчас не подтверждены; проверьте перед посещением.",
+            "source_id": "osm:way/1460537088",
+            "citations": [
+              "osm:way/1460537088"
+            ],
+            "explanation_source": "llm-grounded",
+            "fact_keys": [
+              "name",
+              "category"
+            ],
+            "source": "OSM",
+            "access_evidence": "unknown",
+            "cuisine": null,
+            "operator": null,
+            "raw_provenance": {
+              "snapshot_path": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+              "snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239",
+              "osm_id": "osm:way/1460537088",
+              "source_updated_at": "2026-03-10T19:18:24Z"
+            }
+          }
+        ],
+        "warnings": [
+          "Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены."
+        ],
+        "mode": "llm-grounded",
+        "sources": [
+          {
+            "id": "osm:way/230401645",
+            "title": "Байтерек",
+            "url": "https://www.openstreetmap.org/way/230401645",
+            "collected_at": "2026-10-19T21:30:22+00:00",
+            "verification": "source_reported_not_field_verified"
+          },
+          {
+            "id": "osm:way/1460537088",
+            "title": "Astana Musical",
+            "url": "https://www.openstreetmap.org/way/1460537088",
+            "collected_at": "2026-10-19T21:30:22+00:00",
+            "verification": "source_reported_not_field_verified"
+          }
+        ],
+        "plan": {
+          "total_minutes": 67,
+          "walk_minutes": 37,
+          "visit_minutes": 30,
+          "return_walk_minutes": 18,
+          "budget_minutes": 120,
+          "distance_m": 2606,
+          "returns_to_origin": true,
+          "method": "haversine × 1.3; 75 м/мин; без дорожного графа"
+        },
+        "retrieved_count": 24,
+        "dataset": {
+          "name": "Astana POI / OpenStreetMap",
+          "version": 1,
+          "is_demo": false,
+          "collected_at": "2026-10-19T21:30:22+00:00",
+          "collection_method": "overpass_batch",
+          "endpoint": "https://overpass-api.de/api/interpreter",
+          "bbox": [
+            51.0,
+            71.2,
+            51.32,
+            71.7
+          ],
+          "geographic_scope": "Bounded Astana urban-area rectangle, not an administrative boundary or exhaustive inventory",
+          "query_profile": "astana_walk_v2",
+          "unnamed_count": 478,
+          "label_policy": "name_generated=true and source_name=null identify category/OSM-ID display labels, not official names; source_tags retain actual OSM values only",
+          "source_snapshot_at": "2026-10-19T21:29:20Z",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "ODbL 1.0",
+          "license_url": "https://www.openstreetmap.org/copyright",
+          "limitations": [
+            "Не проверено на месте",
+            "Не является информацией об открытии сейчас",
+            "Отсутствующие теги означают неизвестность",
+            "Геометрия way/relation представлена центром объекта",
+            "Названия безымянных площадок/парков — явно отмеченные подписи категории и OSM ID"
+          ],
+          "source_file": null,
+          "raw_snapshot": "data/snapshots/astana-2026-10-19T213022966728Z.overpass.json",
+          "query_file": "data/snapshots/astana-2026-10-19T213022966728Z.overpassql",
+          "raw_snapshot_sha256": "fec3f809a9f46f72e047cf534083e5d6735812f0f88246bae402f01e463e3239",
+          "source": "OSM",
+          "dataset_sha256": "07dc0a3eb3a9b76b1c8121253cf5c5f1f46d67d991c5eb6b7823d45fccc0aa1e",
+          "lab_enrichment": "Exact raw OSM tag join; no provider requests or invented names"
+        },
+        "diagnostics": {
+          "llm_status": "validated",
+          "llm_attempts": 1,
+          "llm_rejections": [],
+          "filtered": {
+            "architecture_evidence": 190,
+            "duplicate_source": 6,
+            "budget": 34
+          },
+          "ranking_policy": "bounded BM25 + walking distance + request context; diversity; alias/proximity deduplication 80m; no paid boosts",
+          "intent": {
+            "coffee": false,
+            "socket": false,
+            "quiet": false,
+            "strict_quiet": false,
+            "child": false,
+            "tourist": true,
+            "architecture": true,
+            "night": false,
+            "accessible": false,
+            "outdoor": false,
+            "preferred_categories": [],
+            "excluded_categories": [],
+            "time_of_day": "day",
+            "general_suggestion": false
+          },
+          "validation_note": "Структура, ссылки и защищённые свойства проверены; полная семантическая достоверность свободного текста не гарантируется.",
+          "lab_index_sha256": "73be2d4a48f7e56b3656648c3b0998c8b8b56533059d4e1942535660de58ebbf"
+        },
+        "resolved_context": {
+          "origin": {
+            "lat": 51.1283,
+            "lon": 71.4305,
+            "label": "Байтерек — публичная точка"
+          },
+          "origin_id": "baiterek",
+          "minutes": 120,
+          "time_of_day": "day",
+          "origin_source": "query_landmark",
+          "minutes_source": "query",
+          "time_of_day_source": "default_day"
+        }
+      }
+    }
+  ],
+  "limits": "Literal why/action reviewed by A. These are separate new local model runs, not historical release certification."
+}
