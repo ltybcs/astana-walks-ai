@@ -1,0 +1,223 @@
+{
+  "checked_at": "2026-10-20T09:44:37.155852+00:00",
+  "scope": "Isolated Google lab: opt-in bounded Google APIs + loopback Qwen, permitted local storage. Stable main app and accepted submission remain separate.",
+  "tested_source_commit": "aabe55e911aa7dd00d177bdef7cf7f8f146e3f82",
+  "hash_normalization": "CRLF to LF, matching repository text blobs",
+  "source_hashes": {
+    "app/google_budget.py": "a442e9f6d36eb7e3dd45bb2c8f6fc0c86f09abc68771c22e1ed65b1983a76ce3",
+    "app/google_cache.py": "d27fcb832cef9a72652bb29a7f63f553ec24064d29b8d036dba5ad08747be06c",
+    "app/google_client.py": "8eb03465876b016cabfc072dd6c5d683eef8e34caf65630ac7b05a7edc571d02",
+    "app/google_grounded.py": "f55e0437b5eaddc551656873357bdac20477700ebe24d04c921e7b74de01926f",
+    "app/google_lab.py": "914e820a70ffa57302f899ab947438ab3e22535a029e5066068ebea5a0d6fba0",
+    "tests/test_google_budget.py": "a9ec213511dd28a963c7001a4903dd97b29e22db6ba63ab3b369423b7bce81c6",
+    "tests/test_google_cache.py": "216f07c7701e2ac33dcfd8b92cdc0b72357d0f2b2d3ba31a7d684f6d6c1faa5c",
+    "tests/test_google_client.py": "e396469a4b6a6b60724916cd2936dd41d56c9638206ce87b3fae4f898576cadc",
+    "tests/test_google_grounded.py": "12012473e610501bb3eaf68456bc9a48d5dea10018de6544db3cebfc05130520",
+    "tests/test_google_lab.py": "d9498cbcbde35444234bbf1f3d8b8efe663bbc7558bb0f5c3ace8df13593ef68",
+    "tests/test_google_lab_frontend.js": "17139c83eb9b2de2581107349d836362ae529107022ab318ec4344bd0d0b1c44",
+    "tests/test_google_lab_frontend.py": "b080270655a751ecf2b40ed983f92e36096d3c1577f7f932611b5bb6dc53bc44",
+    "web/google-lab/index.html": "8cdbcb2dd42ad7996f18b4ea61d7c989dc5b678c78bcd372f55e0e01f3bc9e79",
+    "web/google-lab/lab.css": "3689468c0afb0efd2ec8600890163676258c95e02b834bd8e05404b4e90d30be",
+    "web/google-lab/lab.js": "c71a030bac4bfa90ff43a1627e7497457920d4ff3c1501f0e7a35b5495594a10",
+    "web/google-lab/embeds.json": "f09ff4cc7273c0da617734b18e899919b7bf991830dbc10be2d33657f5e268ba"
+  },
+  "documentation_snapshot": {
+    "hashes": {
+      "README.md": "f4b4acd5b51bf80a331ac0a9d9185404cdf88c8b06706b17bb80d7d741d95286",
+      "docs/GOOGLE_LIVE_PILOT.md": "0b125527c3bc282c63f2fa734cce0ed8e9c43b97962d56294c72bf2e0527c72d",
+      "docs/GOOGLE_MAPS_LAB.md": "b5c233b50b12e83a7c177fa38af4efe3cbf11af41bf22c749b86bd65b37fcd0e",
+      "docs/GOOGLE_LAB_SCENARIOS.md": "4c4cf699f0c0c514df66ed47ba49b1bac2d4ca8cd217671c4486c44b8b190fb0"
+    },
+    "scope": "Post-test documentation snapshot; these files include final live results and are not claimed to exist unchanged at tested_source_commit."
+  },
+  "unit_suite": {
+    "run": 227,
+    "pass": 225,
+    "skipped": 2,
+    "failures": 0,
+    "seconds": 19.681,
+    "log_sha256": "40f5c833940df019d99b18c00b7d5ef111cbdb9fdb5abc3f77ddadb6a07b8941",
+    "boundary": "Mocks and ephemeral local HTTP only; no Google/model calls. Two skips require Windows symlink privileges."
+  },
+  "offline_frontend": {
+    "cases": 50,
+    "pass": 50,
+    "wrapper_passed_in_unit_suite": true,
+    "boundary": "Mocked DOM/network fixtures, not actual provider quality."
+  },
+  "actual_browser": {
+    "checks": [
+      {
+        "case": "default_osm",
+        "pass": true
+      },
+      {
+        "case": "google_surface_isolated",
+        "pass": true
+      },
+      {
+        "case": "exact_public_preview",
+        "pass": true
+      },
+      {
+        "case": "archive_notice_before_consent",
+        "pass": true
+      },
+      {
+        "case": "form_change_invalidates_consent",
+        "pass": true
+      },
+      {
+        "case": "incomplete_query_clarifies_locally",
+        "pass": true
+      },
+      {
+        "case": "mobile_390_no_overflow",
+        "pass": true,
+        "measurements": {
+          "provider": 44,
+          "submit": 50,
+          "viewport": 390,
+          "width": 375
+        }
+      },
+      {
+        "case": "mobile_touch_controls",
+        "pass": true
+      },
+      {
+        "case": "mobile_exact_preview_no_overflow",
+        "pass": true,
+        "measurements": {
+          "document": 375,
+          "parameters": 284,
+          "viewport": 390
+        }
+      },
+      {
+        "case": "compact_mega_preview_mobile_390",
+        "pass": true,
+        "measurements": {
+          "viewport": 390,
+          "document": 375,
+          "parameters": 283,
+          "provider": 44,
+          "submit": 50
+        }
+      },
+      {
+        "case": "live_google_sources_adjacent_and_branded",
+        "pass": true,
+        "backend_source_commit": "28dddc419800b79adfa1f5e45387e4deb5d66c31",
+        "scope": "Frontend/data-display check only; this candidate failed manual AI quality."
+      },
+      {
+        "case": "live_google_walking_return_link_and_two_attributions",
+        "pass": true,
+        "backend_source_commit": "28dddc419800b79adfa1f5e45387e4deb5d66c31",
+        "scope": "Frontend/data-display check only; this candidate failed manual AI quality."
+      },
+      {
+        "case": "live_places_hours_attributed",
+        "pass": true,
+        "backend_source_commit": "28dddc419800b79adfa1f5e45387e4deb5d66c31",
+        "scope": "Frontend/data-display check only; this candidate failed manual AI quality."
+      },
+      {
+        "case": "live_places_five_reviews_authors_dates_links",
+        "pass": true,
+        "backend_source_commit": "28dddc419800b79adfa1f5e45387e4deb5d66c31",
+        "scope": "Frontend/data-display check only; this candidate failed manual AI quality."
+      },
+      {
+        "case": "live_mobile_390_no_overflow",
+        "pass": true,
+        "backend_source_commit": "28dddc419800b79adfa1f5e45387e4deb5d66c31",
+        "scope": "Frontend/data-display check only; this candidate failed manual AI quality."
+      },
+      {
+        "case": "live_provider_change_clears_google_content_details_route",
+        "pass": true,
+        "backend_source_commit": "28dddc419800b79adfa1f5e45387e4deb5d66c31",
+        "scope": "Frontend state clearing, independent of manual AI quality."
+      },
+      {
+        "case": "current_source_whole_llm_answer_read_against_full_google_context",
+        "pass": true
+      },
+      {
+        "case": "all_five_source_previews_adjacent_and_branded",
+        "pass": true
+      },
+      {
+        "case": "two_walking_leg_attributions_and_return_url",
+        "pass": true
+      },
+      {
+        "case": "osm_surface_and_catalog_hidden",
+        "pass": true
+      },
+      {
+        "case": "fresh_hours_with_attribution",
+        "pass": true
+      },
+      {
+        "case": "five_fresh_reviews_with_authors_dates_links",
+        "pass": true
+      },
+      {
+        "case": "mobile_390_no_horizontal_overflow",
+        "pass": true
+      }
+    ],
+    "source_js_sha256": "c71a030bac4bfa90ff43a1627e7497457920d4ff3c1501f0e7a35b5495594a10",
+    "boundary": "Preview/mobile/isolation checks share unchanged frontend bytes. Current-source live checks are identified in runtime receipt."
+  },
+  "live_runtime": {
+    "path": "qa/google-live-runtime.json",
+    "sha256": "4d032055491aaf1b885c8c742058f1a156fe74de5d61aa46c67118b41df34034",
+    "current_source_live_cases": 1,
+    "all_http_attempts_used": 75,
+    "authorized_total_limit": 500,
+    "counter_scope": "All Google HTTP attempts, including MCP lifecycle, failed searches, diagnostic probe, details and timeouts; not a billed-SKU count."
+  },
+  "historical_evidence": [
+    {
+      "path": "qa/history/google-maps-lab-ai-293d527.json",
+      "sha256": "d9fd3909c550d67ebbcff60d9913172a218711373e905f82ac103d706a165d22",
+      "bytes": 11479,
+      "scope": "Historical viewer/OSM evidence; does not prove current Google live behavior."
+    },
+    {
+      "path": "qa/history/google-lab-ai-runtime-293d527.json",
+      "sha256": "b93bd352e7b00ca4aac8b786e8997144926c192e09af8c18dd0addd960c9ceb8",
+      "bytes": 40221,
+      "scope": "Historical viewer/OSM evidence; does not prove current Google live behavior."
+    },
+    {
+      "path": "qa/history/google-maps-lab-viewer-9b0217f.json",
+      "sha256": "2b955ef95f775b9c024e6d639b79bea66adf0f2b19ce9e696331c385037aa8e1",
+      "bytes": 5839,
+      "scope": "Historical viewer/OSM evidence; does not prove current Google live behavior."
+    }
+  ],
+  "storage": {
+    "places_ids": "Indefinite, from validated Places New details",
+    "places_coordinates_days": 29,
+    "whole_accepted_output_and_minimal_required_previews_days": 29,
+    "purpose": "performance_and_display_evaluation_only",
+    "future_answer_rag_training_reuse": false,
+    "hours_reviews_or_raw_provider_payload_on_disk": false,
+    "cleanup": "Startup, access/status and hourly while running. Offline deletion is not guaranteed; disk errors are sanitized and fail closed."
+  },
+  "known_limits": [
+    "Only three public origins, no custom GPS sent to Google.",
+    "Same-source Google coverage refusal is retained separately; a positive check does not guarantee repeatable coverage.",
+    "Google locationBias is soft; local source coordinates enforce a hard distance bound.",
+    "WALK is beta, actual pavement/access/safety and visiting conditions need checking.",
+    "Visit duration is a proposal; finite returned durations are not a physical route audit.",
+    "A whole Google-summary fallback is explicitly labeled; it is not a successful local AI recommendation.",
+    "Current-source MEGA live case and earlier-source Baiterek case are distinct evidence.",
+    "Google lab remains draft PR15, not deployed over the stable public main demo."
+  ]
+}

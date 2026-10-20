@@ -1,0 +1,454 @@
+"use strict";
+
+const $ = id => document.getElementById(id);
+const state = {
+  requestId: 0, controller: null, signature: "", result: null, optionId: null,
+  mapId: 0, mapController: null, mapTimer: null, mapLoadTimer: null, geoCancel: null
+};
+const PROVIDERS = {osm: "OpenStreetMap", google: "Google Maps", dgis: "2ГИС"};
+const ORIGIN_SOURCES = {
+  query_landmark: "из сообщения", query_catalog: "из сообщения",
+  browser_geolocation: "геопозиция браузера", explicit_landmark: "из сообщения",
+  explicit_coordinates: "из сообщения"
+};
+function node(tag, text, className) {
+  const value = document.createElement(tag);
+  if (text !== undefined && text !== null) value.textContent = String(text);
+  if (className) value.className = className;
+  return value;
+}
+function show(id, visible) { $(id).hidden = !visible; }
+function finite(value) { return typeof value === "number" && Number.isFinite(value); }
+function coordinate(lat, lon) {
+  return finite(lat) && finite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+}
+function signature() { return $("walk-query").value; }
+function current(id, sig) { return state.requestId === id && signature() === sig; }
+function safeUrl(value, provider) {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    if (url.username || url.password || url.port) return null;
+    if (provider === "dgis-attribution" && url.protocol === "http:" && url.hostname === "dev.2gis.ru" && url.pathname === "/") return url.href;
+    if (url.protocol !== "https:") return null;
+    const hosts = {
+      google: ["www.google.com", "maps.google.com", "maps.app.goo.gl"],
+      osm: ["www.openstreetmap.org", "openstreetmap.org"],
+      dgis: ["2gis.kz", "2gis.ru", "2gis.com", "www.2gis.kz", "www.2gis.ru", "www.2gis.com", "dev.2gis.ru"]
+    };
+    if (!(hosts[provider] || []).includes(url.hostname)) return null;
+    if (provider === "google" && url.hostname === "www.google.com" && !url.pathname.startsWith("/maps")) return null;
+    return url.href;
+  } catch (_) { return null; }
+}
+function link(text, url, provider) {
+  const safe = safeUrl(url, provider);
+  if (!safe) return node("span", text);
+  const element = node("a", text);
+  element.href = safe;
+  element.target = "_blank";
+  element.rel = "noopener noreferrer";
+  return element;
+}
+function clearMap() {
+  state.mapId += 1;
+  if (state.mapController) state.mapController.abort();
+  state.mapController = null;
+  clearTimeout(state.mapTimer);
+  clearTimeout(state.mapLoadTimer);
+  state.mapTimer = null;
+  state.mapLoadTimer = null;
+  $("route-map-host").replaceChildren();
+  $("route-map-status").textContent = "";
+  $("route-external").removeAttribute("href");
+  show("route-external", false);
+  show("route-map-section", false);
+}
+function clearResult() {
+  clearMap();
+  state.result = null;
+  state.optionId = null;
+  show("walk-result", false);
+  for (const id of ["source-receipts", "google-sources", "google-original-sources", "walk-warnings", "walk-variants", "walk-stops", "other-sources", "route-attributions"]) $(id).replaceChildren();
+  $("walk-answer").textContent = "";
+  $("google-original-text").textContent = "";
+  $("walk-context").textContent = "";
+  $("walk-budget").textContent = "";
+}
+function cancelFlow(message = "Сообщение изменилось. Подбор можно запустить снова.") {
+  state.requestId += 1;
+  if (state.controller) state.controller.abort();
+  state.controller = null;
+  if (state.geoCancel) state.geoCancel();
+  state.geoCancel = null;
+  clearResult();
+  $("walk-submit").disabled = false;
+  $("walk-submit").textContent = "Найти прогулку →";
+  show("walk-error", false);
+  $("walk-status").textContent = message;
+}
+function onInputChange() {
+  const next = signature();
+  if (next === state.signature) return;
+  state.signature = next;
+  cancelFlow();
+}
+function errorMessage(error) {
+  if (error && error.code === "known_start_required") return "Старт не определён. Поиск по источникам и обращение к модели не выполнены.";
+  if (error && error.code === "timeout") return "Ожидание завершено. Удалённый запрос мог выполниться и учесться в лимите. Автоматического повтора нет.";
+  if (error && error.name === "AbortError") return "Подбор отменён. Удалённый запрос мог выполниться и учесться в лимите.";
+  if (error && typeof error.message === "string") return error.message;
+  return "Подбор не выполнен. Попробуйте позже.";
+}
+async function post(path, body, signal) {
+  const response = await fetch(path, {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    credentials: "same-origin", cache: "no-store", redirect: "error",
+    signal, body: JSON.stringify(body)
+  });
+  let data;
+  try { data = await response.json(); } catch (_) {
+    throw new Error("Сервис вернул нечитаемый ответ. Подбор не выполнен.");
+  }
+  if (!response.ok) {
+    const error = new Error(typeof data.error === "string" ? data.error : "Сервис временно недоступен.");
+    error.code = data.code;
+    throw error;
+  }
+  return data;
+}
+function startKnown(context) {
+  return Boolean(context && context.origin && coordinate(context.origin.lat, context.origin.lon)
+    && typeof context.origin.label === "string" && context.origin.label.trim()
+    && !context.is_city_sample && context.origin_source !== "city_sample"
+    && context.origin_source !== "pending_geolocation");
+}
+function startError() {
+  const error = new Error("Старт не определён. Поиск не выполнен.");
+  error.code = "known_start_required";
+  return error;
+}
+function requestLocation(id, sig) {
+  return new Promise(resolve => {
+    let settled = false;
+    let timer;
+    const finish = value => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (state.geoCancel === cancel) state.geoCancel = null;
+      resolve(current(id, sig) ? value : {status: "cancelled"});
+    };
+    const cancel = () => finish({status: "cancelled"});
+    state.geoCancel = cancel;
+    if (!navigator.geolocation || typeof navigator.geolocation.getCurrentPosition !== "function") {
+      finish({status: "unsupported"});
+      return;
+    }
+    timer = setTimeout(() => finish({status: "timeout"}), 8000);
+    try {
+      navigator.geolocation.getCurrentPosition(position => {
+        const coords = position && position.coords;
+        const accuracy = coords && coords.accuracy;
+        if (!coords || !coordinate(coords.latitude, coords.longitude) || !finite(accuracy) || accuracy < 0 || accuracy > 100000) {
+          finish({status: "unavailable"});
+          return;
+        }
+        finish({status: "granted", geolocation: {lat: coords.latitude, lon: coords.longitude, accuracy}});
+      }, error => finish({status: error && error.code === 1 ? "denied" : error && error.code === 3 ? "timeout" : "unavailable"}),
+      {enableHighAccuracy: false, timeout: 8000, maximumAge: 0});
+    } catch (_) { finish({status: "unavailable"}); }
+  });
+}
+function validateResult(data) {
+  if (!data || !["llm-grounded-unified", "grounding-only"].includes(data.mode) || !startKnown(data.resolved_context)) throw new Error("Ответ не соответствует протоколу подбора.");
+  if (!data.grounding || typeof data.grounding.summary !== "string" || !Array.isArray(data.grounding.sources)) throw new Error("В ответе отсутствуют источники Google.");
+  if (data.answer !== null && (!data.answer || typeof data.answer.text !== "string" || !data.answer.text.trim())) throw new Error("В ответе отсутствует полный текст.");
+  if (data.mode === "llm-grounded-unified" && !data.answer) throw new Error("Режим ответа не подтверждён.");
+  if (!data.sources || !Array.isArray(data.sources.osm) || !Array.isArray(data.sources.dgis)) throw new Error("В ответе отсутствует происхождение мест.");
+  for (const provider of ["osm", "google", "dgis"]) {
+    const receipt = data.source_receipt && data.source_receipt[provider];
+    if (!receipt || !["searched", "no_data"].includes(receipt.status) || !Number.isInteger(receipt.candidate_count) || receipt.candidate_count < 0 || !Number.isInteger(receipt.selected_count) || receipt.selected_count < 0 || (receipt.status === "no_data" && (receipt.candidate_count !== 0 || receipt.selected_count !== 0))) throw new Error("Не подтверждён результат проверки всех трёх источников.");
+  }
+  if (!Array.isArray(data.alternatives) || !data.alternatives.length || data.alternatives.length > 3) throw new Error("Отсутствуют готовые варианты прогулки.");
+  const ids = new Set();
+  for (const option of data.alternatives) {
+    if (!option || typeof option.id !== "string" || !option.id || ids.has(option.id) || !Number.isInteger(option.budget_minutes) || option.budget_minutes < 10 || option.budget_minutes > 480 || !Array.isArray(option.stops) || option.stops.length > 3 || typeof option.route_built !== "boolean") throw new Error("Некорректный вариант прогулки.");
+    ids.add(option.id);
+    if (option.route_built) {
+      const plan = option.plan;
+      if (option.budget_status !== "fits" || !plan || plan.verified !== true || plan.returns_to_origin !== true || !finite(plan.total_minutes) || plan.total_minutes < 0 || plan.total_minutes > option.budget_minutes || !option.stops.length) throw new Error("Маршрут не подтверждён в пределах времени.");
+      for (const stop of option.stops) if (!stop || !["osm", "google", "dgis"].includes(stop.provider) || typeof stop.name !== "string" || !coordinate(stop.lat, stop.lon)) throw new Error("Некорректная остановка маршрута.");
+    }
+  }
+  if (!ids.has(data.default_option_id)) throw new Error("Не определён основной вариант.");
+  return data;
+}
+function contextText(context) {
+  const time = {day: "день", evening: "вечер", night: "ночь"}[context.time_of_day] || "текущее время";
+  const source = ORIGIN_SOURCES[context.origin_source] || "подтверждённый старт";
+  const assumptions = Array.isArray(context.assumptions) ? context.assumptions.filter(value => typeof value === "string") : [];
+  return "Старт: " + context.origin.label + " · " + source + " · " + time
+    + (assumptions.length ? "\n" + assumptions.join(" ") : "");
+}
+function renderGoogleSources(hostId, sources) {
+  const host = $(hostId);
+  host.replaceChildren();
+  const brand = node("span", "Google Maps", "google-brand");
+  brand.setAttribute("translate", "no");
+  host.append(brand);
+  sources.forEach((source, index) => {
+    const item = node("div", null, "google-source");
+    item.append(node("span", "[" + index + "]" + (typeof source.source_id === "string" ? " / " + source.source_id : ""), "source-index"));
+    const title = typeof source.title === "string" && source.title ? source.title
+      : source.attribution && typeof source.attribution.title === "string" ? source.attribution.title : "Google Maps";
+    const url = source.url || (source.attribution && source.attribution.url);
+    item.append(link(title, url, "google"));
+    const attribution = source.attribution;
+    if (attribution && typeof attribution.title === "string" && attribution.title !== title) item.append(node("p", attribution.title));
+    if (attribution && attribution.url && attribution.url !== url) item.append(link(attribution.title || "Источник Google", attribution.url, "google"));
+    host.append(item);
+  });
+}
+function renderReceipts(receipts) {
+  const host = $("source-receipts");
+  host.replaceChildren();
+  for (const provider of ["osm", "google", "dgis"]) {
+    const receipt = receipts[provider];
+    const item = node("div", null, "source-receipt");
+    item.append(node("strong", PROVIDERS[provider]));
+    item.append(node("span", receipt.status === "no_data" ? "Подходящих данных нет" : "Найдено: " + receipt.candidate_count + " · в плане: " + receipt.selected_count));
+    host.append(item);
+  }
+}
+function renderOtherSources(sources) {
+  const host = $("other-sources");
+  host.replaceChildren();
+  for (const provider of ["osm", "dgis"]) {
+    host.append(node("h3", PROVIDERS[provider]));
+    const list = node("ul", null, "other-source-list");
+    sources[provider].forEach(source => {
+      const item = node("li");
+      if (typeof source.source_id === "string") item.append(node("span", "[" + source.source_id + "] "));
+      item.append(link(source.name || source.id || "Место", source.source_url, provider));
+      if (source.category) item.append(node("span", " · " + source.category));
+      list.append(item);
+    });
+    if (!sources[provider].length) list.append(node("li", "Подходящих данных нет."));
+    host.append(list);
+  }
+}
+function renderResult(data) {
+  state.result = data;
+  $("walk-mode").textContent = data.mode === "llm-grounded-unified" ? "ИИ · три источника проверены" : "Без ответа модели";
+  $("walk-context").textContent = contextText(data.resolved_context);
+  renderReceipts(data.source_receipt);
+  $("answer-label").textContent = data.answer ? "Ответ помощника" : "Полный ответ Google · без генерации модели";
+  $("walk-answer").textContent = data.answer ? data.answer.text : data.grounding.summary;
+  renderGoogleSources("google-sources", data.grounding.sources);
+  show("google-original", Boolean(data.answer));
+  $("google-original-text").textContent = data.grounding.summary;
+  renderGoogleSources("google-original-sources", data.grounding.sources);
+  const warnings = $("walk-warnings");
+  warnings.replaceChildren();
+  if (Array.isArray(data.warnings)) data.warnings.filter(value => typeof value === "string").forEach(value => warnings.append(node("li", value)));
+  show("walk-warnings", warnings.children.length > 0);
+  renderOtherSources(data.sources);
+  const variants = $("walk-variants");
+  variants.replaceChildren();
+  data.alternatives.forEach(option => {
+    const button = node("button", option.budget_minutes + " мин");
+    button.type = "button";
+    button.dataset.optionId = option.id;
+    button.setAttribute("aria-pressed", "false");
+    button.addEventListener("click", () => selectOption(option.id));
+    variants.append(button);
+  });
+  show("walk-variants", data.alternatives.length > 1);
+  show("walk-result", true);
+  selectOption(data.default_option_id);
+}
+function renderRouteAttributions(attributions) {
+  const host = $("route-attributions");
+  host.replaceChildren();
+  if (!Array.isArray(attributions)) return;
+  attributions.forEach(value => {
+    if (typeof value === "string") host.append(node("span", value));
+    else if (value && typeof value.title === "string") host.append(link(value.title, value.url, "google"));
+  });
+}
+function directionsUrl(context, stops) {
+  if (!startKnown(context) || !stops.length || stops.length > 3) return null;
+  const origin = context.origin.lat + "," + context.origin.lon;
+  const url = new URL("https://www.google.com/maps/dir/");
+  url.searchParams.set("api", "1");
+  url.searchParams.set("origin", origin);
+  url.searchParams.set("destination", origin);
+  url.searchParams.set("travelmode", "walking");
+  url.searchParams.set("waypoints", stops.map(stop => stop.lat + "," + stop.lon).join("|"));
+  return url.href;
+}
+function validateMapUrl(value) {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.hostname !== "www.google.com" || url.port || url.username || url.password || url.pathname !== "/maps/embed/v1/directions" || url.hash) return null;
+    const allowed = new Set(["key", "origin", "destination", "waypoints", "mode", "language", "region", "avoid", "units"]);
+    for (const key of url.searchParams.keys()) if (!allowed.has(key) || url.searchParams.getAll(key).length !== 1) return null;
+    if (!url.searchParams.get("key") || !url.searchParams.get("origin") || url.searchParams.get("origin") !== url.searchParams.get("destination") || url.searchParams.get("mode") !== "walking") return null;
+    const stops = (url.searchParams.get("waypoints") || "").split("|").filter(Boolean);
+    return stops.length >= 1 && stops.length <= 3 ? url.href : null;
+  } catch (_) { return null; }
+}
+async function loadRouteMap(option, context) {
+  clearMap();
+  if (!option.route_built) return;
+  show("route-map-section", true);
+  const external = directionsUrl(context, option.stops);
+  if (external) { $("route-external").href = external; show("route-external", true); }
+  if (typeof option.map_ticket !== "string" || !option.map_ticket) {
+    $("route-map-status").textContent = "Карта маршрута пока недоступна. План и ссылка на Google Maps остаются доступны.";
+    return;
+  }
+  const mapId = state.mapId;
+  const requestId = state.requestId;
+  const controller = new AbortController();
+  state.mapController = controller;
+  $("route-map-status").textContent = "Загружаем единственную карту выбранного маршрута…";
+  const timer = setTimeout(() => controller.abort(), 20000);
+  const active = () => mapId === state.mapId && requestId === state.requestId && state.optionId === option.id;
+  try {
+    const data = await post("/api/unified/map", {ticket: option.map_ticket}, controller.signal);
+    if (!active()) return;
+    const url = validateMapUrl(data.url);
+    if (!url || !finite(data.expires_in) || data.expires_in <= 0 || data.expires_in > 600) throw new Error("Неподтверждённый адрес карты.");
+    const iframe = node("iframe");
+    iframe.title = "Пеший маршрут Google Maps с возвращением";
+    iframe.setAttribute("referrerpolicy", "origin");
+    iframe.setAttribute("allowfullscreen", "");
+    iframe.addEventListener("load", () => {
+      if (!active()) return;
+      clearTimeout(state.mapLoadTimer);
+      $("route-map-status").textContent = "Карта Google Maps загружена. Если маршрут не отображается, откройте ссылку ниже.";
+    });
+    iframe.addEventListener("error", () => {
+      if (!active()) return;
+      clearTimeout(state.mapLoadTimer);
+      $("route-map-status").textContent = "Карта не загрузилась. Откройте маршрут в Google Maps по ссылке ниже.";
+    });
+    iframe.src = url;
+    $("route-map-host").replaceChildren(iframe);
+    state.mapLoadTimer = setTimeout(() => {
+      if (active()) $("route-map-status").textContent = "Карта отвечает медленно. План доступен; маршрут можно открыть по ссылке ниже.";
+    }, 12000);
+    state.mapTimer = setTimeout(() => {
+      if (!active()) return;
+      $("route-map-host").replaceChildren();
+      $("route-map-status").textContent = "Срок показа карты завершён. Откройте маршрут по ссылке ниже.";
+    }, data.expires_in * 1000);
+  } catch (_) {
+    if (active()) $("route-map-status").textContent = "Карта маршрута недоступна. План и ссылка на Google Maps остаются доступны.";
+  } finally {
+    clearTimeout(timer);
+    if (active()) state.mapController = null;
+  }
+}
+function selectOption(id) {
+  if (!state.result) return;
+  const option = state.result.alternatives.find(value => value.id === id);
+  if (!option || state.optionId === id) return;
+  state.optionId = id;
+  for (const button of $("walk-variants").children) button.setAttribute("aria-pressed", String(button.dataset.optionId === id));
+  const plan = option.plan || {};
+  $("walk-budget").textContent = option.route_built
+    ? plan.total_minutes + " из " + option.budget_minutes + " мин · пешком " + plan.walk_minutes + " · остановки " + plan.visit_minutes + " · запас " + plan.buffer_minutes
+    : "На " + option.budget_minutes + " мин подтверждённый маршрут не построен.";
+  $("walk-route-note").textContent = option.route_built
+    ? "Возвращение к старту включено: " + plan.return_walk_minutes + " мин. Пеший путь рассчитан Google; время посещения и запас предложены приложением."
+    : "Подходящих остановок или подтверждённого времени недостаточно. Это результат проверки источников, а не готовая рекомендация.";
+  renderRouteAttributions(plan.route_attributions);
+  const host = $("walk-stops");
+  host.replaceChildren();
+  if (option.route_built) option.stops.forEach(stop => {
+    const item = node("li");
+    const content = node("div", null, "stop-content");
+    content.append(node("strong", stop.name));
+    content.append(node("p", PROVIDERS[stop.provider] + (finite(stop.visit_minutes) ? " · посещение " + stop.visit_minutes + " мин" : "")));
+    content.append(link("Источник места ↗", stop.source_url, stop.provider));
+    item.append(content);
+    host.append(item);
+  });
+  loadRouteMap(option, option.resolved_context || state.result.resolved_context);
+}
+async function submitWalk(event) {
+  if (event && event.preventDefault) event.preventDefault();
+  const query = $("walk-query").value.trim();
+  if (!query || query.length > 2000) {
+    $("walk-error").textContent = "Сообщение пустое или слишком длинное. Подбор не запущен.";
+    show("walk-error", true);
+    return;
+  }
+  cancelFlow("");
+  const id = state.requestId;
+  const sig = signature();
+  state.signature = sig;
+  const controller = new AbortController();
+  state.controller = controller;
+  const clock = new Date();
+  const payload = {query, client_context: {instant: clock.toISOString(), utc_offset_minutes: -clock.getTimezoneOffset()}};
+  let timedOut = false;
+  const deadline = setTimeout(() => { timedOut = true; controller.abort(); if (state.geoCancel) state.geoCancel(); }, 210000);
+  $("walk-submit").disabled = true;
+  $("walk-submit").textContent = "Подбираем прогулку…";
+  $("walk-status").textContent = "Определяем старт и время из сообщения…";
+  try {
+    let probe = await post("/api/context", payload, controller.signal);
+    if (!current(id, sig)) return;
+    if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+    if (probe.needs_geolocation === true) {
+      $("walk-status").textContent = "Ожидаем разрешённую геолокацию, не более 8 секунд…";
+      const location = await requestLocation(id, sig);
+      if (!current(id, sig)) return;
+    if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+      if (location.status !== "granted") throw startError();
+      payload.location_status = "granted";
+      payload.geolocation = location.geolocation;
+      probe = await post("/api/context", payload, controller.signal);
+      if (!current(id, sig)) return;
+    if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+    }
+    if (probe.needs_geolocation || !startKnown(probe.resolved_context)) throw startError();
+    $("walk-status").textContent = "Проверяем OSM, Google и 2ГИС. Затем рассчитаем возвращение и подготовим один ответ…";
+    const data = await post("/api/unified/recommend", {...payload, consent: true}, controller.signal);
+    if (!current(id, sig)) return;
+    if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+    renderResult(validateResult(data));
+    $("walk-status").textContent = "Подбор завершён. Варианты времени переключаются без нового поиска.";
+    $("walk-result-title").focus({preventScroll: true});
+    $("walk-result-title").scrollIntoView({block: "start", behavior: "auto"});
+  } catch (error) {
+    if (!current(id, sig)) return;
+    clearResult();
+    if (timedOut) { error = new Error(); error.code = "timeout"; }
+    $("walk-error").textContent = errorMessage(error);
+    show("walk-error", true);
+    $("walk-status").textContent = "Подбор не выполнен.";
+  } finally {
+    delete payload.geolocation;
+    delete payload.location_status;
+    clearTimeout(deadline);
+    if (current(id, sig)) {
+      state.controller = null;
+      $("walk-submit").disabled = false;
+      $("walk-submit").textContent = "Найти прогулку →";
+    }
+  }
+}
+function boot() {
+  state.signature = signature();
+  $("walk-form").addEventListener("submit", submitWalk);
+  $("walk-query").addEventListener("input", onInputChange);
+  $("walk-query").addEventListener("change", onInputChange);
+  window.addEventListener("pagehide", () => cancelFlow("Подбор остановлен. Можно отправить новое сообщение."));
+}
+document.addEventListener("DOMContentLoaded", boot);

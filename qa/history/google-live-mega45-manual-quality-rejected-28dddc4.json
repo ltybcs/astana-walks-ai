@@ -1,0 +1,17 @@
+{
+  "case": "mega45",
+  "input": "У меня 45 минут возле Mega, хочу короткую прогулку",
+  "source_commit": "28dddc419800b79adfa1f5e45387e4deb5d66c31",
+  "mode": "google-grounded-llm",
+  "budget_status": "fits",
+  "before_http_attempts": 56,
+  "after_http_attempts": 59,
+  "answer_characters": 242,
+  "answer_sha256": "fa78f2c12cea2603735ccaef5e9a5822cd4c0110448e4e02289ca7d4d62b0b48",
+  "source_count": 4,
+  "local_model_status": "validated_structure_sources_and_known_claims",
+  "model_seconds": 48.062,
+  "accepted_live_recommendation": false,
+  "automated_guard_accepted": true,
+  "scope": "Manual quality rejected unsupported activity and invented interests; not a positive quality pass. Whole output may exist only in permitted private performance/display archive."
+}

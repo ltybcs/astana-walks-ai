@@ -1,0 +1,243 @@
+{
+  "schema": "astana-walks-text-only-lab-check-v1",
+  "created_at": "2026-10-20T10:49:38.749598+00:00",
+  "source_commit": "04113e99be25a63a8be6a5b301139b1c31ade4d9",
+  "source_hash_normalization": "Exact Git LF text blobs; working bytes checked after CRLF normalization",
+  "source_hashes": {
+    "app/google_budget.py": "a442e9f6d36eb7e3dd45bb2c8f6fc0c86f09abc68771c22e1ed65b1983a76ce3",
+    "app/google_cache.py": "d27fcb832cef9a72652bb29a7f63f553ec24064d29b8d036dba5ad08747be06c",
+    "app/google_client.py": "202b63d645f24283ce5a4ffc9580e7b8be6303ab4e23e97dcfd7fee9cf1a7634",
+    "app/google_grounded.py": "530507a939a269a90955b9ba048a3ee4ec184c7c5191c5178e1c3b184b0bc588",
+    "app/google_lab.py": "9838d730b9e361b56a09eb5636c8aec508194afac4e3c3272f32034e68312d8e",
+    "app/lab_context.py": "9a08337b877e95827050202612585231e945df2aa80cdc6fa9ac1139848f4b88",
+    "tests/test_google_budget.py": "a9ec213511dd28a963c7001a4903dd97b29e22db6ba63ab3b369423b7bce81c6",
+    "tests/test_google_cache.py": "216f07c7701e2ac33dcfd8b92cdc0b72357d0f2b2d3ba31a7d684f6d6c1faa5c",
+    "tests/test_google_client.py": "e396469a4b6a6b60724916cd2936dd41d56c9638206ce87b3fae4f898576cadc",
+    "tests/test_google_grounded.py": "4825f2d7c6c1ee9285f357a07eb1f2ffc0b3c54aca4f012ddddb2ab95a5ead22",
+    "tests/test_google_lab.py": "04f529d4ad8a9091299b3fed25772cd9d09c1a1f248b74efcef4ef2aa9ff4621",
+    "tests/test_lab_context.py": "912e39271077e7491e2b49d5f0a0f47877d9d84142b88e0f8105d73c5cdfdb77",
+    "tests/test_google_lab_frontend.js": "a58d6d1a6ec9aae6d7e3091fe7121b513ffa1f4eb40fb239f658c908b56272ba",
+    "tests/test_google_lab_frontend.py": "b080270655a751ecf2b40ed983f92e36096d3c1577f7f932611b5bb6dc53bc44",
+    "web/google-lab/index.html": "5b7dc3728661ac135582505a68f696aca4b01ca6263c3df89ed3719bcbab2b12",
+    "web/google-lab/lab.css": "d3cc3573cbdf53b78dbd469db80b9b7020489bb7068a6eb28fc2baab5f4685ad",
+    "web/google-lab/lab.js": "0cc4e72262014c23178824c31f7df1e40dfac3265f103b5999ff15dbbdee698e",
+    "web/google-lab/embeds.json": "f09ff4cc7273c0da617734b18e899919b7bf991830dbc10be2d33657f5e268ba"
+  },
+  "suite": {
+    "run": 246,
+    "passed": 244,
+    "skipped": 2,
+    "failures": 0,
+    "seconds": 21.433,
+    "skip_scope": "Windows symlink capability"
+  },
+  "offline_frontend": {
+    "passed": 57,
+    "total": 57,
+    "network_calls": 0,
+    "device_geolocation_mocked": true
+  },
+  "independent_review": {
+    "context_and_http": "approved",
+    "google_orchestration_and_client": "approved",
+    "ui": "approved",
+    "time_allocation_and_intent_delta": "approved",
+    "quiet_inflections_and_joint_uncertainty": "approved"
+  },
+  "browser_checks": {
+    "source_commit": "04113e99be25a63a8be6a5b301139b1c31ade4d9",
+    "google_expo_range": {
+      "passed": true,
+      "scope": "Automatic context and whole fallback rendering; not a successful LLM quality case",
+      "public_origin": "expo",
+      "origin_distinct_from_mega": true,
+      "ready_budgets": [
+        60,
+        90,
+        120
+      ],
+      "primary_status": "fits",
+      "primary_mode": "google-grounding-summary",
+      "primary_llm_accepted": false,
+      "whole_google_fallback_displayed": true,
+      "all_source_previews_displayed": true,
+      "source_count": 1,
+      "manual_context_questions": 0,
+      "device_geolocation_requested": false,
+      "quota_before": 75,
+      "quota_after": 85,
+      "source_commit": "f2013a4d59b0c1d6d04569f3ea5fe963079fa64b",
+      "budget_options_displayed": true,
+      "separate_walk_and_return_displayed": true,
+      "route_durations_saved_in_qa": false
+    },
+    "google_mega45_control": {
+      "passed": true,
+      "scope": "Honest no-eligible-source guard, not an accepted AI quality result",
+      "public_origin": "mega",
+      "budget_minutes": 45,
+      "primary_mode": "google-grounding-summary",
+      "budget_status": "unverified",
+      "primary_llm_accepted": false,
+      "model_call_skipped_no_eligible_stop": true,
+      "whole_google_fallback_displayed": true,
+      "all_source_previews_displayed": true,
+      "source_count": 2,
+      "manual_context_questions": 0,
+      "quota_before": 85,
+      "quota_after": 86,
+      "source_commit": "f2013a4d59b0c1d6d04569f3ea5fe963079fa64b"
+    },
+    "actual_device_geolocation_tested": false,
+    "geolocation_success_denial_timeout_and_stale_callbacks": "Mocked only in 57-case frontend suite",
+    "actual_mobile_viewport_check": "Not claimed for this source; current browser viewport capability did not resize the tested tab",
+    "existing_user_message_preserved_on_tab_reload": true,
+    "existing_user_tab_manual_fields_after_reload": 0,
+    "historical_pre_balance_osm": {
+      "passed": true,
+      "provider": "OSM snapshot plus local Qwen",
+      "typed_duration": false,
+      "typed_day_period": false,
+      "public_origin": "mega",
+      "ready_budgets": [
+        60,
+        120,
+        240
+      ],
+      "actual_plan_minutes": [
+        42,
+        95,
+        95
+      ],
+      "primary_llm_accepted": true,
+      "return_displayed": true,
+      "alternative_extractive_label_verified": true,
+      "switch_to_alternative_and_back_without_submit": true,
+      "manual_context_fields": 0,
+      "screenshot_scope": "OSM output only, local ignored tmp; no Google content",
+      "current_time_source_displayed": true,
+      "source_commit": "f2013a4d59b0c1d6d04569f3ea5fe963079fa64b"
+    },
+    "google_baiterek_walk_control": {
+      "passed": true,
+      "scope": "No eligible source, not an accepted AI quality result",
+      "source_commit": "f2013a4d59b0c1d6d04569f3ea5fe963079fa64b",
+      "public_origin": "baiterek",
+      "budget_minutes": 120,
+      "primary_mode": "google-grounding-summary",
+      "budget_status": "unverified",
+      "primary_llm_accepted": false,
+      "model_call_skipped_no_eligible_stop": true,
+      "whole_google_fallback_displayed": true,
+      "all_source_previews_displayed": true,
+      "source_count": 4,
+      "manual_context_questions": 0,
+      "quota_before": 86,
+      "quota_after": 87
+    },
+    "historical_google_cafe_intent_failure": {
+      "source_commit": "f2013a4d59b0c1d6d04569f3ea5fe963079fa64b",
+      "formal_mode": "google-grounded-llm",
+      "structural_guard_accepted": true,
+      "manual_quality_pass": false,
+      "reason": "Proposed facade viewing instead of the requested coffee break",
+      "source_count": 4,
+      "whole_original_context_read": true,
+      "all_source_previews_displayed": true,
+      "public_origin": "baiterek",
+      "budget_minutes": 60,
+      "quota_before": 87,
+      "quota_after": 90,
+      "provider_payload_saved_in_qa": false
+    },
+    "historical_google_cafe_after_intent_fix": {
+      "source_commit": "bac1d16df2162fba2d7284be7baf736296f705b0",
+      "structural_guard_accepted": true,
+      "formal_mode": "google-grounded-llm",
+      "action_matches_coffee_intent": true,
+      "manual_quality_pass": false,
+      "reason": "Unverified quiet claim in an inflected adjective escaped the old lexical guard",
+      "whole_original_context_read": true,
+      "source_count": 4,
+      "all_source_previews_displayed": true,
+      "quota_before": 90,
+      "quota_after": 96,
+      "provider_payload_saved_in_qa": false
+    },
+    "final_google_guard_delta": {
+      "source_commit": "04113e99be25a63a8be6a5b301139b1c31ade4d9",
+      "actual_google_calls_after_this_delta": 0,
+      "synthetic_replay_rejects_quiet_inflections": true,
+      "joint_uncertainty_allowed": true,
+      "affirmative_claim_with_unrelated_unknown_hours_rejected": true,
+      "successful_final_source_google_semantic_quality_case_claimed": false
+    },
+    "google_budget": {
+      "used": 96,
+      "limit": 500,
+      "remaining": 404,
+      "new_http_attempts": 21,
+      "new_acceptance_cap": 25,
+      "no_ledger_reset": true
+    },
+    "osm_defaults": {
+      "passed": true,
+      "source_commit": "04113e99be25a63a8be6a5b301139b1c31ade4d9",
+      "provider": "OSM snapshot plus local Qwen",
+      "typed_duration": false,
+      "typed_day_period": false,
+      "public_origin": "mega",
+      "ready_budgets": [
+        60,
+        120,
+        240
+      ],
+      "actual_plan_minutes": [
+        37,
+        93,
+        229
+      ],
+      "proposed_visit_minutes_per_stop": [
+        15,
+        30,
+        60
+      ],
+      "distinct_time_allocation_displayed": true,
+      "primary_llm_accepted": true,
+      "primary_manual_quality_pass": true,
+      "primary_source_count": 1,
+      "long_option_total_minutes": 229,
+      "long_option_visit_minutes": 180,
+      "long_option_return_minutes": 12,
+      "long_option_stop_count": 3,
+      "long_option_extractive_label_verified": true,
+      "return_displayed": true,
+      "switch_to_long_option_and_back_without_submit": true,
+      "manual_context_fields": 0,
+      "current_time_source_displayed": true,
+      "screenshot_scope": "Final-source OSM output only; no Google content"
+    }
+  },
+  "scope": {
+    "main_8000_unchanged": true,
+    "model_8081_not_restarted": true,
+    "public_tunnel_unchanged": true,
+    "real_device_geolocation_requested": false,
+    "arbitrary_external_geocoder_added": false,
+    "google_payloads_or_user_messages_in_this_receipt": false,
+    "pr15_remains_separate_draft": true
+  },
+  "intermediate_suite": {
+    "source_commit": "f2013a4d59b0c1d6d04569f3ea5fe963079fa64b",
+    "run": 244,
+    "passed": 242,
+    "skipped": 2
+  },
+  "limitations": [
+    "Unknown addresses use only the shipped local gazetteer; labelled city example on failure.",
+    "Budgets are upper bounds; routes need not fill every minute.",
+    "At most the primary option has model narration; other options are explicitly extractive or whole provider summaries.",
+    "Google route fit is not verification of physical access, opening hours or safety.",
+    "The previous QA receipts retain their original source commits and are not evidence for this source."
+  ]
+}

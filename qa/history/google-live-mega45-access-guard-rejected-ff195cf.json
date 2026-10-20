@@ -1,0 +1,14 @@
+{
+  "case": "mega45",
+  "input": "У меня 45 минут возле Mega, хочу короткую прогулку",
+  "source_commit": "ff195cf9faf03ee87cabc7264061df44fde75b99",
+  "mode": "google-grounding-summary",
+  "budget_status": "fits",
+  "source_count": 5,
+  "before_http_attempts": 61,
+  "after_http_attempts": 67,
+  "model_seconds": 57.265,
+  "local_model_status": "unsupported_protected_access_safety",
+  "accepted_live_recommendation": false,
+  "scope": "Measured model finished; existing protected-claim guard rejected entire output. Exact rejected wording was not saved. No output archive created."
+}

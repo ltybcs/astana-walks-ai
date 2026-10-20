@@ -1,0 +1,194 @@
+{
+  "checked_at": "2026-10-20T06:35:09+00:00",
+  "pass": true,
+  "branch": "codex/google-maps-lab",
+  "separate_service": "http://127.0.0.1:8003/",
+  "source_hashes": {
+    "app/google_lab.py": "24cf4569883485b324ae7a43ff0d6bafe555330d6d1d121c559f409066501a0c",
+    "tests/test_google_lab.py": "1ce9a7e8e25f497006df913e9da2ee6d4b6a717a6b1f5aeac672d1b73e3bfd63",
+    "web/google-lab/lab.js": "f31e3e760e5721103cfd751ae246b4916b96dbbe3fd554a9129e99652dc54518",
+    "web/google-lab/index.html": "24a1c1461dc5a30194c82cc4f34de128ac558ccb8958298bc2ab982636c571de",
+    "web/google-lab/lab.css": "18cbc4a79f65a54001cdc62e37e3b796d4b3d5ac9fd66b103c3c6ef479445ae8",
+    "web/google-lab/embeds.json": "f09ff4cc7273c0da617734b18e899919b7bf991830dbc10be2d33657f5e268ba",
+    "docs/GOOGLE_MAPS_LAB.md": "145c321e31d86227b5ebef5a674db47a3755d6f3409db9133861d48c9d25fa47",
+    "README.md": "783a502a88b59cf536fca133fcc938ffd452e0e497395298752ef6738fdff386"
+  },
+  "http_checks": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "pass": true
+    },
+    {
+      "path": "/lab.js",
+      "status": 200,
+      "pass": true
+    },
+    {
+      "path": "/embeds.json",
+      "status": 200,
+      "pass": true
+    },
+    {
+      "path": "/.git/config",
+      "status": 404,
+      "pass": true
+    },
+    {
+      "path": "/.local/2gis/api-key",
+      "status": 404,
+      "pass": true
+    },
+    {
+      "path": "/app/google_lab.py",
+      "status": 404,
+      "pass": true
+    }
+  ],
+  "browser": {
+    "checks": [
+      {
+        "name": "Google waits for load button",
+        "pass": true
+      },
+      {
+        "name": "Google loads one shared map",
+        "pass": true,
+        "title": "Google Maps: Байтерек и бульвар Нуржол"
+      },
+      {
+        "name": "Area change removes previous frame",
+        "pass": true
+      },
+      {
+        "name": "Selected MEGA shared frame is created",
+        "pass": true
+      },
+      {
+        "name": "Unload removes Google frame",
+        "pass": true
+      },
+      {
+        "name": "Returning to OSM removes Google frame",
+        "pass": true
+      },
+      {
+        "client_width": 375,
+        "name": "Mobile 390 viewport has no horizontal overflow",
+        "pass": true,
+        "scroll_width": 375
+      },
+      {
+        "name": "Keyboard Enter keeps focus on stable map",
+        "pass": true,
+        "observed_active_id": "osm-map"
+      },
+      {
+        "name": "Named culture filter shows 72 objects",
+        "pass": true,
+        "count": 72
+      },
+      {
+        "name": "Food filter shows 623 objects",
+        "pass": true,
+        "count": 623
+      },
+      {
+        "name": "Load more expands food list from60 to120",
+        "pass": true,
+        "counts": [
+          60,
+          120
+        ]
+      },
+      {
+        "name": "Unnamed children layer is optional",
+        "pass": true,
+        "named_only": 1,
+        "with_unnamed": 341
+      },
+      {
+        "name": "Desktop has no horizontal overflow",
+        "pass": true,
+        "client_width": 1265,
+        "scroll_width": 1265
+      },
+      {
+        "name": "Zoom controls are44px with Russian labels",
+        "pass": true,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "name": "Actual OSM streets and attribution visually inspected",
+        "pass": true
+      },
+      {
+        "name": "Actual Google streets and attribution visually inspected",
+        "pass": true
+      }
+    ],
+    "scope": "Actual CUA browser interaction and pixel inspection at desktop1280x1050/mobile390x844; public landmarks only. No physical-phone, LLM, paid API, Google-POI import or 2GIS search test."
+  },
+  "local_captures": [
+    {
+      "local_capture": "tmp/google-maps-lab/osm-desktop.jpg",
+      "format": "JPEG",
+      "dimensions": [
+        1265,
+        1038
+      ],
+      "sha256": "f5f6a8e6d19c8f83222d71573589aedd7658e6a1ee677787824d044d7320f7f0"
+    },
+    {
+      "local_capture": "tmp/google-maps-lab/google-desktop.jpg",
+      "format": "JPEG",
+      "dimensions": [
+        1265,
+        1038
+      ],
+      "sha256": "641a8c79d1da9c0cea8fe5ee6554a9e2f3e3b093708c5a8bcd81a46f4a53adc0"
+    },
+    {
+      "local_capture": "tmp/google-maps-lab/google-mobile.jpg",
+      "format": "JPEG",
+      "dimensions": [
+        375,
+        812
+      ],
+      "sha256": "4f669df4f0bbe797813584e05281dfbd9ee8c079f20e960093010f3e057d8f41"
+    }
+  ],
+  "suite": {
+    "run": 145,
+    "passed": 144,
+    "skipped": 1,
+    "failures": 0,
+    "errors": 0,
+    "node_in_path": true,
+    "skip_reason": "Windows could not create an actual symlink; Linux CI can exercise it.",
+    "log_sha256": "5ea0d9763092e4cd2f92a7a7aeb03e08d4d50bd9fdb524cdcb22b59d717817bd",
+    "note": "Existing 2GIS collector tests use mock records; no actual provider search."
+  },
+  "frontend_checks": {
+    "syntax": true,
+    "baseline_offline": {
+      "passed": 16,
+      "total": 16
+    },
+    "final_delta_offline": {
+      "passed": 6,
+      "total": 6
+    },
+    "scope": "Baseline covers consent/filter/source behavior before unchanged-logic copy fixes; final delta covers focus/tile lifecycle. Actual final browser observations are separate."
+  },
+  "independent_review": {
+    "backend": "approved exact module/test hashes",
+    "frontend": "approved exact final JS/HTML/CSS hashes"
+  },
+  "observed_issues_fixed": [
+    "Tile requests initially lacked Referer and showed blocked bitmap; scoped normal referrer policy restored actual streets.",
+    "Keyboard selection recreated focused button; stable map container now receives focus after Enter."
+  ],
+  "scope": "No-key shared Google map and OSM directory. No Google Places import, paid API key, LLM inference, 2GIS search or physical-device/PWA test. Stable main changed only by separately reviewed PR14, not this lab."
+}

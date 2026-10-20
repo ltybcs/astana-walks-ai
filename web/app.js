@@ -165,7 +165,7 @@ function showTwoGisService(service){
   if(twoGisBusy)return;
   $("two-gis-submit").disabled=!twoGisAvailable;
   $("two-gis-quota").textContent=!service.configured?"Живой поиск 2ГИС не подключён на этом сервере. Подбор прогулки по OpenStreetMap доступен выше.":
-    service.quota?"Осталось "+service.quota.remaining+" из "+service.quota.limit+" запросов за последние 24 часа. Лимит общий для этого демо.":
+    service.quota?"Осталось "+service.quota.remaining+" из "+service.quota.limit+" запросов за последние 30 дней. Лимит общий для этого демо.":
     "Живой поиск 2ГИС временно недоступен. Повторите позже.";
 }
 $("two-gis-category").addEventListener("change",()=>{$("two-gis-results").replaceChildren();});
@@ -189,7 +189,7 @@ $("two-gis-form").addEventListener("submit",async(event)=>{
       card.append(el("p",null,place.opening_hours?"Расписание из 2ГИС: "+place.opening_hours+". Проверьте перед визитом.":"Часы и доступ сейчас не подтверждены."));
       card.append(sourceLink(place.source_url,"Открыть карточку в 2ГИС ↗"));list.append(card);
     }
-    const remaining=data.quota?" Осталось запросов за 24 часа: "+data.quota.remaining+".":"";
+    const remaining=data.quota?" Осталось запросов за 30 дней: "+data.quota.remaining+".":"";
     $("two-gis-status").textContent=(found.length?"Получено карточек: "+found.length+". Это одна страница поиска, а не полный каталог.":"В этой выборке нет подходящих карточек. Попробуйте другую категорию.")+remaining;
   }catch(error){
     $("two-gis-status").textContent=error.name==="AbortError"?"Поиск занял слишком много времени. Попытка уже могла быть учтена в лимите.":error.message;

@@ -30,8 +30,8 @@ CATEGORIES = {"cafe": "Кофейни", "park": "Парки", "museum": "Муз�
 FIELDS = "items.point,items.rubrics"
 PAGE_SIZE = 10  # Demo-key maximum; never silently request the paid-key limit.
 ATTRIBUTION = {"text": "2ГИС", "url": "http://dev.2gis.ru"}
-LIMIT = 20
-WINDOW_SECONDS = 86_400
+LIMIT = 500
+WINDOW_SECONDS = 30 * 86_400
 TIMEOUT_SECONDS = 25
 MAX_BYTES = 5_000_000
 _PROCESS_LOCK = threading.Lock()
@@ -218,7 +218,7 @@ class _LiveClient:
             attempts = self._attempts(now)
             quota = self._quota(attempts, now)
             if quota["remaining"] == 0:
-                raise DGISLiveError("Лимит 20 попыток 2ГИС за последние 24 часа исчерпан.",
+                raise DGISLiveError("Лимит 500 попыток 2ГИС за последние 30 дней исчерпан.",
                                     code="quota_exhausted", http_status=429, quota=quota)
             attempts.append(now)
             self._write_attempts(attempts)  # Reserve durably before any network call.

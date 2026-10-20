@@ -1,0 +1,252 @@
+{
+  "checked_at": "2026-10-20T09:44:37.153854+00:00",
+  "scope": "One current-source MEGA45 live Google + local Qwen case verified through the actual browser. Metadata only.",
+  "current_source_cases": [
+    {
+      "source_commit": "aabe55e911aa7dd00d177bdef7cf7f8f146e3f82",
+      "hash_normalization": "CRLF to LF, matching repository text blobs",
+      "source_hashes": {
+        "app/google_budget.py": "a442e9f6d36eb7e3dd45bb2c8f6fc0c86f09abc68771c22e1ed65b1983a76ce3",
+        "app/google_cache.py": "d27fcb832cef9a72652bb29a7f63f553ec24064d29b8d036dba5ad08747be06c",
+        "app/google_client.py": "8eb03465876b016cabfc072dd6c5d683eef8e34caf65630ac7b05a7edc571d02",
+        "app/google_grounded.py": "f55e0437b5eaddc551656873357bdac20477700ebe24d04c921e7b74de01926f",
+        "app/google_lab.py": "914e820a70ffa57302f899ab947438ab3e22535a029e5066068ebea5a0d6fba0",
+        "tests/test_google_budget.py": "a9ec213511dd28a963c7001a4903dd97b29e22db6ba63ab3b369423b7bce81c6",
+        "tests/test_google_cache.py": "216f07c7701e2ac33dcfd8b92cdc0b72357d0f2b2d3ba31a7d684f6d6c1faa5c",
+        "tests/test_google_client.py": "e396469a4b6a6b60724916cd2936dd41d56c9638206ce87b3fae4f898576cadc",
+        "tests/test_google_grounded.py": "12012473e610501bb3eaf68456bc9a48d5dea10018de6544db3cebfc05130520",
+        "tests/test_google_lab.py": "d9498cbcbde35444234bbf1f3d8b8efe663bbc7558bb0f5c3ace8df13593ef68",
+        "tests/test_google_lab_frontend.js": "17139c83eb9b2de2581107349d836362ae529107022ab318ec4344bd0d0b1c44",
+        "tests/test_google_lab_frontend.py": "b080270655a751ecf2b40ed983f92e36096d3c1577f7f932611b5bb6dc53bc44",
+        "web/google-lab/index.html": "8cdbcb2dd42ad7996f18b4ea61d7c989dc5b678c78bcd372f55e0e01f3bc9e79",
+        "web/google-lab/lab.css": "3689468c0afb0efd2ec8600890163676258c95e02b834bd8e05404b4e90d30be",
+        "web/google-lab/lab.js": "c71a030bac4bfa90ff43a1627e7497457920d4ff3c1501f0e7a35b5495594a10",
+        "web/google-lab/embeds.json": "f09ff4cc7273c0da617734b18e899919b7bf991830dbc10be2d33657f5e268ba"
+      },
+      "case": "mega45",
+      "input": "У меня 45 минут возле Mega, хочу короткую прогулку",
+      "status": 200,
+      "mode": "google-grounded-llm",
+      "budget_status": "fits",
+      "return_verified": true,
+      "selected_place_id": "ChIJBZWlvhnGhiARn_G8Kfrrwc0",
+      "source_count": 5,
+      "answer_characters": 235,
+      "answer_sha256": "6dc6fe8ccf9d37cede504d8e4e1ee7765f6a90151ee902ac96dc99628b3469f1",
+      "before_http_attempts": 67,
+      "after_http_attempts": 73,
+      "final_http_attempts": 75,
+      "local_model_status": "validated_structure_sources_and_known_claims",
+      "model_seconds": 56.344,
+      "model_transport_metadata": {
+        "phase": "model_response",
+        "seconds": 56.344,
+        "bytes": 1174,
+        "finish_reason": "stop",
+        "timings": {
+          "prompt_n": 2028,
+          "prompt_ms": 41167.743,
+          "predicted_n": 116,
+          "predicted_ms": 14923.991,
+          "predicted_per_second": 7.705713572193925
+        },
+        "content_characters": 326,
+        "usage": {
+          "prompt_tokens": 2028,
+          "completion_tokens": 116,
+          "total_tokens": 2144
+        }
+      },
+      "observer_sha256": "384e8c8cec06a5668f49a28f0ddc18f84b5804ae0f72d5e34f80671d7b24479e",
+      "accepted_live_recommendation": true,
+      "manual_review": {
+        "passed": true,
+        "full_summary_and_all_previews_read": true,
+        "choice_matches_walk_intent": true,
+        "external_viewing_action_supported": true,
+        "no_unverified_internal_activity_or_access_promise": true,
+        "boundary": "Single response review, not a general semantic guarantee or physical route audit."
+      },
+      "details": [
+        {
+          "profile": "hours",
+          "hours_present": true,
+          "attributed": true,
+          "after_http_attempts": 74
+        },
+        {
+          "profile": "reviews",
+          "review_count": 5,
+          "authors_present": true,
+          "dates_present": true,
+          "attributed": true,
+          "after_http_attempts": 75
+        }
+      ],
+      "browser_checks": [
+        {
+          "case": "current_source_whole_llm_answer_read_against_full_google_context",
+          "pass": true
+        },
+        {
+          "case": "all_five_source_previews_adjacent_and_branded",
+          "pass": true
+        },
+        {
+          "case": "two_walking_leg_attributions_and_return_url",
+          "pass": true
+        },
+        {
+          "case": "osm_surface_and_catalog_hidden",
+          "pass": true
+        },
+        {
+          "case": "fresh_hours_with_attribution",
+          "pass": true
+        },
+        {
+          "case": "five_fresh_reviews_with_authors_dates_links",
+          "pass": true
+        },
+        {
+          "case": "mobile_390_no_horizontal_overflow",
+          "pass": true
+        }
+      ]
+    }
+  ],
+  "current_source_declined_checks": [],
+  "previous_source_cases": [
+    {
+      "path": "qa/history/google-live-mega45-access-guard-rejected-ff195cf.json",
+      "sha256": "a0b0bb9fcf1b3dedc0a4f834b6a14c185b9b5d2ade44278db2397244e37140a9",
+      "source_commit": "ff195cf9faf03ee87cabc7264061df44fde75b99",
+      "mode": "google-grounding-summary",
+      "accepted_live_recommendation": false,
+      "scope": "Historical previous-source live check; never counted as a current-source pass."
+    },
+    {
+      "path": "qa/history/google-live-mega45-manual-quality-rejected-28dddc4.json",
+      "sha256": "fb741fe6cf876407aef97567c791f896003ab7e8613384d2a87f6667d5021de8",
+      "source_commit": "28dddc419800b79adfa1f5e45387e4deb5d66c31",
+      "mode": "google-grounded-llm",
+      "accepted_live_recommendation": false,
+      "scope": "Historical previous-source live check; never counted as a current-source pass."
+    },
+    {
+      "path": "qa/history/google-live-mega45-model-timeout-75d7b1d.json",
+      "sha256": "215a602b7b11390f6a1dc0cea3fc05daaa8a7305b82dd25c3da0e90681a88c15",
+      "source_commit": "75d7b1dea4095b36540060a32a90319f0d4a35c1",
+      "mode": "google-grounding-summary",
+      "accepted_live_recommendation": false,
+      "scope": "Historical previous-source live check; never counted as a current-source pass."
+    },
+    {
+      "path": "qa/history/google-live-mega45-no-nearby-0c5423e.json",
+      "sha256": "a6d76dca92f3b047a98509ba8f0b3d863825660effc143a7ec71c93c4280e73d",
+      "source_commit": "0c5423ea9e3637279d7cea63b6dcc4a1d139c6e5",
+      "mode": "google-grounding-summary",
+      "accepted_live_recommendation": false,
+      "scope": "Historical previous-source live check; never counted as a current-source pass."
+    },
+    {
+      "path": "qa/history/google-live-mega45-no-nearby-28dddc4.json",
+      "sha256": "1a22566b7fb6b8a704950e84c585677e7a616918345b728c9eb952ca44f30b94",
+      "source_commit": "28dddc419800b79adfa1f5e45387e4deb5d66c31",
+      "mode": "google-grounding-summary",
+      "accepted_live_recommendation": false,
+      "scope": "Historical previous-source live check; never counted as a current-source pass."
+    },
+    {
+      "path": "qa/history/google-live-mega45-no-nearby-71fb904.json",
+      "sha256": "ba74f24a306985890cc65d73691f397bcefe4ac6859d73db44d24cc4736c5929",
+      "source_commit": "71fb90402bd187e04ad595b76fa469f0bdecf5f4",
+      "mode": "google-grounding-summary",
+      "accepted_live_recommendation": false,
+      "scope": "Historical previous-source live check; never counted as a current-source pass."
+    },
+    {
+      "path": "qa/history/google-live-mega45-no-nearby-bfa7f38.json",
+      "sha256": "5f7415dc4f3487471cc6c622a0a37210d5f913ee863382b118035fa6521a9e46",
+      "source_commit": "bfa7f386232b6ebe313de340cf4afef16cab810e",
+      "mode": "google-grounding-summary",
+      "accepted_live_recommendation": false,
+      "scope": "Historical previous-source live check; never counted as a current-source pass."
+    },
+    {
+      "path": "qa/history/google-live-mega45-pre-geo-check.json",
+      "sha256": "4dd7ed8b00298c6b88a7b266b350c0885a35a4a496a30fdd898bc1e183ac8b09",
+      "source_commit": null,
+      "mode": "google-grounded-llm",
+      "accepted_live_recommendation": false,
+      "scope": "Historical previous-source live check; never counted as a current-source pass."
+    },
+    {
+      "path": "qa/history/google-live-mega45-selected-source-rejected-9cdd339.json",
+      "sha256": "46a7fb4bc4a4e311524be40d5df317f93eb73add641296e8ca2f2f6510d2e270",
+      "source_commit": "9cdd3399330310359f55b776e3780088decafeb5",
+      "mode": "Исходный ответ Google",
+      "accepted_live_recommendation": false,
+      "scope": "Historical previous-source live check; never counted as a current-source pass."
+    },
+    {
+      "path": "qa/history/google-live-mega45-unaccepted-ui-72dcbd4.json",
+      "sha256": "a324c88d8d76f21c5fd91ce3943849fdc804a371ff307b24d8b2f6419cd91fb9",
+      "source_commit": "72dcbd48da4700946615d75ef2cc089cd850b2a6",
+      "mode": "Исходный ответ Google",
+      "accepted_live_recommendation": false,
+      "scope": "Historical previous-source live check; never counted as a current-source pass."
+    },
+    {
+      "path": "qa/history/google-live-tourist120-grounded-bfa7f38.json",
+      "sha256": "ceed014e6bdc8055646bd2a5ec49b5bbaade877c30f427a8fcb63c07265434fe",
+      "source_commit": "bfa7f386232b6ebe313de340cf4afef16cab810e",
+      "mode": "google-grounded-llm",
+      "accepted_live_recommendation": true,
+      "scope": "Historical previous-source live check; never counted as a current-source pass."
+    }
+  ],
+  "public_area_diagnostic": {
+    "purpose": "Single public EXPO-area search diagnostic, no model or route call",
+    "before": 24,
+    "after": 28,
+    "source_count": 5,
+    "source_ids": [
+      "ChIJIXmquFCFRUIRmv3Li3U4BBI",
+      "ChIJ4av6Rq-FRUIRN4g63bqh90s",
+      "ChIJBZWlvhnGhiARn_G8Kfrrwc0",
+      "ChIJcZvBxUaERUIRdU3sf1AdZCk",
+      "ChIJNen6FFGERUIR141SaFsGipU"
+    ],
+    "nearby_id": "ChIJ4av6Rq-FRUIRN4g63bqh90s",
+    "response_sha256": "a40be9f70aa21db06696ec142918954a17a17e9bbb0df4e702d884fe74494610"
+  },
+  "quota": {
+    "used": 75,
+    "limit": 500,
+    "remaining": 425,
+    "state": "ready"
+  },
+  "storage_metadata_audit": {
+    "places_id_count": 3,
+    "coordinates_count": 3,
+    "whole_grounded_output_count": 4,
+    "retention_days": 29,
+    "only_allowlisted_fields": true,
+    "hours_reviews_raw_grounding_absent": true,
+    "grounded_purpose": [
+      "performance_and_display_evaluation_only"
+    ],
+    "boundary": "Metadata audit of private local storage; no cached provider content exported.",
+    "after_http_attempts": 75,
+    "current_accepted_whole_output_present": true,
+    "current_output_source_preview_count": 5
+  },
+  "provider_content_exported": false,
+  "limits": [
+    "A real API response and structural guard do not certify every factual statement or physical access.",
+    "Current positive live case count is one; same-source declined checks remain explicit. Baiterek120 success is from earlier source bfa7f38.",
+    "Google responses vary: the same public query can return no eligible nearby source. No automatic retry or forced positive result.",
+    "No raw summary, whole answer, hours, review, route payload, prompt, key or user GPS retained in this Git receipt."
+  ]
+}

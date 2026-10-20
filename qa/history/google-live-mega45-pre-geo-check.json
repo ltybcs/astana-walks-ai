@@ -1,0 +1,58 @@
+{
+  "case": "mega45",
+  "input": "У меня 45 минут возле Mega, хочу короткую прогулку",
+  "status": 200,
+  "response_sha256": "bf8e6999a197348384fc6c2e2fdcf8028c9362dca0628d11dfe728efd786ab53",
+  "before_http_attempts": 3,
+  "after_http_attempts": 9,
+  "mode": "google-grounded-llm",
+  "budget_status": "does_not_fit",
+  "error_code": null,
+  "boundary": "No provider payload retained in this receipt. Whole accepted output may be in the separate 30-day display/performance archive. This failed probe is historical debugging evidence, not a quality PASS or a final-source certification.",
+  "source_count": 1,
+  "source_place_ids": [
+    "ChIJ476EiMWGRUIRK0nC8VtaaTw"
+  ],
+  "selected_place_id": "ChIJ476EiMWGRUIRK0nC8VtaaTw",
+  "answer_characters": 648,
+  "answer_sha256": "c7693b749a5bf03b1dd224a4d38e9543d4cb6c440ed10792d918ccc824ff56fa",
+  "local_model_status": "validated_structure_sources_and_known_claims",
+  "return_verified": true,
+  "cache_status": "stored",
+  "preview_replay_rejected_without_network": true,
+  "details": [
+    {
+      "profile": "hours",
+      "status": 200,
+      "response_sha256": "4451859e7f7134dddb882c956df3d849b193691b401f0c7663179add9202d129",
+      "returned_place_id": "ChIJ476EiMWGRUIRK0nC8VtaaTw",
+      "hours_present": true,
+      "review_count": 0,
+      "coordinates_present": true,
+      "after_http_attempts": 10,
+      "error_code": null,
+      "cache_status": "stored"
+    },
+    {
+      "profile": "reviews",
+      "status": 200,
+      "response_sha256": "0c4760fdf8bdd4028cf4641545168b17ab895ab5e164ca4780d756f66d80f996",
+      "returned_place_id": "ChIJ476EiMWGRUIRK0nC8VtaaTw",
+      "hours_present": false,
+      "review_count": 5,
+      "coordinates_present": false,
+      "after_http_attempts": 11,
+      "error_code": null,
+      "cache_status": "stored"
+    }
+  ],
+  "final_http_attempts": 11,
+  "acceptance": {
+    "passed": false,
+    "reason": "Google returned only a far source; routes were too long for45 minutes but a positive local-model recommendation still appeared. Subsequent geography filtering and fits-only generation required."
+  },
+  "reviewed_python_source_sha256": {
+    "app/google_grounded.py": "363c8dc42f766e2d80b3ea0fe266c7236feaeb40bd81d197f30bfd1bc2514f62",
+    "app/google_cache.py": "d27fcb832cef9a72652bb29a7f63f553ec24064d29b8d036dba5ad08747be06c"
+  }
+}
