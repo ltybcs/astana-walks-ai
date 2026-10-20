@@ -70,7 +70,7 @@ def _time_options(query, explicit):
             if free(match):
                 exact.add(value)
                 covered.append(match.span())
-    words = {"один": 1, "одного": 1, "два": 2, "двух": 2, "три": 3, "трех": 3, "четыре": 4, "пять": 5, "шесть": 6, "семь": 7, "восемь": 8}
+    words = {"один": 1, "одного": 1, "пара": 2, "пару": 2, "пары": 2, "два": 2, "двух": 2, "три": 3, "трех": 3, "четыре": 4, "пять": 5, "шесть": 6, "семь": 7, "восемь": 8}
     for match in re.finditer(r"\b(" + "|".join(words) + r")\s+час(?:а|ов)?\b", query):
         if free(match):
             exact.add(words[match[1]] * 60)
