@@ -1,5 +1,7 @@
 """Offline ledger tests: real durable counters, fake operation names only."""
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager, redirect_stdout, redirect_stderr
+import io
 import json
 import os
 from pathlib import Path
@@ -181,6 +183,129 @@ class GoogleBudgetTests(unittest.TestCase):
             sleep.assert_not_called()
             self.assertEqual(self.path.read_bytes(), original)
             self.assertEqual(list(self.path.parent.glob("*.tmp")), [])
+
+
+    def seeded(self, used=400, limit=500):
+        GoogleBudget.initialize(self.path)
+        value = json.loads(self.path.read_bytes())
+        value.update(limit=limit, used=used, operations={"places.resolve": used})
+        self.path.write_bytes(json.dumps(value, separators=(",", ":")).encode())
+        return value
+
+    def test_explicit_raise_preserves_usage_operations_and_initialized_stamp(self):
+        before = self.seeded()
+        before["operations"] = {"mcp.search_places": 250, "mcp.compute_routes": 130, "places.resolve": 20}
+        self.path.write_bytes(json.dumps(before).encode())
+        with patch("app.google_budget.utc_now", return_value="2026-10-21T12:00:00+00:00") as clock:
+            status = GoogleBudget(self.path).raise_to_750()
+        self.assertEqual(status, {"used": 400, "limit": 750, "remaining": 350, "state": "ready"})
+        self.assertEqual(json.loads(self.path.read_bytes()),
+                         {**before, "limit": 750, "updated_at": "2026-10-21T12:00:00+00:00"})
+        clock.assert_called_once_with()
+        self.assertEqual(GoogleBudget(self.path).status(), status)
+        self.assertEqual(list(self.path.parent.glob("*.tmp")), [])
+
+    def test_750_raise_is_idempotent_without_timestamp_write_or_charge(self):
+        self.seeded(limit=750)
+        before = self.path.read_bytes()
+        with patch("app.google_budget.utc_now", side_effect=AssertionError("Do not rewrite time")), \
+             patch.object(GoogleBudget, "_write_atomic", side_effect=AssertionError("Do not rewrite ledger")):
+            self.assertEqual(GoogleBudget(self.path).raise_to_750(),
+                             {"used": 400, "limit": 750, "remaining": 350, "state": "ready"})
+        self.assertEqual(self.path.read_bytes(), before)
+        with self.assertRaises(TypeError):
+            GoogleBudget(self.path).raise_to_750(500)
+
+    def test_reservation_uses_stored_ceiling_and_never_raises_it_automatically(self):
+        before = self.seeded(used=500)
+        budget = GoogleBudget(self.path)
+        with self.assertRaises(GoogleError) as caught:
+            budget.reserve("places.hours")
+        self.assertEqual(caught.exception.code, "quota_exhausted")
+        self.assertEqual(json.loads(self.path.read_bytes()), before)
+        budget.raise_to_750()
+        value = json.loads(self.path.read_bytes())
+        value.update(used=749, operations={"places.resolve": 749})
+        self.path.write_bytes(json.dumps(value).encode())
+        self.assertEqual(budget.reserve("places.hours"),
+                         {"used": 750, "limit": 750, "remaining": 0, "state": "exhausted"})
+        exhausted = self.path.read_bytes()
+        with self.assertRaises(GoogleError) as caught:
+            GoogleBudget(self.path).reserve("mcp.initialize")
+        self.assertEqual((caught.exception.code, caught.exception.status), ("quota_exhausted", 429))
+        self.assertIn("750", str(caught.exception))
+        self.assertEqual(self.path.read_bytes(), exhausted)
+
+    def test_raise_missing_corrupt_unapproved_and_overused_fail_without_creation_or_reset(self):
+        with self.assertRaises(GoogleError):
+            GoogleBudget(self.path).raise_to_750()
+        self.assertEqual(list(self.path.parent.iterdir()), [])
+        valid = self.seeded()
+        invalid = [b"{}", b"invalid", b"x" * 16385]
+        invalid += [json.dumps({**valid, "limit": limit}).encode()
+                    for limit in (True, 0, 400, 499, 501, 749, 751, 1000)]
+        invalid += [json.dumps({**valid, "limit": 750, "used": 751, "operations": {"places.resolve": 751}}).encode(),
+                    json.dumps({**valid, "used": 401}).encode()]
+        for raw in invalid:
+            with self.subTest(raw=raw[:80]):
+                self.path.write_bytes(raw)
+                with self.assertRaises(GoogleError) as caught:
+                    GoogleBudget(self.path).raise_to_750()
+                self.assertEqual(caught.exception.code, "quota_unavailable")
+                self.assertEqual(self.path.read_bytes(), raw)
+                self.assertEqual(list(self.path.parent.glob("*.tmp")), [])
+
+    def test_raise_atomic_write_failure_keeps_original_grant_and_cleans_snapshot(self):
+        self.seeded()
+        before = self.path.read_bytes()
+        with patch("app.google_budget.os.replace", side_effect=OSError(errno.ENOSPC, "PRIVATE_DISK_ERROR")) as replaced:
+            with self.assertRaises(GoogleError) as caught:
+                GoogleBudget(self.path).raise_to_750()
+        self.assertEqual(caught.exception.code, "quota_unavailable")
+        self.assertNotIn("PRIVATE", str(caught.exception))
+        replaced.assert_called_once()
+        self.assertEqual(self.path.read_bytes(), before)
+        self.assertEqual(GoogleBudget(self.path).status()["used"], 400)
+        self.assertEqual(GoogleBudget(self.path).status()["limit"], 500)
+        self.assertEqual(list(self.path.parent.glob("*.tmp")), [])
+
+    def test_raise_rereads_latest_usage_after_taking_the_shared_lock(self):
+        from app import google_budget
+        before = self.seeded()
+        actual_lock = google_budget._locked
+        advanced = False
+        @contextmanager
+        def concurrent_writer(path, timeout=5):
+            nonlocal advanced
+            if not advanced:
+                advanced = True
+                # Represents another valid writer completing after precheck and
+                # before migration gets the same real OS lock. No stale reset.
+                GoogleBudget(path).reserve("places.hours")
+            with actual_lock(path, timeout=timeout):
+                yield
+        with patch("app.google_budget._locked", side_effect=concurrent_writer):
+            status = GoogleBudget(self.path).raise_to_750()
+        state = json.loads(self.path.read_bytes())
+        self.assertEqual(status["used"], 401)
+        self.assertEqual(state["limit"], 750)
+        self.assertEqual(state["operations"], {"places.resolve": 400, "places.hours": 1})
+        self.assertEqual(state["initialized_at"], before["initialized_at"])
+
+    def test_explicit_cli_requires_exact_action_and_existing_absolute_path(self):
+        from app.google_budget import main
+        self.seeded()
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            self.assertEqual(main(["--raise-to-750", str(self.path)]), 0)
+            before = self.path.read_bytes()
+            self.assertEqual(main(["--raise-to-750", str(self.path)]), 0)
+            self.assertEqual(self.path.read_bytes(), before)
+            for arguments in (["--raise-to-1000", str(self.path)], ["--raise-to-75", str(self.path)],
+                              ["--init", str(self.path), "--raise-to-750", str(self.path)],
+                              ["--raise-to-750", "relative.json"], ["--init", str(self.path)]):
+                with self.subTest(arguments=arguments), self.assertRaises(SystemExit):
+                    main(arguments)
+                self.assertEqual(self.path.read_bytes(), before)
 
 
 if __name__ == "__main__":

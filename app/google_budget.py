@@ -1,4 +1,4 @@
-"""A single explicitly initialized, fail-closed 500-attempt Google pilot ledger.
+"""One fail-closed Google ledger: initialized at 500, explicitly raisable to 750.
 
 Only operation counters and UTC timestamps are persisted, never Google content,
 queries, coordinates, keys or identifiers. Reservation is durable before HTTP.
@@ -15,6 +15,8 @@ import tempfile
 from time import monotonic, sleep
 
 LIMIT = 500
+RAISED_LIMIT = 750
+APPROVED_LIMITS = frozenset({LIMIT, RAISED_LIMIT})
 OPERATIONS = frozenset({
     "mcp.initialize", "mcp.initialized", "mcp.tools_list", "mcp.search_places",
     "mcp.compute_routes", "mcp.close", "places.hours", "places.reviews", "places.resolve",
@@ -58,9 +60,9 @@ def _decode(raw: bytes) -> dict:
                        parse_constant=lambda _: (_ for _ in ()).throw(ValueError("Nonfinite ledger")))
     if not isinstance(value, dict) or set(value) != {"version", "limit", "used", "operations", "initialized_at", "updated_at"}:
         raise ValueError("Invalid ledger schema")
-    if type(value["version"]) is not int or value["version"] != 1 or type(value["limit"]) is not int or value["limit"] != LIMIT:
+    if type(value["version"]) is not int or value["version"] != 1 or type(value["limit"]) is not int or value["limit"] not in APPROVED_LIMITS:
         raise ValueError("Invalid ledger grant")
-    if type(value["used"]) is not int or not 0 <= value["used"] <= LIMIT:
+    if type(value["used"]) is not int or not 0 <= value["used"] <= value["limit"]:
         raise ValueError("Invalid ledger usage")
     counts = value["operations"]
     if not isinstance(counts, dict) or not set(counts) <= OPERATIONS or any(type(n) is not int or n < 0 for n in counts.values()) or sum(counts.values()) != value["used"]:
@@ -161,8 +163,8 @@ class GoogleBudget:
 
     @staticmethod
     def _status(value) -> dict:
-        return {"used": value["used"], "limit": LIMIT, "remaining": LIMIT - value["used"],
-                "state": "exhausted" if value["used"] == LIMIT else "ready"}
+        return {"used": value["used"], "limit": value["limit"], "remaining": value["limit"] - value["used"],
+                "state": "exhausted" if value["used"] == value["limit"] else "ready"}
 
     def status(self) -> dict:
         try:
@@ -171,31 +173,35 @@ class GoogleBudget:
         except GoogleError:
             return {"used": None, "limit": LIMIT, "remaining": 0, "state": "unavailable"}
 
+    def _write_atomic(self, value):
+        """Write one snapshot while the caller retains the shared writer lock."""
+        raw = json.dumps(value, allow_nan=False, separators=(",", ":")).encode("utf-8")
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(prefix=self.path.name + ".", suffix=".tmp", dir=self.path.parent, delete=False) as output:
+                temporary = Path(output.name)
+                output.write(raw)
+                output.flush()
+                os.fsync(output.fileno())
+            _path(self.path)
+            _replace_reserved_snapshot(temporary, self.path)
+            temporary = None
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+
     def reserve(self, operation: str) -> dict:
         if operation not in OPERATIONS:
             raise ValueError("Unknown Google operation")
         try:
             with _locked(self.path):
                 value = self._read()
-                if value["used"] >= LIMIT:
-                    raise GoogleError("quota_exhausted", "Общий тестовый лимит Google 500 запросов исчерпан.", 429)
+                if value["used"] >= value["limit"]:
+                    raise GoogleError("quota_exhausted", "Общий тестовый лимит Google " + str(value["limit"]) + " запросов исчерпан.", 429)
                 value["used"] += 1
                 value["operations"][operation] = value["operations"].get(operation, 0) + 1
                 value["updated_at"] = utc_now()
-                raw = json.dumps(value, allow_nan=False, separators=(",", ":")).encode("utf-8")
-                temporary = None
-                try:
-                    with tempfile.NamedTemporaryFile(prefix=self.path.name + ".", suffix=".tmp", dir=self.path.parent, delete=False) as output:
-                        temporary = Path(output.name)
-                        output.write(raw)
-                        output.flush()
-                        os.fsync(output.fileno())
-                    _path(self.path)
-                    _replace_reserved_snapshot(temporary, self.path)
-                    temporary = None
-                finally:
-                    if temporary is not None:
-                        temporary.unlink(missing_ok=True)
+                self._write_atomic(value)
                 return self._status(value)
         except GoogleError:
             raise
@@ -203,15 +209,44 @@ class GoogleBudget:
             raise GoogleError("quota_unavailable", "Не удалось надёжно учесть запрос Google; запрос не отправлен.", 503) from None
 
 
+    def raise_to_750(self) -> dict:
+        """Explicit operator action; never initialize, reset, decrease or charge."""
+        try:
+            # Refuse missing/corrupt input before even creating a lock file.
+            # This snapshot is deliberately discarded: a concurrent writer may
+            # advance usage before the lock, so only the locked reread is used.
+            self._read()
+            with _locked(self.path):
+                value = self._read()
+                if value["limit"] == RAISED_LIMIT:
+                    return self._status(value)  # No timestamp, fsync or replace.
+                value["limit"] = RAISED_LIMIT
+                value["updated_at"] = utc_now()
+                self._write_atomic(value)
+                return self._status(value)
+        except GoogleError:
+            raise
+        except (OSError, ValueError):
+            raise GoogleError("quota_unavailable", "Не удалось надёжно повысить общий лимит Google; прежнее состояние сохранено.", 503) from None
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--init", metavar="ABSOLUTE_LEDGER_PATH", required=True)
+    parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument("--init", metavar="ABSOLUTE_LEDGER_PATH")
+    action.add_argument("--raise-to-750", metavar="ABSOLUTE_LEDGER_PATH")
     args = parser.parse_args(argv)
     try:
-        GoogleBudget.initialize(args.init)
+        if args.init is not None:
+            GoogleBudget.initialize(args.init)
+        else:
+            GoogleBudget(args.raise_to_750).raise_to_750()
     except (OSError, ValueError, GoogleError):
-        parser.exit(1, "Ledger initialization refused; existing state is never reset.\n")
-    print("Initialized one 500-attempt Google pilot ledger; keep its absolute path shared.")
+        parser.exit(1, "Ledger operation refused; existing usage is never reset.\n")
+    if args.init is not None:
+        print("Initialized one 500-attempt Google pilot ledger; keep its absolute path shared.")
+    else:
+        print("Google pilot limit is 750; existing usage, operations and initialization are retained.")
     return 0
 
 
