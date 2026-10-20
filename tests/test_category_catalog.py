@@ -13,6 +13,7 @@ CASES = {
     "promenade": ("набережную", "a promenade"),
     "playground": ("детскую площадку", "a playground"),
     "cafe": ("кофе", "a cafe"),
+    "pharmacy": ("аптеку", "a pharmacy"),
     "restaurant": ("ресторан", "a restaurant"),
     "bar": ("бар", "a pub"),
     "museum": ("музей", "a museum"),
@@ -44,7 +45,7 @@ CASES = {
 class CategoryCatalogTests(unittest.TestCase):
     def test_catalog_is_immutable_and_has_one_shared_complete_spec(self):
         self.assertEqual(set(CASES), CATEGORY_IDS)
-        self.assertEqual(len(CATEGORY_CATALOG), 30)
+        self.assertEqual(len(CATEGORY_CATALOG), 31)
         with self.assertRaises(TypeError):
             CATEGORY_CATALOG["fake"] = {}
         for identifier, spec in CATEGORY_CATALOG.items():
@@ -195,6 +196,31 @@ class CategoryCatalogTests(unittest.TestCase):
         self.assertEqual(result["mode"], "single_venue")
         self.assertEqual(parse_search_intent("Не хочу кафешку, хочу музей")["excluded_categories"], ["cafe"])
         self.assertEqual(parse_search_intent("Не хочу кафешку, хочу музей")["categories"], ["museum"])
+
+    def test_pharmacy_questions_do_not_silently_become_broad_walks(self):
+        exact = "Не знаешь где поблизости к аэропорту есть аптека, у меня вылет через 2 часа. Я в Аэропорту"
+        for query in (exact, "Не знаешь где есть аптека?", "Не подскажешь, где аптека?",
+                      "Где рядом с Байтереком есть аптека?", "Хочу найти аптеку возле Mega"):
+            with self.subTest(query=query):
+                result = parse_search_intent(query)
+                self.assertTrue(result["supported"])
+                self.assertEqual(result["categories"], ["pharmacy"])
+                self.assertEqual(result["mode"], "single_venue")
+                self.assertNotIn("pharmacy", result["excluded_categories"])
+        for place in ("планетарий", "ломбард", "ветклиника"):
+            for query in ("Где поблизости есть " + place + "?", "Не знаешь где поблизости есть " + place + "?",
+                          "Где рядом " + place + "?"):
+                with self.subTest(query=query):
+                    self.assertFalse(parse_search_intent(query)["supported"])
+        for query in ("Где погулять?", "Что можно посмотреть?", "Где можно посмотреть поблизости?"):
+            self.assertTrue(parse_search_intent(query)["supported"])
+        negative = parse_search_intent("Где есть НЕ аптека, а кафе рядом с Байтереком?")
+        self.assertTrue(negative["supported"])
+        self.assertEqual(negative["categories"], ["cafe"])
+        self.assertIn("pharmacy", negative["excluded_categories"])
+        self.assertEqual(categories_from_rubrics(["Аптеки"]), ("pharmacy",))
+        self.assertEqual(categories_from_rubrics(["Аптека — название кафе", "Лекарства"]), ())
+        self.assertNotIn("наличие лекарств подтверждено", CATEGORY_CATALOG["pharmacy"]["proposed_activity"])
 
     def test_preferences_negation_privacy_and_legacy_wrapper(self):
         result = parse_search_intent("Хочу тихое кафе с розеткой для коляски PRIVATE_NAME 51.1,71.4 https://private.example")

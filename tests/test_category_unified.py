@@ -24,8 +24,9 @@ def resolve(payload):
     return resolve_request(payload, now=NOW)
 
 VENUES = (
+    ("pharmacy", "аптеку"),
     ("playground", "детскую площадку"), ("cafe", "кафе"),
-    ("restaurant", "ресторан"), ("bar", "бар"), ("museum", "музей"),
+    ("pharmacy", "аптеку"), ("restaurant", "ресторан"), ("bar", "бар"), ("museum", "музей"),
     ("theatre", "театр"), ("mall", "торговый центр"),
     ("computer_club", "компьютерный клуб"), ("cinema", "кинотеатр"),
     ("bowling", "боулинг"), ("billiards", "бильярд"), ("karaoke", "караоке"),

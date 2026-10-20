@@ -34,3 +34,35 @@ class StopReasonTests(unittest.TestCase):
         reason=result["alternatives"][0]["stops"][0]["why_text"]
         self.assertIn("розетки",reason)
         self.assertNotIn("тишина",reason)
+
+    def test_exact_airport_pharmacy_question_never_substitutes_a_cafe(self):
+        from tests.test_category_unified import resolve
+        query="Не знаешь где поблизости к аэропорту есть аптека, у меня вылет через 2 часа. Я в Аэропорту"
+        context=resolve({"query":query,"client_context":CLIENT})["resolved_context"]
+        self.assertEqual(context["origin_id"],"airport")
+        self.assertEqual(context["budget_options"],[120])
+        origin=context["origin"]
+        cafe=fixture(origin,"cafe",opening_hours="24/7")
+        pharmacy=fixture(origin,"pharmacy","2gis:2",opening_hours="24/7")
+        for available in ([cafe],[cafe,pharmacy]):
+            with self.subTest(pharmacy=len(available)==2):
+                service, google, _, narrator=make_service(origin,available)
+                result=service.recommend({"query":query,"client_context":CLIENT,"consent":True})
+                stops=result["alternatives"][0]["stops"]
+                self.assertEqual([stop["category"] for stop in stops], ["pharmacy"] if len(available)==2 else [])
+                self.assertEqual(narrator.call_count,int(len(available)==2))
+                if stops:
+                    self.assertIn("аптек",stops[0]["why_text"])
+                    self.assertNotIn("кафе",stops[0]["why_text"])
+                else:self.assertEqual(google.legs,[])
+
+    def test_unknown_question_goal_does_not_start_a_generic_walk_search(self):
+        from app.google_budget import GoogleError
+        service, google, dgis, narrator=make_service(PUBLIC_ORIGINS["baiterek"],[])
+        with self.assertRaises(GoogleError) as caught:
+            service.recommend({"query":"Не знаешь где возле Байтерека есть планетарий", "client_context":CLIENT,"consent":True})
+        self.assertEqual(caught.exception.code,"unsupported_activity")
+        self.assertEqual(google.search_count,0)
+        self.assertEqual(google.legs,[])
+        dgis.search.assert_not_called()
+        narrator.assert_not_called()

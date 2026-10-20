@@ -31,13 +31,15 @@ _PREFERENCES = {
     "accessible": r"коляс\w*|безбарьер\w*|wheelchair|accessible|арбамен",
 }
 _TARGET = re.compile(
+    r"\bгде\b[^,;.!?]{0,100}?\b(?:есть|находится|находятся)\s+|"
+    r"\bгде\s+(?:(?:поблизости|рядом|тут|здесь|можно)\s+)*(?:найти\s+)?|"
     r"(?<!\w)(?:хочу|хотел\w*|пойду|сходить|ищу|найти|посетить|нужен|нужна|нужно|нужны|"
     r"want|need|find|visit|looking\s+for|would\s+like)(?!\w)\s+"
     r"(?:(?:бы|to|a|an)\s+)?(?:(?:в|на|to)\s+)?"
 )
 # These are generic requests, not evidence that any source has a new category.
 _GENERIC = re.compile(
-    r"(?:где\s+)?(?:погуля\w*|гуля\w*|пройтись)|"
+    r"(?:где\s+)?(?:погуля\w*|гуля\w*|пройтись|посмотреть(?:\s+(?:поблизости|рядом))?)|"
     r"(?:(?:что[\s-]*нибудь|что[\s-]*то|что|нечто)\s+)?"
     r"(?:необычн\w*|интересн\w*)(?:\s+мест[оа])?|"
     r"мест[оа]|куда\s+сходить|где\s+провести\s+время|"
@@ -61,7 +63,9 @@ def _normalize(query):
 def _clause_prefix(query, start):
     # Contrast and punctuation terminate the scope of a previous rejection.
     prefix = query[max(0, start - 90):start]
-    return re.split(r"[,;.!?]|\b(?:но|зато|but|rather|instead)\b|\s+а\s+", prefix)[-1]
+    prefix = re.split(r"[,;.!?]|\b(?:но|зато|but|rather|instead)\b|\s+а\s+", prefix)[-1]
+    # Polite uncertainty negates knowing, not the activity being requested.
+    return re.sub(r"\bне\s+(?:знаешь|знаете|подскажешь|подскажете)\b", "", prefix)
 
 
 def _negated(query, start, end):
@@ -138,6 +142,8 @@ def _unsupported_primary(query, matches):
         primary_end = target.end() + (cut.start() if cut else len(body))
         primary = query[target.end():primary_end].strip()
         if not primary:
+            continue
+        if _GENERIC.fullmatch(primary):
             continue
         if any(start >= target.end() and end <= primary_end and not _negated(query, start, end)
                and not _location_mention(query, start)

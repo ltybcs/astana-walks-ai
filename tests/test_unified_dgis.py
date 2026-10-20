@@ -338,6 +338,32 @@ class UnifiedDGISTests(unittest.TestCase):
                 self.assertIn(identifier, result["places"][0]["source_categories"])
                 self.assertEqual(self.transport.call_count, before + 1)
 
+    def test_pharmacy_requires_exact_rubric_and_does_not_infer_drug_availability(self):
+        items = [card(id="1", type="branch", name="Нейтральное название", rubrics=[{"name": "Аптеки"}],
+                      drugs={"PRIVATE_DRUG_NAME": "available"}, reviews={"text": "PRIVATE_STOCK_CLAIM"}),
+                 card(id="2", type="branch", name="Аптека — только название", rubrics=[{"name": "Кафе"}]),
+                 card(id="3", type="branch", name="Аптека без рубрики", rubrics=[]),
+                 card(id="4", type="branch", name="Другая карточка", rubrics=[{"name": "Кафе"}, {"name": "Аптеки"}])]
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(envelope(items)).encode())
+        for query in ("Где рядом с Байтереком есть аптека?",
+                      "Хочу найти аптеку возле Байтерека PRIVATE_DRUG_REQUEST"):
+            with self.subTest(query=query):
+                before = self.transport.call_count
+                result = self.client.search(query, ORIGIN, 1000)
+                params = parse_qs(urlsplit(self.transport.call_args.args[0].full_url).query)
+                self.assertEqual(params["q"], [CATEGORY_CATALOG["pharmacy"]["dgis_query"]])
+                self.assertEqual(params["fields"], [legacy.FIELDS])
+                self.assertNotIn("PRIVATE_DRUG_REQUEST", self.transport.call_args.args[0].full_url)
+                self.assertEqual([p["id"] for p in result["places"]], ["2gis:1", "2gis:4"])
+                self.assertTrue(all(p["category"] == "pharmacy" for p in result["places"]))
+                self.assertEqual(result["places"][1]["source_categories"], ["cafe", "pharmacy"])
+                self.assertNotIn("PRIVATE_DRUG_NAME", repr(result))
+                self.assertNotIn("PRIVATE_STOCK_CLAIM", repr(result))
+                for place in result["places"]:
+                    for unsupported in ("drugs", "medicines", "stock", "availability", "medical_advice"):
+                        self.assertNotIn(unsupported, place)
+                self.assertEqual(self.transport.call_count, before + 1)
+
     def test_multirubric_source_can_prove_requested_type_but_brand_and_secondary_goal_cannot(self):
         items = [card(id="1", type="branch", name="Нейтральное название",
                       rubrics=[{"name": "Кафе"}, {"name": "Боулинг"}]),

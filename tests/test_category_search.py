@@ -25,7 +25,7 @@ REQUESTS = {
     "climbing": "Хочу на скалодром", "ice_rink": "Хочу на каток", "pool": "Хочу поплавать в бассейне",
     "spa": "Хочу в СПА", "amusement_park": "Хочу в парк аттракционов", "fitness": "Хочу в фитнес-клуб",
     "bookshop": "Хочу в книжный магазин", "library": "Хочу в библиотеку", "coworking": "Хочу в коворкинг",
-    "nightclub": "Хочу в ночной клуб",
+    "nightclub": "Хочу в ночной клуб", "pharmacy": "Хочу в аптеку",
 }
 ORIGIN = PUBLIC_ORIGINS["baiterek"]
 
@@ -53,7 +53,7 @@ class Response:
 
 
 class CategorySearchTests(unittest.TestCase):
-    def test_all_thirty_categories_reach_google_as_static_primary_search_without_raw_text(self):
+    def test_all_catalogue_categories_reach_google_as_static_primary_search_without_raw_text(self):
         self.assertEqual(set(REQUESTS), CATEGORY_IDS)
         for category, phrase in REQUESTS.items():
             with self.subTest(category=category):
@@ -84,6 +84,31 @@ class CategorySearchTests(unittest.TestCase):
                 result = retrieve(query, [unrelated, matching])
                 self.assertEqual([item["poi"]["id"] for item in result["selected"]], [matching["id"]])
                 self.assertEqual(retrieve(query, [unrelated])["selected"], [])
+
+    def test_pharmacy_question_cannot_be_replaced_by_airport_cafes_or_parks(self):
+        query = "Не знаешь где поблизости к аэропорту есть аптека, у меня вылет через 2 часа. Я в Аэропорту"
+        resolved = resolve_request({"query": query, "time_of_day": "day"})
+        self.assertEqual(resolved["resolved_context"]["origin_id"], "airport")
+        self.assertEqual(resolved["resolved_context"]["budget_options"], [120])
+        intent = detect_intent(query)
+        self.assertEqual(intent["preferred_categories"], ["pharmacy"])
+        self.assertEqual(intent["activity_mode"], "single_venue")
+        self.assertFalse(intent["unsupported_activity"])
+        self.assertEqual(safe_intent(query)["categories"], ["pharmacy"])
+        origin = resolved["origin"]
+        pharmacy = {**place("osm:node/1", "pharmacy"), "name": "Синтетическая аптека",
+                    "lat": origin["lat"] + .001, "lon": origin["lon"] + .001}
+        wrong = [{**place("osm:node/2", "cafe", close=True), "name": "Синтетическое кафе",
+                  "lat": origin["lat"] + .0001, "lon": origin["lon"] + .0001},
+                 {**place("osm:node/3", "park", close=True), "name": "Синтетический парк",
+                  "lat": origin["lat"] + .0002, "lon": origin["lon"] + .0002}]
+        def search(records, period="day"):
+            retriever = Retriever(data={"dataset": {"is_demo": True}, "places": deepcopy(records)})
+            return retriever.retrieve(query, origin, 120, period)["selected"]
+        self.assertEqual([item["poi"]["id"] for item in search(wrong + [pharmacy])], [pharmacy["id"]])
+        self.assertEqual(search(wrong), [])
+        self.assertEqual(search(wrong + [{**pharmacy, "opening_hours": None}], "night"), [])
+        self.assertEqual([item["poi"]["id"] for item in search(wrong + [pharmacy], "night")], [pharmacy["id"]])
 
     def test_secondary_coffee_or_architecture_does_not_replace_primary_requested_venue(self):
         for category in ("bowling", "cinema", "fitness", "library", "computer_club"):
