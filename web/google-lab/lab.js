@@ -423,12 +423,28 @@ function selectOption(id) {
     const item = node("li");
     const content = node("div", null, "stop-content");
     content.append(node("strong", stop.name));
-    if (typeof stop.user_description === "string" && stop.user_description.trim() && stop.user_description.length <= 600) {
-      const originLabel = stop.description_origin === "source-template" ? "Идея приложения"
-        : stop.description_origin === "local-model" ? "Описание ИИ" : null;
-      if (originLabel) content.append(node("p", originLabel, "stop-description-origin"));
-      content.append(node("p", stop.user_description, "stop-description"));
+    const availabilityNote = typeof stop.availability_note === "string" && stop.availability_note.trim()
+      && stop.availability_note.length <= 600 ? stop.availability_note : null;
+    let displayDescription = typeof stop.user_description === "string" && stop.user_description.length <= 600
+      ? stop.user_description : null;
+    let separatedAvailabilityNote = false;
+    if (displayDescription && availabilityNote) {
+      // Older clients need the compatibility suffix in the response. Only this
+      // exact suffix is split for display; the original response stays intact.
+      const suffix = " Примечание приложения: " + availabilityNote;
+      if (displayDescription.endsWith(suffix)) {
+        displayDescription = displayDescription.slice(0, -suffix.length);
+        separatedAvailabilityNote = true;
+      }
     }
+    if (displayDescription && displayDescription.trim()) {
+      const originLabel = stop.description_origin === "source-template" ? "Идея приложения"
+        : (stop.description_origin === "local-model"
+          || stop.description_origin === "local-model-with-note" && separatedAvailabilityNote) ? "Описание ИИ" : null;
+      if (originLabel) content.append(node("p", originLabel, "stop-description-origin"));
+      content.append(node("p", displayDescription, "stop-description"));
+    }
+    if (availabilityNote) content.append(node("p", availabilityNote, "stop-availability-note"));
     if (typeof stop.why_text === "string" && stop.why_text.trim()) {
       const why = node("details", null, "stop-why-details");
       why.append(node("summary", "Почему выбрано"), node("p", stop.why_text, "stop-why"));

@@ -84,6 +84,36 @@ class CategoryCatalogTests(unittest.TestCase):
                     self.assertEqual(result["categories"], [category])
                     self.assertEqual(result["mode"], CATEGORY_CATALOG[category]["mode"])
 
+    def test_nature_desire_has_a_deterministic_park_fallback_without_source_facts(self):
+        from app.semantic_intent import deterministic_plan
+        cases = ("У меня 1,5 часа, я около экспо, хочу увидеть природу Астаны",
+                 "Я у EXPO, хочу посмотреть природу", "Хочу насладиться природой возле Mega",
+                 "Хочу полюбоваться природою возле Байтерека")
+        for query in cases:
+            with self.subTest(query=query):
+                parsed = parse_search_intent(query)
+                self.assertTrue(parsed["supported"])
+                self.assertEqual(parsed["categories"], ["park"])
+                fallback = deterministic_plan(query)
+                self.assertEqual(fallback.canonical_primary, "park")
+                self.assertEqual(fallback.extraction_mode, "deterministic")
+                self.assertEqual(fallback.search_intent["categories"], ["park"])
+                self.assertEqual(fallback.required_keys, ())
+
+    def test_nature_words_in_museum_landmark_or_negative_do_not_create_a_park_goal(self):
+        for query, expected in (("Хочу посетить музей природы", ["museum"]),
+                                ("Хочу посмотреть музей природы", ["museum"]),
+                                ("Хочу кофе у музея природы", ["cafe"]),
+                                ("Хочу кафе возле парка", ["cafe"]),
+                                ("Не хочу увидеть природу, хочу кофе", ["cafe"])):
+            with self.subTest(query=query):
+                parsed = parse_search_intent(query)
+                self.assertTrue(parsed["supported"])
+                self.assertEqual(parsed["categories"], expected)
+        self.assertIn("park", parse_search_intent("Не хочу увидеть природу, хочу кофе")["excluded_categories"])
+        self.assertFalse(parse_search_intent("Хочу увидеть капибару на природе")["supported"])
+        self.assertEqual(categories_from_rubrics(["Природа — название кафе", "Природа"]), ())
+
     def test_longest_compound_match_prevents_false_parent_categories(self):
         for phrase, category in (("pool tables", "billiards"), ("pool halls", "billiards"),
                                  ("movie theater", "cinema"), ("anti-cafe", "anti_cafe"),

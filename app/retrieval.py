@@ -17,7 +17,7 @@ from typing import Any
 from itertools import permutations
 from urllib.parse import urlparse
 
-from .activity_intent import parse_search_intent
+from .activity_intent import parse_search_intent, _negated
 from .category_catalog import CATEGORY_CATALOG
 
 
@@ -96,9 +96,54 @@ def _wanted(query: str, pattern: str) -> bool:
     return False
 
 
+
+_CONFIRMED_HOURS_PATTERN = (
+    r"(?<!\w)(?:24\s*/\s*7|круглосуточн\w*|open\s+now|24[\s-]*hours?|"
+    r"открыт(?:о|а|ы)?\s+сейчас|(?:должен|должна|должно|должны)\s+быть\s+открыт\w*|"
+    r"обязательно\s+открыт\w*)(?!\w)"
+)
+
+
+def requires_confirmed_hours(query: str) -> bool:
+    """A stated opening requirement is stricter than the current time of day."""
+    if not isinstance(query, str):
+        return False
+    normalized = query.casefold().replace("ё", "е")
+    return (_wanted(normalized, _CONFIRMED_HOURS_PATTERN)
+            and any(not _negated(normalized, match.start(), match.end())
+                    for match in re.finditer(_CONFIRMED_HOURS_PATTERN, normalized)))
+
+
+def night_hours_eligible(place: dict, *, night: bool, allow_unknown_outdoor_hours: bool = False,
+                         require_confirmed_hours: bool = False) -> bool:
+    """Return availability eligibility, never an assertion of live access.
+
+    Unknown park/promenade hours can be an explicitly opted-in conditional idea.
+    An explicit opening requirement always needs the exact own-source 24/7 fact.
+    Other types, specified non-24/7 schedules and restricted access stay strict.
+    """
+    if (not isinstance(place, dict) or type(night) is not bool
+            or type(allow_unknown_outdoor_hours) is not bool or type(require_confirmed_hours) is not bool):
+        return False
+    tags = place.get("source_tags", {})
+    if not isinstance(tags, dict):
+        return False
+    for access in (tags.get("access"), place.get("access_evidence")):
+        if access is not None and (not isinstance(access, str) or access.strip().casefold() in {"private", "no"}):
+            return False
+    hours = place.get("opening_hours")
+    if require_confirmed_hours:
+        return hours == "24/7"
+    if not night or hours == "24/7":
+        return True
+    return (allow_unknown_outdoor_hours and place.get("category") in {"park", "promenade"}
+            and (hours is None or hours == ""))
+
 def detect_intent(query: str, time_of_day: str = "day", *, intent_plan=None) -> dict[str, Any]:
     if intent_plan is not None:
-        return _planned_intent(intent_plan, time_of_day)
+        result = _planned_intent(intent_plan, time_of_day)
+        result["require_confirmed_hours"] = requires_confirmed_hours(query)
+        return result
     query = query.lower().replace("ё", "е")
     search = parse_search_intent(query)
     positives = list(search["categories"])
@@ -116,6 +161,7 @@ def detect_intent(query: str, time_of_day: str = "day", *, intent_plan=None) -> 
         "tourist": _wanted(query, r"турист\w*|достопримеч\w*|архитект\w*|tourist|sightsee\w*"),
         "architecture": _wanted(query, r"архитект\w*|architecture|сәулет\w*"),
         "night": time_of_day == "night" or _wanted(night_query, r"ноч\w*|night|түн\w*"),
+        "require_confirmed_hours": requires_confirmed_hours(query),
         "accessible": _wanted(query, r"коляс\w*|безбарьер\w*|wheelchair|accessible|арбамен"),
         "outdoor": _wanted(query, r"прогул\w*|погуля\w*|гуля\w*|walk\w*|серуен\w*|воздух"),
         "preferred_categories": requested,
@@ -379,7 +425,7 @@ class Retriever:
             score += idf * frequency * 2.5 / normalizer
         return score
 
-    def retrieve(self, query: str, origin: dict, minutes: int, time_of_day: str = "day", *, intent_plan=None) -> dict:
+    def retrieve(self, query: str, origin: dict, minutes: int, time_of_day: str = "day", *, intent_plan=None, allow_unknown_outdoor_hours: bool = False) -> dict:
         intent = detect_intent(query, time_of_day, intent_plan=intent_plan)
         candidates = []
         filtered = Counter()
@@ -427,8 +473,10 @@ class Retriever:
                 continue
             if intent["child"] and category in {"bar", "nightclub"}:
                 continue
-            if intent["night"] and poi.get("opening_hours") != "24/7":
-                filtered["night"] += 1
+            if not night_hours_eligible(poi, night=intent["night"],
+                    allow_unknown_outdoor_hours=allow_unknown_outdoor_hours,
+                    require_confirmed_hours=intent["require_confirmed_hours"]):
+                filtered["night" if intent["night"] else "required_hours"] += 1
                 continue
             if intent["tourist"] and not preferred and category not in tourist_categories:
                 continue

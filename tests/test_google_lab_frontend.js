@@ -342,6 +342,75 @@ test("ready variant switches description attribution locally and editing clears 
   const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();assert(h.elements["walk-stops"].textContent.includes("Описание ИИ"));await h.elements["walk-variants"].children[1].emit("click");await flush();assert(h.elements["walk-stops"].textContent.includes("Идея приложения"));assert(!h.elements["walk-stops"].textContent.includes("Описание ИИ"));assert.equal(h.calls("/api/context").length,1);assert.equal(h.calls("/api/unified/recommend").length,1);await h.edit("Новое сообщение");assert.equal(h.elements["walk-stops"].textContent,"");
 });
 
+test("night availability note stays visible beside accepted model or template description",async()=>{
+  const note="Ночной доступ и освещение не подтверждены; проверьте перед выходом.";
+  for(const description_origin of ["local-model","source-template",undefined]){
+    const user_description=description_origin?"Предложенная прогулка у выбранного места.":undefined;
+    const data=result({alternatives:[option(45,{stops:[{...stop(),user_description,description_origin,availability_note:note,why_text:"Техническая причина выбора."}]})]});
+    const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();
+    const content=h.elements["walk-stops"].children[0].children[0],p=content.children.find(el=>el.className==="stop-availability-note"),why=content.children.find(el=>el.className==="stop-why-details");
+    assert(p);assert.equal(p.tagName,"P");assert.equal(p.textContent,note);assert.equal(p.hidden,false);assert.equal(p.parentNode,content);assert.equal(p.children.length,0);assert.notEqual(why.open,true);assert(content.children.indexOf(p)<content.children.indexOf(why));
+    assert.equal(h.elements["walk-mode"].textContent,"ИИ · три источника проверены");assert.equal(h.elements["walk-answer"].textContent,data.answer.text);assert.equal(h.elements["google-sources"].children.length,data.grounding.sources.length+1);
+  }
+});
+test("missing empty or invalid availability note adds no fabricated access statement",async()=>{
+  for(const availability_note of [undefined,null,""," ",{},42,"x".repeat(601)]){
+    const data=result({alternatives:[option(45,{stops:[{...stop(),user_description:"Принятое описание без сведений о ночном доступе.",description_origin:"local-model",availability_note}]})]});
+    const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();assert(!h.elements["walk-stops"].children[0].children[0].children.some(el=>el.className==="stop-availability-note"));assert(!h.elements["walk-stops"].textContent.includes("[object Object]"));assert(!h.elements["walk-result"].hidden);
+  }
+});
+test("availability note is exact plain text and never injects elements or changes Google content",async()=>{
+  const note='<img src=x onerror=alert(1)> Ночной доступ не подтверждён.';
+  const data=result({alternatives:[option(45,{stops:[{...stop(),availability_note:note}]})]});
+  const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();
+  const p=h.elements["walk-stops"].children[0].children[0].children.find(el=>el.className==="stop-availability-note");assert.equal(p.textContent,note);assert.equal(p.children.length,0);assert.equal(h.elements["walk-answer"].textContent,data.answer.text);assert.equal(h.elements["google-original-text"].textContent,data.grounding.summary);assert.equal(h.elements["google-original-sources"].children.length,data.grounding.sources.length+1);
+});
+test("ready variant without a night note clears old note without another source search",async()=>{
+  const note="Ночной доступ и освещение не подтверждены; проверьте перед выходом.";
+  const data=result({alternatives:[option(45,{stops:[{...stop(),availability_note:note}]}),option(60)]});
+  const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();assert(h.elements["walk-stops"].textContent.includes(note));await h.elements["walk-variants"].children[1].emit("click");await flush();assert(!h.elements["walk-stops"].textContent.includes(note));assert.equal(h.calls("/api/context").length,1);assert.equal(h.calls("/api/unified/recommend").length,1);await h.edit("Другой запрос");assert.equal(h.elements["walk-stops"].textContent,"");
+});
+
+test("compatibility note appears once for accepted model or template without mutating response",async()=>{
+  const note="Ночной доступ и освещение не подтверждены; проверьте перед выходом.";
+  const description="Предложенная прогулка у выбранного места после проверки условий.";
+  const composite=description+" Примечание приложения: "+note;
+  for(const description_origin of ["local-model","source-template"]){
+    const data=result({alternatives:[option(45,{stops:[{...stop(),user_description:composite,description_origin,availability_note:note}]})]});
+    data.answer.venue_descriptions=[{stop_id:"osm:0",text:description}];
+    if(description_origin==="source-template"){data.mode="grounding-only";data.answer=null;}
+    const original=copy(data);
+    const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();
+    const content=h.elements["walk-stops"].children[0].children[0];assert.equal(content.children.find(el=>el.className==="stop-description").textContent,description);assert.equal(content.children.find(el=>el.className==="stop-availability-note").textContent,note);assert.equal(content.textContent.split(note).length-1,1);
+    assert.equal(content.children.find(el=>el.className==="stop-description-origin").textContent,description_origin==="local-model"?"Описание ИИ":"Идея приложения");
+    assert.deepEqual(copy(h.run("state.result")),original);assert.deepEqual(data,original);assert.equal(h.elements["walk-answer"].textContent,data.answer?data.answer.text:data.grounding.summary);assert.equal(h.elements["google-sources"].children.length,data.grounding.sources.length+1);
+  }
+});
+test("only exact matching final application suffix is split from display description",async()=>{
+  const note="Ночной доступ и освещение не подтверждены; проверьте перед выходом.";
+  for(const user_description of ["Примечание приложения: "+note,"Своя идея. "+note,"Своя идея. Примечание приложения: "+note+" ","Своя идея. Примечание приложения: Другая проверка."]){
+    const data=result({alternatives:[option(45,{stops:[{...stop(),user_description,availability_note:note}]})]});
+    const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();const content=h.elements["walk-stops"].children[0].children[0];assert.equal(content.children.find(el=>el.className==="stop-description").textContent,user_description);assert.equal(content.children.find(el=>el.className==="stop-availability-note").textContent,note);
+  }
+});
+
+test("accepted model composite is labelled AI only after exact note separation",async()=>{
+  const note="Ночной доступ и освещение не подтверждены; проверьте перед выходом.";
+  const pure="Модель предложила прогулку у выбранного места после проверки условий.";
+  const composite=pure+" Примечание приложения: "+note;
+  const data=result({alternatives:[option(45,{stops:[{...stop(),user_description:composite,description_origin:"local-model-with-note",availability_note:note}]})]});
+  data.answer.venue_descriptions=[{stop_id:"osm:0",text:pure}];const original=copy(data);
+  const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();
+  const content=h.elements["walk-stops"].children[0].children[0];assert.equal(content.children.find(el=>el.className==="stop-description").textContent,pure);assert.equal(content.children.find(el=>el.className==="stop-description-origin").textContent,"Описание ИИ");assert.equal(content.children.find(el=>el.className==="stop-availability-note").textContent,note);assert.equal(content.textContent.split(note).length-1,1);assert.deepEqual(copy(h.run("state.result")),original);assert.deepEqual(data,original);assert.equal(data.answer.venue_descriptions[0].text,pure);assert.equal(h.elements["walk-answer"].textContent,data.answer.text);
+});
+test("malformed or missing composite suffix never receives an AI description label",async()=>{
+  const note="Ночной доступ и освещение не подтверждены; проверьте перед выходом.";
+  for(const [user_description,availability_note] of [["Описание без суффикса приложения.",note],["Идея. Примечание приложения: "+note+" ",note],["Идея. Примечание приложения: Другое примечание.",note],["Идея. Примечание приложения: "+note,undefined],["Идея. Примечание приложения: "+note,{}]]){
+    const data=result({alternatives:[option(45,{stops:[{...stop(),user_description,availability_note,description_origin:"local-model-with-note"}]})]});
+    const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();const content=h.elements["walk-stops"].children[0].children[0];assert(!content.children.some(el=>el.className==="stop-description-origin"));assert.equal(content.children.find(el=>el.className==="stop-description").textContent,user_description);assert(!h.elements["walk-result"].hidden);
+  }
+});
+
 (async()=>{
   let passed=0;
   for(const item of cases){try{await item.fn();passed++;}catch(error){console.error("FAIL "+item.name+"\n"+error.stack);process.exitCode=1;}}
