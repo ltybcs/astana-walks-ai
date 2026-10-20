@@ -1,644 +1,453 @@
 "use strict";
 
-const GROUPS = [
-  {id:"all",label:"Все",categories:null,color:"#536b6b"},
-  {id:"food",label:"Еда",categories:["cafe","restaurant","bar"],color:"#b24b35"},
-  {id:"walk",label:"Прогулка",categories:["park"],color:"#267947"},
-  {id:"culture",label:"Культура",categories:["museum","theatre","attraction","monument"],color:"#6251a0"},
-  {id:"kids",label:"Дети",categories:["playground"],color:"#ab6b05"},
-  {id:"mall",label:"ТЦ",categories:["mall"],color:"#176f96"}
-];
-const FALLBACK_LABELS = {cafe:"Кафе",restaurant:"Ресторан",bar:"Бар",park:"Парк",museum:"Музей",theatre:"Театр",attraction:"Достопримечательность",monument:"Памятник",playground:"Детская площадка",mall:"Торговый центр"};
-const CATEGORY_COLORS = {cafe:"#b24b35",restaurant:"#aa6530",bar:"#88534b",park:"#267947",museum:"#6251a0",theatre:"#975197",attraction:"#496bb2",monument:"#795b93",playground:"#ab6b05",mall:"#176f96"};
-function categoryColor(category) {return CATEGORY_COLORS[category] || "#536b6b";}
-function restrictedLabel(count) {
-  const n=Number.isInteger(count) && count>=0 ? count : 0;
-  const tail=n%100;
-  if(tail<11 || tail>14) {
-    if(n%10===1) return n+" место с ограниченным доступом скрыто";
-    if(n%10>=2 && n%10<=4) return n+" места с ограниченным доступом скрыты";
-  }
-  return n+" мест с ограниченным доступом скрыто";
+const $ = id => document.getElementById(id);
+const state = {
+  requestId: 0, controller: null, signature: "", result: null, optionId: null,
+  mapId: 0, mapController: null, mapTimer: null, mapLoadTimer: null, geoCancel: null
+};
+const PROVIDERS = {osm: "OpenStreetMap", google: "Google Maps", dgis: "2ГИС"};
+const ORIGIN_SOURCES = {
+  query_landmark: "из сообщения", query_catalog: "из сообщения",
+  browser_geolocation: "геопозиция браузера", explicit_landmark: "из сообщения",
+  explicit_coordinates: "из сообщения"
+};
+function node(tag, text, className) {
+  const value = document.createElement(tag);
+  if (text !== undefined && text !== null) value.textContent = String(text);
+  if (className) value.className = className;
+  return value;
 }
-const PAGE_SIZE = 60;
-const state = {places:[],filtered:[],dataset:{},summary:{},labels:FALLBACK_LABELS,group:"culture",query:"",showUnnamed:false,limit:PAGE_SIZE,selected:null,map:null,layer:null,markers:new Map(),activeTab:"osm",areas:[],googleLoaded:false,tilesLoaded:0,tilesFailed:0};
-let ui;
-
-function normalized(value) {return String(value || "").normalize("NFKC").toLocaleLowerCase("ru").replace(/ё/g,"е");}
-function isUnnamed(place) {return place.name_generated === true;}
-function groupFor(category) {return GROUPS.find(group => group.categories?.includes(category)) || GROUPS[0];}
-function filterPlaces(places,groupId,query,showUnnamed) {
-  const group=GROUPS.find(item=>item.id===groupId) || GROUPS[0];
-  const words=normalized(query).trim().split(/\s+/).filter(Boolean);
-  return places.filter(place=>{
-    if(!showUnnamed && isUnnamed(place)) return false;
-    if(group.categories && !group.categories.includes(place.category)) return false;
-    const haystack=normalized([place.name,FALLBACK_LABELS[place.category],place.category,place.description,place.cuisine,place.operator].filter(Boolean).join(" "));
-    return words.every(word=>haystack.includes(word));
+function show(id, visible) { $(id).hidden = !visible; }
+function finite(value) { return typeof value === "number" && Number.isFinite(value); }
+function coordinate(lat, lon) {
+  return finite(lat) && finite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+}
+function signature() { return $("walk-query").value; }
+function current(id, sig) { return state.requestId === id && signature() === sig; }
+function safeUrl(value, provider) {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    if (url.username || url.password || url.port) return null;
+    if (provider === "dgis-attribution" && url.protocol === "http:" && url.hostname === "dev.2gis.ru" && url.pathname === "/") return url.href;
+    if (url.protocol !== "https:") return null;
+    const hosts = {
+      google: ["www.google.com", "maps.google.com", "maps.app.goo.gl"],
+      osm: ["www.openstreetmap.org", "openstreetmap.org"],
+      dgis: ["2gis.kz", "2gis.ru", "2gis.com", "www.2gis.kz", "www.2gis.ru", "www.2gis.com", "dev.2gis.ru"]
+    };
+    if (!(hosts[provider] || []).includes(url.hostname)) return null;
+    if (provider === "google" && url.hostname === "www.google.com" && !url.pathname.startsWith("/maps")) return null;
+    return url.href;
+  } catch (_) { return null; }
+}
+function link(text, url, provider) {
+  const safe = safeUrl(url, provider);
+  if (!safe) return node("span", text);
+  const element = node("a", text);
+  element.href = safe;
+  element.target = "_blank";
+  element.rel = "noopener noreferrer";
+  return element;
+}
+function clearMap() {
+  state.mapId += 1;
+  if (state.mapController) state.mapController.abort();
+  state.mapController = null;
+  clearTimeout(state.mapTimer);
+  clearTimeout(state.mapLoadTimer);
+  state.mapTimer = null;
+  state.mapLoadTimer = null;
+  $("route-map-host").replaceChildren();
+  $("route-map-status").textContent = "";
+  $("route-external").removeAttribute("href");
+  show("route-external", false);
+  show("route-map-section", false);
+}
+function clearResult() {
+  clearMap();
+  state.result = null;
+  state.optionId = null;
+  show("walk-result", false);
+  for (const id of ["source-receipts", "google-sources", "google-original-sources", "walk-warnings", "walk-variants", "walk-stops", "other-sources", "route-attributions"]) $(id).replaceChildren();
+  $("walk-answer").textContent = "";
+  $("google-original-text").textContent = "";
+  $("walk-context").textContent = "";
+  $("walk-budget").textContent = "";
+}
+function cancelFlow(message = "Сообщение изменилось. Подбор можно запустить снова.") {
+  state.requestId += 1;
+  if (state.controller) state.controller.abort();
+  state.controller = null;
+  if (state.geoCancel) state.geoCancel();
+  state.geoCancel = null;
+  clearResult();
+  $("walk-submit").disabled = false;
+  $("walk-submit").textContent = "Найти прогулку →";
+  show("walk-error", false);
+  $("walk-status").textContent = message;
+}
+function onInputChange() {
+  const next = signature();
+  if (next === state.signature) return;
+  state.signature = next;
+  cancelFlow();
+}
+function errorMessage(error) {
+  if (error && error.code === "known_start_required") return "Старт не определён. Поиск по источникам и обращение к модели не выполнены.";
+  if (error && error.code === "timeout") return "Ожидание завершено. Удалённый запрос мог выполниться и учесться в лимите. Автоматического повтора нет.";
+  if (error && error.name === "AbortError") return "Подбор отменён. Удалённый запрос мог выполниться и учесться в лимите.";
+  if (error && typeof error.message === "string") return error.message;
+  return "Подбор не выполнен. Попробуйте позже.";
+}
+async function post(path, body, signal) {
+  const response = await fetch(path, {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    credentials: "same-origin", cache: "no-store", redirect: "error",
+    signal, body: JSON.stringify(body)
+  });
+  let data;
+  try { data = await response.json(); } catch (_) {
+    throw new Error("Сервис вернул нечитаемый ответ. Подбор не выполнен.");
+  }
+  if (!response.ok) {
+    const error = new Error(typeof data.error === "string" ? data.error : "Сервис временно недоступен.");
+    error.code = data.code;
+    throw error;
+  }
+  return data;
+}
+function startKnown(context) {
+  return Boolean(context && context.origin && coordinate(context.origin.lat, context.origin.lon)
+    && typeof context.origin.label === "string" && context.origin.label.trim()
+    && !context.is_city_sample && context.origin_source !== "city_sample"
+    && context.origin_source !== "pending_geolocation");
+}
+function startError() {
+  const error = new Error("Старт не определён. Поиск не выполнен.");
+  error.code = "known_start_required";
+  return error;
+}
+function requestLocation(id, sig) {
+  return new Promise(resolve => {
+    let settled = false;
+    let timer;
+    const finish = value => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (state.geoCancel === cancel) state.geoCancel = null;
+      resolve(current(id, sig) ? value : {status: "cancelled"});
+    };
+    const cancel = () => finish({status: "cancelled"});
+    state.geoCancel = cancel;
+    if (!navigator.geolocation || typeof navigator.geolocation.getCurrentPosition !== "function") {
+      finish({status: "unsupported"});
+      return;
+    }
+    timer = setTimeout(() => finish({status: "timeout"}), 8000);
+    try {
+      navigator.geolocation.getCurrentPosition(position => {
+        const coords = position && position.coords;
+        const accuracy = coords && coords.accuracy;
+        if (!coords || !coordinate(coords.latitude, coords.longitude) || !finite(accuracy) || accuracy < 0 || accuracy > 100000) {
+          finish({status: "unavailable"});
+          return;
+        }
+        finish({status: "granted", geolocation: {lat: coords.latitude, lon: coords.longitude, accuracy}});
+      }, error => finish({status: error && error.code === 1 ? "denied" : error && error.code === 3 ? "timeout" : "unavailable"}),
+      {enableHighAccuracy: false, timeout: 8000, maximumAge: 0});
+    } catch (_) { finish({status: "unavailable"}); }
   });
 }
-function googleURLForPlace(place) {
-  const query=isUnnamed(place) ? place.lat+","+place.lon : place.name+", Астана";
-  return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(query);
-}
-function googleURLForArea(area) {return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent((area?.name || "Астана")+", Казахстан");}
-function safeEmbedURL(value) {
-  try {const url=new URL(value);return url.origin==="https://www.google.com" && url.pathname==="/maps/embed" && !url.username && !url.password && Boolean(url.searchParams.get("pb")) && [...url.searchParams.keys()].every(key=>key==="pb") && !url.hash ? url.href : null;} catch {return null;}
-}
-function sourceURL(place) {
-  try {const url=new URL(place.source_url);return url.protocol==="https:" && ["www.openstreetmap.org","openstreetmap.org"].includes(url.hostname) ? url.href : null;} catch {return null;}
-}
-function node(tag,className,text) {const element=document.createElement(tag);if(className) element.className=className;if(text!==undefined) element.textContent=text;return element;}
-function externalLink(text,href,className) {const link=node("a",className,text);link.href=href;link.target="_blank";link.rel="noopener noreferrer";return link;}
-function categoryLabel(place) {return state.labels[place.category] || FALLBACK_LABELS[place.category] || place.category;}
-function dateLabel(value) {if(!value) return "не указана";const date=new Date(value);return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("ru-RU",{timeZone:"Asia/Almaty",year:"numeric",month:"long",day:"numeric"});}
-function factText(place) {
-  if(place.cuisine) return "Кухня по OSM: "+place.cuisine;
-  if(place.operator) return "Оператор по OSM: "+place.operator;
-  return place.opening_hours ? "Часы по OSM: "+place.opening_hours : "Часы и возможность посещения не подтверждены.";
-}
-function addFact(list,label,value) {if(value===null || value===undefined || value==="") return;list.append(node("dt","",label),node("dd","",String(value)));}
-
-function createCard(place) {
-  const card=node("article","place-card"+(state.selected===place.id?" selected":""));
-  card.dataset.placeId=place.id;card.style.setProperty("--category-color",categoryColor(place.category));
-  const heading=node("div","card-heading");heading.append(node("h3","",place.name));card.append(heading,node("p","category-label",categoryLabel(place)));
-  if(place.access_evidence==="customers") card.append(node("span","card-badge","По OSM: для клиентов"));
-  if(isUnnamed(place)) card.append(node("span","card-badge generated-badge","Название по категории; в OSM не указано"));
-  card.append(node("p","card-fact",factText(place)));
-  const actions=node("div","card-actions");
-  const locate=node("button","quiet-button","На карте OSM");locate.type="button";locate.setAttribute("aria-label","Показать "+place.name+" на карте OSM");locate.addEventListener("click",()=>focusPlace(place));
-  const google=externalLink("Открыть в Google ↗",googleURLForPlace(place));google.setAttribute("aria-label","Открыть "+place.name+" во внешнем Google Maps");
-  actions.append(locate,google);card.append(actions);
-  const source=sourceURL(place);if(source) card.append(externalLink("Источник OSM ↗",source,"source-link"));
-  const details=node("details");details.append(node("summary","","Факты из источника"));
-  const facts=node("dl");addFact(facts,"Доступ по OSM",place.access_evidence || "unknown");addFact(facts,"Часы по OSM",place.opening_hours || "не указаны");addFact(facts,"Кухня",place.cuisine);addFact(facts,"Оператор",place.operator);addFact(facts,"Последнее изменение OSM",place.source_updated_at || place.raw_provenance?.source_updated_at);addFact(facts,"Получено из источника",place.collected_at || state.dataset.collected_at);addFact(facts,"OSM ID",place.raw_provenance?.osm_id || place.id);
-  details.append(facts,node("p","card-fact","Сведения источника не заменяют проверку доступа, часов или безопасности на месте."));card.append(details);
-  return card;
-}
-function renderFilters() {
-  const basis=filterPlaces(state.places,"all",state.query,state.showUnnamed);
-  ui.filters.replaceChildren(...GROUPS.map(group=>{
-    const count=group.categories ? basis.filter(place=>group.categories.includes(place.category)).length : basis.length;
-    const button=node("button");button.type="button";button.dataset.group=group.id;button.style.setProperty("--group-color",group.color);button.setAttribute("aria-pressed",String(state.group===group.id));button.append(node("span","",group.label),node("span","group-count",String(count)));button.addEventListener("click",()=>{state.group=group.id;state.limit=PAGE_SIZE;applyFilters(true);ui.filters.querySelector('[data-group="'+group.id+'"]')?.focus();});return button;
-  }));
-}
-function renderList() {
-  const shown=state.filtered.slice(0,state.limit);
-  if(!state.filtered.length) {
-    const empty=node("div","empty-state");empty.append(node("h3","","Подходящих мест нет"),node("p","","Попробуйте другой запрос, категорию или включите безымянные места."));
-    const reset=node("button","quiet-button","Сбросить фильтры");reset.type="button";reset.addEventListener("click",()=>{state.group="all";state.query="";state.showUnnamed=false;state.limit=PAGE_SIZE;ui.search.value="";ui.unnamed.checked=false;applyFilters(true);});empty.append(reset);ui.list.replaceChildren(empty);
-  } else ui.list.replaceChildren(...shown.map(createCard));
-  ui.listCount.textContent="В списке "+shown.length+" из "+state.filtered.length+" мест по фильтрам";
-  ui.more.hidden=shown.length>=state.filtered.length;
-  ui.more.textContent="Ещё "+Math.min(PAGE_SIZE,state.filtered.length-shown.length)+" мест";
-}
-function applyFilters(fit) {
-  state.filtered=filterPlaces(state.places,state.group,state.query,state.showUnnamed);
-  state.filtered.sort((a,b)=>Number(isUnnamed(a))-Number(isUnnamed(b)) || a.name.localeCompare(b.name,"ru"));
-  if(!state.filtered.some(place=>place.id===state.selected)) state.selected=null;
-  renderFilters();renderList();renderMarkers(fit);
-  ui.filterSummary.textContent="Найдено "+state.filtered.length+" из "+state.places.length+" объектов каталога. "+(state.showUnnamed?"Безымянные включены.":"Безымянные скрыты.");
-  updateMapCount();
-}
-function createPopup(place) {
-  const popup=node("div");popup.append(node("p","popup-title",place.name),node("p","popup-category",categoryLabel(place)),node("p","popup-fact",factText(place)));
-  if(place.access_evidence==="customers") popup.append(node("p","popup-fact","По данным OSM: доступ для клиентов."));
-  popup.append(node("p","popup-fact","Доступ, часы и условия сейчас не проверены."));
-  const links=node("div","popup-links");const source=sourceURL(place);if(source) links.append(externalLink("Источник OSM ↗",source));links.append(externalLink("Открыть в Google ↗",googleURLForPlace(place)));popup.append(links);return popup;
-}
-function initMap() {
-  if(!window.L) {ui.tileStatus.textContent="Библиотека карты недоступна. Каталог и ссылки на источники работают.";return;}
-  state.map=L.map(ui.map,{preferCanvas:true,scrollWheelZoom:false}).setView([51.14,71.43],12);
-  const tiles=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,referrerPolicy:"strict-origin-when-cross-origin",attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'});
-  let tileTimer;
-  const privacyNote="Сервис тайлов получает IP и область карты. Геопозиция не приближается автоматически.";
-  const unavailable=()=>state.tilesLoaded>0 ? "Подложка загрузилась частично. Каталог и точки работают." : "Подложка недоступна. Каталог и точки работают.";
-  const startLoading=()=>{
-    clearTimeout(tileTimer);state.tilesLoaded=0;state.tilesFailed=0;
-    ui.tileStatus.textContent="Загружаем подложку OSM… "+privacyNote;
-    tileTimer=setTimeout(()=>{ui.tileStatus.textContent=unavailable()+" "+privacyNote;},12000);
-  };
-  tiles.on("loading",startLoading);
-  tiles.on("tileload",()=>{state.tilesLoaded++;});
-  tiles.on("tileerror",()=>{state.tilesFailed++;ui.tileStatus.textContent=unavailable()+" "+privacyNote;});
-  tiles.on("load",()=>{
-    clearTimeout(tileTimer);
-    ui.tileStatus.textContent=(state.tilesFailed || !state.tilesLoaded ? unavailable()+" " : "")+privacyNote;
-  });
-  startLoading();tiles.addTo(state.map);state.layer=L.layerGroup().addTo(state.map);state.routeLayer=L.layerGroup().addTo(state.map);
-  const zoom=ui.map.querySelectorAll(".leaflet-control-zoom a");if(zoom[0]){zoom[0].title="Приблизить";zoom[0].setAttribute("aria-label","Приблизить карту");}if(zoom[1]){zoom[1].title="Отдалить";zoom[1].setAttribute("aria-label","Отдалить карту");}
-}
-function renderMarkers(fit) {
-  if(!state.map || !state.layer) return;
-  if(currentProvider()==="google") {state.layer.clearLayers();return;}
-  state.layer.clearLayers();state.markers.clear();
-  if(ui.explorer && !ui.explorer.open) return;
-  for(const place of state.filtered) {
-    const color=categoryColor(place.category);
-    const marker=L.circleMarker([place.lat,place.lon],{radius:6,weight:1.5,color:"#fffef9",fillColor:color,fillOpacity:.9}).bindPopup(()=>createPopup(place),{maxWidth:300});
-    marker.on("click",()=>{state.selected=place.id;for(const card of ui.list.querySelectorAll(".place-card")) card.classList.toggle("selected",card.dataset.placeId===place.id);});
-    marker.addTo(state.layer);state.markers.set(place.id,marker);
+function validateResult(data) {
+  if (!data || !["llm-grounded-unified", "grounding-only"].includes(data.mode) || !startKnown(data.resolved_context)) throw new Error("Ответ не соответствует протоколу подбора.");
+  if (!data.grounding || typeof data.grounding.summary !== "string" || !Array.isArray(data.grounding.sources)) throw new Error("В ответе отсутствуют источники Google.");
+  if (data.answer !== null && (!data.answer || typeof data.answer.text !== "string" || !data.answer.text.trim())) throw new Error("В ответе отсутствует полный текст.");
+  if (data.mode === "llm-grounded-unified" && !data.answer) throw new Error("Режим ответа не подтверждён.");
+  if (!data.sources || !Array.isArray(data.sources.osm) || !Array.isArray(data.sources.dgis)) throw new Error("В ответе отсутствует происхождение мест.");
+  for (const provider of ["osm", "google", "dgis"]) {
+    const receipt = data.source_receipt && data.source_receipt[provider];
+    if (!receipt || !["searched", "no_data"].includes(receipt.status) || !Number.isInteger(receipt.candidate_count) || receipt.candidate_count < 0 || !Number.isInteger(receipt.selected_count) || receipt.selected_count < 0 || (receipt.status === "no_data" && (receipt.candidate_count !== 0 || receipt.selected_count !== 0))) throw new Error("Не подтверждён результат проверки всех трёх источников.");
   }
-  if(fit) fitResults();
+  if (!Array.isArray(data.alternatives) || !data.alternatives.length || data.alternatives.length > 3) throw new Error("Отсутствуют готовые варианты прогулки.");
+  const ids = new Set();
+  for (const option of data.alternatives) {
+    if (!option || typeof option.id !== "string" || !option.id || ids.has(option.id) || !Number.isInteger(option.budget_minutes) || option.budget_minutes < 10 || option.budget_minutes > 480 || !Array.isArray(option.stops) || option.stops.length > 3 || typeof option.route_built !== "boolean") throw new Error("Некорректный вариант прогулки.");
+    ids.add(option.id);
+    if (option.route_built) {
+      const plan = option.plan;
+      if (option.budget_status !== "fits" || !plan || plan.verified !== true || plan.returns_to_origin !== true || !finite(plan.total_minutes) || plan.total_minutes < 0 || plan.total_minutes > option.budget_minutes || !option.stops.length) throw new Error("Маршрут не подтверждён в пределах времени.");
+      for (const stop of option.stops) if (!stop || !["osm", "google", "dgis"].includes(stop.provider) || typeof stop.name !== "string" || !coordinate(stop.lat, stop.lon)) throw new Error("Некорректная остановка маршрута.");
+    }
+  }
+  if (!ids.has(data.default_option_id)) throw new Error("Не определён основной вариант.");
+  return data;
 }
-function fitResults() {if(currentProvider()!=="google" && state.map && state.filtered.length) state.map.fitBounds(state.filtered.map(place=>[place.lat,place.lon]),{padding:[25,25],maxZoom:14,animate:false});}
-function focusPlace(place) {
-  setTab("osm");state.selected=place.id;renderList();state.map?.setView([place.lat,place.lon],16,{animate:false});state.markers.get(place.id)?.openPopup();ui.map.tabIndex=0;ui.map.focus({preventScroll:true});ui.mapPanel.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth",block:"start"});
+function contextText(context) {
+  const time = {day: "день", evening: "вечер", night: "ночь"}[context.time_of_day] || "текущее время";
+  const source = ORIGIN_SOURCES[context.origin_source] || "подтверждённый старт";
+  const assumptions = Array.isArray(context.assumptions) ? context.assumptions.filter(value => typeof value === "string") : [];
+  return "Старт: " + context.origin.label + " · " + source + " · " + time
+    + (assumptions.length ? "\n" + assumptions.join(" ") : "");
 }
-function unloadGoogle(message="Карта выгружена. Новое подключение — только по кнопке.") {
-  if(!state.googleLoaded) return;
-  ui.googleHost.replaceChildren(googlePlaceholder());state.googleLoaded=false;ui.unload.disabled=true;ui.load.disabled=!selectedArea();ui.googleStatus.textContent=message;
+function renderGoogleSources(hostId, sources) {
+  const host = $(hostId);
+  host.replaceChildren();
+  const brand = node("span", "Google Maps", "google-brand");
+  brand.setAttribute("translate", "no");
+  host.append(brand);
+  sources.forEach((source, index) => {
+    const item = node("div", null, "google-source");
+    item.append(node("span", "[" + index + "]" + (typeof source.source_id === "string" ? " / " + source.source_id : ""), "source-index"));
+    const title = typeof source.title === "string" && source.title ? source.title
+      : source.attribution && typeof source.attribution.title === "string" ? source.attribution.title : "Google Maps";
+    const url = source.url || (source.attribution && source.attribution.url);
+    item.append(link(title, url, "google"));
+    const attribution = source.attribution;
+    if (attribution && typeof attribution.title === "string" && attribution.title !== title) item.append(node("p", attribution.title));
+    if (attribution && attribution.url && attribution.url !== url) item.append(link(attribution.title || "Источник Google", attribution.url, "google"));
+    host.append(item);
+  });
 }
-function googlePlaceholder() {
-  const wrapper=node("div","google-placeholder");wrapper.append(node("span","placeholder-label","Google Maps"),node("h2","","Подключение по вашему выбору"),node("p","","Нажмите «Загрузить Google-карту». Google получит IP и выбранную публичную область. Маркеры каталога OSM сюда не передаются."));return wrapper;
+function renderReceipts(receipts) {
+  const host = $("source-receipts");
+  host.replaceChildren();
+  for (const provider of ["osm", "google", "dgis"]) {
+    const receipt = receipts[provider];
+    const item = node("div", null, "source-receipt");
+    item.append(node("strong", PROVIDERS[provider]));
+    item.append(node("span", receipt.status === "no_data" ? "Подходящих данных нет" : "Найдено: " + receipt.candidate_count + " · в плане: " + receipt.selected_count));
+    host.append(item);
+  }
 }
-function selectedArea() {return state.areas.find(area=>area.id===ui.area.value);}
-function setTab(tab,focus=false) {
-  if(tab==="osm" && currentProvider()==="google") tab="google";
-  state.activeTab=tab;
-  for(const id of ["osm","google"]) {const active=id===tab;ui.tabs[id].setAttribute("aria-selected",String(active));ui.tabs[id].tabIndex=active?0:-1;ui.panels[id].hidden=!active;}
-  if(tab==="osm") {unloadGoogle("Google-карта выгружена при переходе к OSM. Повторное подключение — по кнопке.");requestAnimationFrame(()=>state.map?.invalidateSize());}
-  if(focus) ui.tabs[tab].focus();
+function renderOtherSources(sources) {
+  const host = $("other-sources");
+  host.replaceChildren();
+  for (const provider of ["osm", "dgis"]) {
+    host.append(node("h3", PROVIDERS[provider]));
+    const list = node("ul", null, "other-source-list");
+    sources[provider].forEach(source => {
+      const item = node("li");
+      if (typeof source.source_id === "string") item.append(node("span", "[" + source.source_id + "] "));
+      item.append(link(source.name || source.id || "Место", source.source_url, provider));
+      if (source.category) item.append(node("span", " · " + source.category));
+      list.append(item);
+    });
+    if (!sources[provider].length) list.append(node("li", "Подходящих данных нет."));
+    host.append(list);
+  }
 }
-function loadGoogle() {
-  const area=selectedArea();if(!area) return;
-  const url=safeEmbedURL(area.embed_url);if(!url) return;
-  const frame=document.createElement("iframe");frame.title="Google Maps: "+area.name;frame.referrerPolicy="no-referrer";frame.loading="eager";frame.src=url;
-  ui.googleHost.replaceChildren(frame);state.googleLoaded=true;ui.unload.disabled=false;ui.load.disabled=true;ui.googleStatus.textContent="Google-карта загружена. Если она не отображается, откройте её по ссылке ниже.";
+function renderResult(data) {
+  state.result = data;
+  $("walk-mode").textContent = data.mode === "llm-grounded-unified" ? "ИИ · три источника проверены" : "Без ответа модели";
+  $("walk-context").textContent = contextText(data.resolved_context);
+  renderReceipts(data.source_receipt);
+  $("answer-label").textContent = data.answer ? "Ответ помощника" : "Полный ответ Google · без генерации модели";
+  $("walk-answer").textContent = data.answer ? data.answer.text : data.grounding.summary;
+  renderGoogleSources("google-sources", data.grounding.sources);
+  show("google-original", Boolean(data.answer));
+  $("google-original-text").textContent = data.grounding.summary;
+  renderGoogleSources("google-original-sources", data.grounding.sources);
+  const warnings = $("walk-warnings");
+  warnings.replaceChildren();
+  if (Array.isArray(data.warnings)) data.warnings.filter(value => typeof value === "string").forEach(value => warnings.append(node("li", value)));
+  show("walk-warnings", warnings.children.length > 0);
+  renderOtherSources(data.sources);
+  const variants = $("walk-variants");
+  variants.replaceChildren();
+  data.alternatives.forEach(option => {
+    const button = node("button", option.budget_minutes + " мин");
+    button.type = "button";
+    button.dataset.optionId = option.id;
+    button.setAttribute("aria-pressed", "false");
+    button.addEventListener("click", () => selectOption(option.id));
+    variants.append(button);
+  });
+  show("walk-variants", data.alternatives.length > 1);
+  show("walk-result", true);
+  selectOption(data.default_option_id);
 }
-async function loadEmbeds() {
+function renderRouteAttributions(attributions) {
+  const host = $("route-attributions");
+  host.replaceChildren();
+  if (!Array.isArray(attributions)) return;
+  attributions.forEach(value => {
+    if (typeof value === "string") host.append(node("span", value));
+    else if (value && typeof value.title === "string") host.append(link(value.title, value.url, "google"));
+  });
+}
+function directionsUrl(context, stops) {
+  if (!startKnown(context) || !stops.length || stops.length > 3) return null;
+  const origin = context.origin.lat + "," + context.origin.lon;
+  const url = new URL("https://www.google.com/maps/dir/");
+  url.searchParams.set("api", "1");
+  url.searchParams.set("origin", origin);
+  url.searchParams.set("destination", origin);
+  url.searchParams.set("travelmode", "walking");
+  url.searchParams.set("waypoints", stops.map(stop => stop.lat + "," + stop.lon).join("|"));
+  return url.href;
+}
+function validateMapUrl(value) {
+  if (typeof value !== "string") return null;
   try {
-    const response=await fetch("/embeds.json",{cache:"no-store"});if(!response.ok) throw new Error("config");const config=await response.json();
-    state.areas=Array.isArray(config.maps) ? config.maps.filter(area=>typeof area.id==="string" && typeof area.name==="string" && safeEmbedURL(area.embed_url)).slice(0,12) : [];
-    if(!state.areas.length) throw new Error("maps");
-    ui.area.replaceChildren(...state.areas.map(area=>{const option=node("option","",area.name);option.value=area.id;return option;}));
-    ui.area.value=state.areas.some(area=>area.id===config.default_id)?config.default_id:state.areas[0].id;ui.area.disabled=false;ui.load.disabled=false;ui.googleExternal.href=googleURLForArea(selectedArea());syncGoogleArea();
-  } catch {ui.area.replaceChildren(node("option","","Нет настроенных областей"));ui.area.disabled=true;ui.load.disabled=true;ui.googleStatus.textContent="Google-карта недоступна. Можно открыть Астану по ссылке ниже.";}
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.hostname !== "www.google.com" || url.port || url.username || url.password || url.pathname !== "/maps/embed/v1/directions" || url.hash) return null;
+    const allowed = new Set(["key", "origin", "destination", "waypoints", "mode", "language", "region", "avoid", "units"]);
+    for (const key of url.searchParams.keys()) if (!allowed.has(key) || url.searchParams.getAll(key).length !== 1) return null;
+    if (!url.searchParams.get("key") || !url.searchParams.get("origin") || url.searchParams.get("origin") !== url.searchParams.get("destination") || url.searchParams.get("mode") !== "walking") return null;
+    const stops = (url.searchParams.get("waypoints") || "").split("|").filter(Boolean);
+    return stops.length >= 1 && stops.length <= 3 ? url.href : null;
+  } catch (_) { return null; }
 }
-async function loadCatalog() {
-  ui.error.hidden=true;
+async function loadRouteMap(option, context) {
+  clearMap();
+  if (!option.route_built) return;
+  show("route-map-section", true);
+  const external = directionsUrl(context, option.stops);
+  if (external) { $("route-external").href = external; show("route-external", true); }
+  if (typeof option.map_ticket !== "string" || !option.map_ticket) {
+    $("route-map-status").textContent = "Карта маршрута пока недоступна. План и ссылка на Google Maps остаются доступны.";
+    return;
+  }
+  const mapId = state.mapId;
+  const requestId = state.requestId;
+  const controller = new AbortController();
+  state.mapController = controller;
+  $("route-map-status").textContent = "Загружаем единственную карту выбранного маршрута…";
+  const timer = setTimeout(() => controller.abort(), 20000);
+  const active = () => mapId === state.mapId && requestId === state.requestId && state.optionId === option.id;
   try {
-    const response=await fetch("/api/catalog",{cache:"no-store"});if(!response.ok) throw new Error("catalog");const catalog=await response.json();
-    if(!Array.isArray(catalog.places)) throw new Error("schema");
-    state.places=catalog.places.filter(place=>typeof place.id==="string" && typeof place.name==="string" && Number.isFinite(place.lat) && Number.isFinite(place.lon) && Math.abs(place.lat)<=90 && Math.abs(place.lon)<=180);
-    state.dataset=catalog.dataset || {};state.summary=catalog.summary || {};state.labels={...FALLBACK_LABELS,...catalog.category_labels};
-    const generated=state.places.filter(isUnnamed).length;ui.unnamedCount.textContent="("+generated+")";
-    ui.summary.replaceChildren(node("span","summary-item",state.places.length+" объектов OSM"),node("span","summary-item",restrictedLabel(state.summary.excluded_restricted_count)),node("span","summary-item","Google — просмотр по кнопке"));
-    ui.datasetNote.textContent="Источник каталога: "+(state.dataset.name || "OpenStreetMap")+". Снимок получен "+dateLabel(state.dataset.collected_at)+"; свойства не проверены на месте.";
-    applyFilters(true);
-  } catch {
-    ui.error.hidden=false;ui.errorText.textContent="Не удалось получить локальный каталог. Проверьте, что сервер Maps Lab запущен, и повторите загрузку.";ui.summary.textContent="Каталог временно недоступен";ui.listCount.textContent="";ui.fit.disabled=true;
+    const data = await post("/api/unified/map", {ticket: option.map_ticket}, controller.signal);
+    if (!active()) return;
+    const url = validateMapUrl(data.url);
+    if (!url || !finite(data.expires_in) || data.expires_in <= 0 || data.expires_in > 600) throw new Error("Неподтверждённый адрес карты.");
+    const iframe = node("iframe");
+    iframe.title = "Пеший маршрут Google Maps с возвращением";
+    iframe.setAttribute("referrerpolicy", "origin");
+    iframe.setAttribute("allowfullscreen", "");
+    iframe.addEventListener("load", () => {
+      if (!active()) return;
+      clearTimeout(state.mapLoadTimer);
+      $("route-map-status").textContent = "Карта Google Maps загружена. Если маршрут не отображается, откройте ссылку ниже.";
+    });
+    iframe.addEventListener("error", () => {
+      if (!active()) return;
+      clearTimeout(state.mapLoadTimer);
+      $("route-map-status").textContent = "Карта не загрузилась. Откройте маршрут в Google Maps по ссылке ниже.";
+    });
+    iframe.src = url;
+    $("route-map-host").replaceChildren(iframe);
+    state.mapLoadTimer = setTimeout(() => {
+      if (active()) $("route-map-status").textContent = "Карта отвечает медленно. План доступен; маршрут можно открыть по ссылке ниже.";
+    }, 12000);
+    state.mapTimer = setTimeout(() => {
+      if (!active()) return;
+      $("route-map-host").replaceChildren();
+      $("route-map-status").textContent = "Срок показа карты завершён. Откройте маршрут по ссылке ниже.";
+    }, data.expires_in * 1000);
+  } catch (_) {
+    if (active()) $("route-map-status").textContent = "Карта маршрута недоступна. План и ссылка на Google Maps остаются доступны.";
+  } finally {
+    clearTimeout(timer);
+    if (active()) state.mapController = null;
+  }
+}
+function selectOption(id) {
+  if (!state.result) return;
+  const option = state.result.alternatives.find(value => value.id === id);
+  if (!option || state.optionId === id) return;
+  state.optionId = id;
+  for (const button of $("walk-variants").children) button.setAttribute("aria-pressed", String(button.dataset.optionId === id));
+  const plan = option.plan || {};
+  $("walk-budget").textContent = option.route_built
+    ? plan.total_minutes + " из " + option.budget_minutes + " мин · пешком " + plan.walk_minutes + " · остановки " + plan.visit_minutes + " · запас " + plan.buffer_minutes
+    : "На " + option.budget_minutes + " мин подтверждённый маршрут не построен.";
+  $("walk-route-note").textContent = option.route_built
+    ? "Возвращение к старту включено: " + plan.return_walk_minutes + " мин. Пеший путь рассчитан Google; время посещения и запас предложены приложением."
+    : "Подходящих остановок или подтверждённого времени недостаточно. Это результат проверки источников, а не готовая рекомендация.";
+  renderRouteAttributions(plan.route_attributions);
+  const host = $("walk-stops");
+  host.replaceChildren();
+  if (option.route_built) option.stops.forEach(stop => {
+    const item = node("li");
+    const content = node("div", null, "stop-content");
+    content.append(node("strong", stop.name));
+    content.append(node("p", PROVIDERS[stop.provider] + (finite(stop.visit_minutes) ? " · посещение " + stop.visit_minutes + " мин" : "")));
+    content.append(link("Источник места ↗", stop.source_url, stop.provider));
+    item.append(content);
+    host.append(item);
+  });
+  loadRouteMap(option, option.resolved_context || state.result.resolved_context);
+}
+async function submitWalk(event) {
+  if (event && event.preventDefault) event.preventDefault();
+  const query = $("walk-query").value.trim();
+  if (!query || query.length > 2000) {
+    $("walk-error").textContent = "Сообщение пустое или слишком длинное. Подбор не запущен.";
+    show("walk-error", true);
+    return;
+  }
+  cancelFlow("");
+  const id = state.requestId;
+  const sig = signature();
+  state.signature = sig;
+  const controller = new AbortController();
+  state.controller = controller;
+  const clock = new Date();
+  const payload = {query, client_context: {instant: clock.toISOString(), utc_offset_minutes: -clock.getTimezoneOffset()}};
+  let timedOut = false;
+  const deadline = setTimeout(() => { timedOut = true; controller.abort(); if (state.geoCancel) state.geoCancel(); }, 210000);
+  $("walk-submit").disabled = true;
+  $("walk-submit").textContent = "Подбираем прогулку…";
+  $("walk-status").textContent = "Определяем старт и время из сообщения…";
+  try {
+    let probe = await post("/api/context", payload, controller.signal);
+    if (!current(id, sig)) return;
+    if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+    if (probe.needs_geolocation === true) {
+      $("walk-status").textContent = "Ожидаем разрешённую геолокацию, не более 8 секунд…";
+      const location = await requestLocation(id, sig);
+      if (!current(id, sig)) return;
+    if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+      if (location.status !== "granted") throw startError();
+      payload.location_status = "granted";
+      payload.geolocation = location.geolocation;
+      probe = await post("/api/context", payload, controller.signal);
+      if (!current(id, sig)) return;
+    if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+    }
+    if (probe.needs_geolocation || !startKnown(probe.resolved_context)) throw startError();
+    $("walk-status").textContent = "Проверяем OSM, Google и 2ГИС. Затем рассчитаем возвращение и подготовим один ответ…";
+    const data = await post("/api/unified/recommend", {...payload, consent: true}, controller.signal);
+    if (!current(id, sig)) return;
+    if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+    renderResult(validateResult(data));
+    $("walk-status").textContent = "Подбор завершён. Варианты времени переключаются без нового поиска.";
+    $("walk-result-title").focus({preventScroll: true});
+  } catch (error) {
+    if (!current(id, sig)) return;
+    clearResult();
+    if (timedOut) { error = new Error(); error.code = "timeout"; }
+    $("walk-error").textContent = errorMessage(error);
+    show("walk-error", true);
+    $("walk-status").textContent = "Подбор не выполнен.";
+  } finally {
+    delete payload.geolocation;
+    delete payload.location_status;
+    clearTimeout(deadline);
+    if (current(id, sig)) {
+      state.controller = null;
+      $("walk-submit").disabled = false;
+      $("walk-submit").textContent = "Найти прогулку →";
+    }
   }
 }
 function boot() {
-  const get=id=>document.getElementById(id);
-  ui={summary:get("catalog-summary"),filters:get("group-filters"),search:get("place-search"),unnamed:get("show-unnamed"),unnamedCount:get("unnamed-count"),filterSummary:get("filter-summary"),list:get("place-list"),listCount:get("list-count"),more:get("load-more"),error:get("catalog-error"),errorText:get("catalog-error-text"),map:get("osm-map"),mapPanel:document.querySelector(".map-panel"),fit:get("fit-map"),mapCount:get("map-result-count"),tileStatus:get("tile-status"),area:get("google-area"),load:get("load-google"),unload:get("unload-google"),googleHost:get("google-frame-host"),googleStatus:get("google-status"),googleExternal:get("google-external"),datasetNote:get("dataset-note"),tabs:{osm:get("tab-osm"),google:get("tab-google")},panels:{osm:get("panel-osm"),google:get("panel-google")}};
-  for(const tab of ["osm","google"]) ui.tabs[tab].addEventListener("click",()=>setTab(tab));
-  document.querySelector(".map-tabs").addEventListener("keydown",event=>{if(["ArrowLeft","ArrowRight","Home","End"].includes(event.key)){event.preventDefault();setTab(event.key==="Home"?"osm":event.key==="End"?"google":state.activeTab==="osm"?"google":"osm",true);}});
-  let timer;ui.search.addEventListener("input",()=>{clearTimeout(timer);timer=setTimeout(()=>{state.query=ui.search.value;state.limit=PAGE_SIZE;applyFilters(true);},150);});
-  ui.unnamed.addEventListener("change",()=>{state.showUnnamed=ui.unnamed.checked;state.limit=PAGE_SIZE;applyFilters(true);});
-  ui.more.addEventListener("click",()=>{state.limit+=PAGE_SIZE;renderList();});ui.fit.addEventListener("click",fitCurrentMap);get("retry-catalog").addEventListener("click",loadCatalog);
-  ui.load.addEventListener("click",loadGoogle);ui.unload.addEventListener("click",()=>unloadGoogle());
-  ui.area.addEventListener("change",()=>{unloadGoogle("Область изменена. Нажмите кнопку для нового подключения к Google.");ui.load.disabled=!selectedArea();ui.googleExternal.href=googleURLForArea(selectedArea());});
-  window.addEventListener("pagehide",()=>unloadGoogle());
-  initWalk();initMap();renderFilters();loadCatalog();loadEmbeds();
+  state.signature = signature();
+  $("walk-form").addEventListener("submit", submitWalk);
+  $("walk-query").addEventListener("input", onInputChange);
+  $("walk-query").addEventListener("change", onInputChange);
+  window.addEventListener("pagehide", () => cancelFlow("Подбор остановлен. Можно отправить новое сообщение."));
 }
-document.addEventListener("DOMContentLoaded",boot);
-
-const WALK_EXAMPLES = {
-  mega:{query:"У меня 45 минут возле Mega, хочу короткую прогулку"},
-  family:{query:"У меня час у набережной Есиля, гуляю с ребёнком, ищу детскую площадку или парк"},
-  tourist:{query:"Я турист у Байтерека, хочу посмотреть достопримечательности и архитектуру"},
-  coffee:{query:"Я у Байтерека, хочу тихое кафе с кофе и розеткой, чтобы поработать"},
-  night:{query:"Я у Байтерека, хочу ночную прогулку: только места с явно указанным режимом 24/7"}
-};
-function validPoint(point) {return point && Number.isFinite(point.lat) && Number.isFinite(point.lon) && Math.abs(point.lat)<=90 && Math.abs(point.lon)<=180;}
-function buildWalkPayload(values) {
-  const query=String(values.query || "").trim();
-  if(!query || query.length>2000) throw new Error("Напишите запрос длиной от 1 до 2000 символов.");
-  return {query};
-}
-
-function googleDirectionsURL(context,recommendations) {
-  if(!validPoint(context?.origin) || !Array.isArray(recommendations) || recommendations.length<1 || recommendations.length>3 || !recommendations.every(validPoint)) return null;
-  const start=context.origin.lat+","+context.origin.lon;
-  const params=new URLSearchParams({api:"1",origin:start,destination:start,travelmode:"walking",waypoints:recommendations.map(place=>place.lat+","+place.lon).join("|")});
-  return "https://www.google.com/maps/dir/?"+params.toString();
-}
-function validateWalkResponse(data) {
-  const context=data?.resolved_context;
-  if(!context || !validPoint(context.origin) || !Number.isInteger(context.minutes) || context.minutes<10 || context.minutes>480 || !["day","evening","night"].includes(context.time_of_day) || typeof data.mode!=="string" || !Array.isArray(data.recommendations) || data.recommendations.length>3) throw new Error("Сервер вернул неполный ответ. Попробуйте подбор ещё раз.");
-  for(const place of data.recommendations) {
-    if(!validPoint(place) || typeof place.name!=="string" || typeof place.why!=="string" || typeof place.action!=="string" || !sourceURL(place)) throw new Error("В ответе не хватает данных о месте. Попробуйте ещё раз.");
-  }
-  if(data.recommendations.length) {
-    const plan=data.plan;
-    if(!plan || plan.returns_to_origin!==true || plan.budget_minutes!==context.minutes || !["total_minutes","walk_minutes","visit_minutes","return_walk_minutes"].every(key=>Number.isFinite(plan[key]) && plan[key]>=0) || plan.total_minutes>context.minutes) throw new Error("Не удалось подтвердить время и возвращение в плане. Повторите подбор.");
-  }
-  return data;
-}
-function walkValues() {return {provider:ui.walk.provider.value,query:ui.walk.query.value};}
-function walkSignature() {return JSON.stringify(walkValues());}
-function submitLabel() {return currentProvider()==="google"?"Подобрать прогулку с Google →":"Найти мою прогулку →";}
-function clearWalkFieldErrors() {ui.walk.query.removeAttribute("aria-invalid");}
-function markWalkFieldErrors(fields) {if(Array.isArray(fields) && fields.includes("query"))ui.walk.query.setAttribute("aria-invalid","true");}
-function invalidateWalk() {
-  state.walkRequestId++;state.walkController?.abort();state.walkController=null;
-  clearGoogleProvider();state.walkData=null;state.routeMarkers=[];state.walkOptions=[];state.activeOption=0;
-  state.routeLayer?.clearLayers();ui.walk.cards.replaceChildren();ui.walk.placeholder.hidden=false;
-  ui.walk.variants.replaceChildren();ui.walk.variants.hidden=true;ui.walk.variantsNote.hidden=true;
-  ui.walk.context.replaceChildren();ui.walk.context.hidden=true;ui.walk.budget.hidden=true;ui.walk.generation.hidden=true;ui.walk.dataNote.hidden=true;ui.walk.actions.hidden=true;ui.walk.google.removeAttribute("href");
-  ui.walk.mode.textContent="Ожидает запроса";ui.walk.mode.removeAttribute("data-mode");
-  ui.walk.status.classList.remove("error");ui.walk.status.textContent="Сообщение изменено. Нажмите кнопку, чтобы обновить прогулку.";
-  ui.walk.submit.disabled=false;ui.walk.submit.textContent=submitLabel();clearWalkFieldErrors();
-  unloadGoogle("Сообщение изменено. Карта выгружена; новое подключение — по кнопке.");
-  if(ui.google)applyProviderSurface();state.walkFormSignature=walkSignature();updateMapCount();
-}
-
-function contextSource(value) {return {query_landmark:"из сообщения",query_catalog:"из сообщения и справочника",query:"из сообщения",query_range:"диапазон из сообщения",default_options:"готовый вариант",browser_geolocation:"по геолокации",city_sample:"пример в Астане",client_current_time:"текущее местное время",astana_current_time:"текущее время Астаны",explicit_landmark:"выбрано ранее",explicit_coordinates:"выбрано ранее",explicit:"выбрано ранее",default_day:"по умолчанию"}[value] || "автоматически";}
-function createWalkCard(place,index,mode) {
-  const card=node("article","walk-card"),body=node("div");card.append(node("span","walk-number",String(index+1)),body);body.append(node("h3","",place.name));
-  const meta=node("div","walk-meta");meta.append(node("span","",categoryLabel(place)));
-  if(Number.isFinite(place.distance_m)) meta.append(node("span","","≈ "+Math.round(place.distance_m)+" м от предыдущей точки"));
-  if(Number.isFinite(place.visit_minutes)) meta.append(node("span","",place.visit_minutes+" мин на посещение"));
-  body.append(meta,node("p","why",place.why),node("p","action-label","Что сделать"),node("p","action-text",place.action));
-  const generated=String(place.explanation_source || mode).includes("llm");
-  body.append(node("p","evidence-note",generated?"Объяснение и идея — LLM · сведения о месте — OSM":"Пояснение по базе мест · идея действия — шаблон"));
-  if(place.name_generated) body.append(node("p","evidence-note","Название в источнике не указано: показана категория и идентификатор OSM."));
-  if(place.access_evidence==="customers") body.append(node("p","opening-note","По OSM: доступ для клиентов."));
-  if(place.opening_note) body.append(node("p","opening-note",place.opening_note));
-  const actions=node("div","card-actions"),source=sourceURL(place);
-  if(source) actions.append(externalLink("Источник места ↗",source));
-  const onMap=node("button","quiet-button","Место "+(index+1)+" на OSM");onMap.type="button";onMap.addEventListener("click",()=>focusRouteStop(index));actions.append(onMap);body.append(actions);
-  return card;
-}
-function renderWalk(data) {
-  state.walkData=data;const context=data.resolved_context,recommendations=data.recommendations;
-  const llm=String(data.mode).startsWith("llm-grounded");
-  ui.walk.mode.textContent=llm?"LLM + найденные места":"Поиск + шаблон";ui.walk.mode.dataset.mode=llm?"llm":"extractive";
-  ui.walk.context.replaceChildren(node("span","context-chip",(context.origin.label || "Выбранный старт")+" · "+contextSource(context.origin_source)),node("span","context-chip",context.minutes+" мин · "+contextSource(context.minutes_source)),node("span","context-chip",({day:"Днём",evening:"Вечером",night:"Ночью"}[context.time_of_day])+" · "+contextSource(context.time_of_day_source)));ui.walk.context.hidden=false;
-  const collected=data.dataset?.collected_at || state.dataset.collected_at;
-  ui.walk.dataNote.textContent=collected?"Подбор по снимку OpenStreetMap от "+dateLabel(collected)+". Google-карта служит для просмотра.":"Подбор по снимку OpenStreetMap; дата не указана. Google-карта служит для просмотра.";ui.walk.dataNote.hidden=false;
-  const warnings=[...contextNotices(context),data.clarification,...(Array.isArray(data.warnings)?data.warnings:[])].filter(value=>typeof value==="string" && value.trim());
-  ui.walk.status.classList.remove("error");ui.walk.status.textContent=warnings.join(" ") || (!recommendations.length?(typeof data.empty_message==="string"?data.empty_message:"Подтверждённых мест в выбранных условиях не найдено."):"");
-  ui.walk.cards.replaceChildren(...recommendations.map((place,index)=>createWalkCard({...state.places.find(item=>item.id===place.id),...place},index,data.mode)));
-  ui.walk.placeholder.hidden=true;ui.walk.budget.hidden=!recommendations.length;ui.walk.generation.hidden=!recommendations.length;
-  if(recommendations.length) {
-    const plan=data.plan;ui.walk.budget.textContent="≈ "+plan.total_minutes+" мин всего из "+context.minutes+" · "+plan.walk_minutes+" мин пешком · "+plan.visit_minutes+" мин в местах. Возвращение к старту учтено ("+plan.return_walk_minutes+" мин).";
-    ui.walk.generation.textContent=llm?"Объяснения подготовлены LLM по найденным местам. Факты и время рассчитаны отдельно; часы и доступность требуют проверки.":"В этом ответе используется поиск по базе мест и шаблонные пояснения. Свободная генерация LLM не использовалась.";
-  }
-  const routeURL=googleDirectionsURL(context,recommendations);ui.walk.actions.hidden=!routeURL;if(routeURL) ui.walk.google.href=routeURL;else ui.walk.google.removeAttribute("href");
-  syncGoogleArea();drawWalkRoute(Boolean(context.origin_id) && context.sensitive_origin!==true);updateMapCount();
-}
-function walkRoutePoints() {const data=state.walkData;if(!data?.recommendations.length) return [];const start=data.resolved_context.origin;return [[start.lat,start.lon],...data.recommendations.map(place=>[place.lat,place.lon]),[start.lat,start.lon]];}
-function drawWalkRoute(fit) {
-  if(!state.routeLayer || !state.map) return;state.routeLayer.clearLayers();state.routeMarkers=[];
-  const data=state.walkData;if(!data?.recommendations.length) return;
-  const context=data.resolved_context,points=walkRoutePoints();
-  L.polyline(points,{color:"#b04428",weight:4,opacity:.85,dashArray:"8,7"}).addTo(state.routeLayer);
-  const start=L.marker([context.origin.lat,context.origin.lon],{icon:L.divIcon({className:"route-pin start-pin",html:"<span>С</span>",iconSize:[44,44],iconAnchor:[22,22]}),autoPanOnFocus:false});
-  const startPopup=node("div");startPopup.append(node("p","popup-title","Старт и возвращение"),node("p","popup-fact",context.origin.label || "Выбранная точка"));start.bindPopup(startPopup,{autoPan:false}).addTo(state.routeLayer);
-  data.recommendations.forEach((place,index)=>{const marker=L.marker([place.lat,place.lon],{icon:L.divIcon({className:"route-pin",html:"<span>"+(index+1)+"</span>",iconSize:[44,44],iconAnchor:[22,22]}),autoPanOnFocus:false}).bindPopup(()=>createPopup(place),{autoPan:false});marker.addTo(state.routeLayer);state.routeMarkers.push(marker);});
-  if(fit) state.map.fitBounds(points,{padding:[35,35],maxZoom:15,animate:false});
-}
-function updateMapCount() {
-  if(!ui?.fit) return;
-  const count=state.walkData?.recommendations.length || 0,exploring=Boolean(ui.explorer?.open);
-  ui.mapCount.textContent=count?count+" остановки · старт и возвращение"+(exploring?" · "+state.filtered.length+" мест каталога":""):exploring?state.filtered.length+" точек каталога по фильтрам":"Сначала подберите прогулку или откройте каталог ниже";
-  ui.fit.textContent=count?"Показать план":"Найденные точки";ui.fit.disabled=!state.map || (!count && (!exploring || !state.filtered.length));
-}
-function fitCurrentMap() {const points=walkRoutePoints();if(state.map && points.length) state.map.fitBounds(points,{padding:[35,35],maxZoom:15,animate:false});else fitResults();}
-function focusWalkMap() {setTab("osm");fitCurrentMap();ui.map.focus({preventScroll:true});ui.mapPanel.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});}
-function focusRouteStop(index) {
-  const place=state.walkData?.recommendations[index];if(!place) return;setTab("osm");state.map?.setView([place.lat,place.lon],16,{animate:false});state.routeMarkers[index]?.openPopup();ui.map.focus({preventScroll:true});ui.mapPanel.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
-}
-function syncGoogleArea() {
-  if(!state.areas.length) return;
-  const data=currentProvider()==="google"?state.googleData:state.walkData;
-  if(!data) return;
-  const originID=data.resolved_context.origin_id;
-  const wanted=originID==="mega"?"mega":originID==="baiterek"?"baiterek":"astana";
-  if(!state.areas.some(area=>area.id===wanted)) return;
-  if(ui.area.value!==wanted) {unloadGoogle("Район прогулки изменён. Подключите Google-карту по кнопке.");ui.area.value=wanted;}
-  ui.googleExternal.href=googleURLForArea(selectedArea());
-}
-function flowIsCurrent(id,signature) {return id===state.walkRequestId && signature===walkSignature();}
-function abortedFlow() {const error=new Error("Request cancelled");error.name="AbortError";return error;}
-function captureClientContext() {const now=new Date();return {instant:now.toISOString(),utc_offset_minutes:-now.getTimezoneOffset()};}
-function requestFlowLocation(controller) {
-  return new Promise((resolve,reject)=>{
-    if(controller.signal.aborted){reject(abortedFlow());return;}
-    const geo=typeof navigator!=="undefined"?navigator.geolocation:null;
-    if(!geo || window.isSecureContext===false){resolve({location_status:"unavailable"});return;}
-    let done=false,timer;
-    const finish=value=>{if(done)return;done=true;clearTimeout(timer);controller.signal.removeEventListener("abort",cancel);resolve(value);};
-    const cancel=()=>{if(done)return;done=true;clearTimeout(timer);controller.signal.removeEventListener("abort",cancel);reject(abortedFlow());};
-    controller.signal.addEventListener("abort",cancel,{once:true});
-    timer=setTimeout(()=>finish({location_status:"timeout"}),8000);
-    try {
-      geo.getCurrentPosition(position=>{
-        if(done)return;
-        const coords=position?.coords,point={lat:coords?.latitude,lon:coords?.longitude};
-        if(!validPoint(point) || !Number.isFinite(coords.accuracy) || coords.accuracy<0 || coords.accuracy>100000){finish({location_status:"unavailable"});return;}
-        finish({location_status:"granted",geolocation:{...point,accuracy:coords.accuracy}});
-      },error=>finish({location_status:error?.code===1?"denied":error?.code===3?"timeout":"unavailable"}),{enableHighAccuracy:false,timeout:8000,maximumAge:0});
-    } catch {finish({location_status:"unavailable"});}
-  });
-}
-async function resolveFlowContext(payload,controller,id,signature) {
-  let result=await jsonGoogleRequest("/api/context",payload,controller);
-  if(!flowIsCurrent(id,signature))throw abortedFlow();
-  if(!result.response.ok){markWalkFieldErrors(result.data.fields);throw googleRequestError(result.data);}
-  if(result.data.needs_geolocation===true) {
-    ui.walk.status.textContent="В сообщении нет старта. Браузер определит местоположение; при отказе покажем подписанный пример в Астане.";
-    const location=await requestFlowLocation(controller);
-    if(!flowIsCurrent(id,signature))throw abortedFlow();
-    Object.assign(payload,location);
-    result=await jsonGoogleRequest("/api/context",payload,controller);
-    if(!flowIsCurrent(id,signature))throw abortedFlow();
-    if(!result.response.ok)throw googleRequestError(result.data);
-  }
-  if(result.data.needs_geolocation || !result.data.resolved_context)throw new Error("Не удалось подготовить автоматический контекст прогулки.");
-  validatePublicContext(result.data.resolved_context);
-  return result.data.resolved_context;
-}
-function contextNotices(context) {
-  const notices=(Array.isArray(context.assumptions)?context.assumptions:[]).filter(value=>typeof value==="string" && value);
-  if(context.is_city_sample || context.origin_source==="city_sample")notices.unshift("Пример в Астане. Старт: "+context.origin.label+". Это не ваше местоположение.");
-  return [...new Set(notices)];
-}
-function responseOptions(data,provider) {
-  const options=Array.isArray(data.alternatives)&&data.alternatives.length?data.alternatives:[data];
-  if(options.length>3)throw new Error("Сервер вернул слишком много вариантов прогулки.");
-  const budgets=new Set();
-  for(const option of options) {
-    (provider==="google"?validateGoogleResponse:validateWalkResponse)(option);
-    const budget=option.budget_minutes ?? option.resolved_context.minutes;
-    if(!Number.isInteger(budget) || budget!==option.resolved_context.minutes || budgets.has(budget) || option.alternatives?.length)throw new Error("Варианты прогулки не согласованы по времени.");
-    budgets.add(budget);
-  }
-  return options.slice().sort((a,b)=>a.resolved_context.minutes-b.resolved_context.minutes);
-}
-function variantLabel(minutes) {return minutes===60?"1 час":minutes===120?"2 часа":minutes===240?"4 часа":minutes+" мин";}
-function renderVariants() {
-  const options=state.walkOptions || [];ui.walk.variants.hidden=options.length<2;ui.walk.variantsNote.hidden=options.length<2;
-  ui.walk.variantsNote.textContent="Готовые планы на разное время. Переключение не делает новых запросов.";
-  ui.walk.variants.replaceChildren(...options.map((option,index)=>{
-    const button=node("button",""),budget=option.resolved_context.minutes,total=option.plan?.total_minutes;
-    button.type="button";button.setAttribute("aria-pressed",String(index===state.activeOption));
-    button.append(node("span","",variantLabel(budget)),node("small","",Number.isFinite(total)?"План "+total+" мин из "+budget:currentProvider()==="google"?"Время не подтверждено":"Нет подтверждённых мест"));
-    button.addEventListener("click",()=>selectResultOption(index,true));return button;
-  }));
-}
-function selectResultOption(index,focus=false) {
-  const option=state.walkOptions?.[index];if(!option)return;
-  state.googleDetailsId++;state.googleDetailsController?.abort();state.googleDetailsController=null;
-  unloadGoogle("Выбран другой план. Повторное подключение карты — по кнопке.");state.activeOption=index;
-  if(currentProvider()==="google")renderGoogleWalk(option);else renderWalk(option);
-  renderVariants();if(focus)ui.walk.variants.children[index]?.focus({preventScroll:true});
-}
-function renderFlowResult(data,provider) {
-  state.walkOptions=responseOptions(data,provider);
-  const wanted=data.resolved_context?.minutes;
-  const selected=state.walkOptions.findIndex(option=>option.resolved_context.minutes===wanted);
-  selectResultOption(selected<0?0:selected);
-}
-async function submitWalk(event) {
-  event.preventDefault();let payload;
-  try {payload={...buildWalkPayload(walkValues()),client_context:captureClientContext()};}
-  catch(error){ui.walk.status.classList.add("error");ui.walk.status.textContent=error.message;return;}
-  invalidateWalk();const id=++state.walkRequestId,signature=walkSignature(),provider=currentProvider(),controller=new AbortController();state.walkController=controller;
-  ui.walk.submit.disabled=true;ui.walk.submit.textContent="Подбираем прогулку…";ui.walk.mode.textContent="Автоматический подбор";ui.walk.placeholder.hidden=true;ui.google.placeholder.hidden=true;
-  ui.walk.status.textContent="Определяем старт, время и варианты прогулки из сообщения…";
-  const timer=setTimeout(()=>controller.abort(),provider==="google"?200000:140000);
-  try {
-    await resolveFlowContext(payload,controller,id,signature);
-    if(!flowIsCurrent(id,signature))return;
-    let result;
-    if(provider==="google") {
-      const preview=await jsonGoogleRequest("/api/google/preview",payload,controller);
-      if(!flowIsCurrent(id,signature))return;
-      if(!preview.response.ok)throw googleRequestError(preview.data);
-      validatePublicContext(preview.data.resolved_context);
-      if(typeof preview.data.preview_token!=="string" || !preview.data.preview_token || typeof preview.data.outbound_search_text!=="string")throw new Error("Не удалось подготовить защищённую передачу Google.");
-      validateGoogleSearchParameters(preview.data.outbound_search_parameters,preview.data.outbound_search_text,preview.data.resolved_context);
-      const g=ui.google;g.outbound.textContent=preview.data.outbound_search_text;g.parameters.textContent=JSON.stringify(preview.data.outbound_search_parameters,null,2);
-      g.previewContext.textContent=googleContextText(preview.data.resolved_context)+(Number.isInteger(preview.data.request_plan?.max_google_http_attempts)?" · Не более "+preview.data.request_plan.max_google_http_attempts+" внешних HTTP-попыток на подбор.":"");g.previewWarnings.textContent=googleWarnings(preview.data.warnings);g.previewQuota.textContent=quotaText(preview.data.quota);g.preview.hidden=false;
-      if(preview.data.quota?.state!=="ready")throw new Error("Тестовый лимит Google недоступен. "+quotaText(preview.data.quota));
-      ui.walk.status.textContent="Google проверяет места и путь туда/обратно. Основной подходящий план получит цельное объяснение ИИ…";
-      result=await jsonGoogleRequest("/api/google/recommend",{...payload,consent:true,preview_token:preview.data.preview_token},controller);
-    } else result=await jsonGoogleRequest("/api/recommend",payload,controller);
-    if(!flowIsCurrent(id,signature))return;
-    if(!result.response.ok){markWalkFieldErrors(result.data.fields);throw googleRequestError(result.data);}
-    renderFlowResult(result.data,provider);ui.walk.heading.focus({preventScroll:true});
-    if(window.matchMedia("(max-width: 760px)").matches)ui.walk.section.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
-  } catch(error) {
-    if(!flowIsCurrent(id,signature))return;
-    ui.walk.mode.textContent="Подбор не завершён";ui.walk.status.classList.add("error");
-    ui.walk.status.textContent=error.name==="AbortError"?"Подбор занял слишком много времени. Внешний запрос мог завершиться и учесться в лимите.":error.message;
-    state.walkData=null;state.googleData=null;state.walkOptions=[];state.routeLayer?.clearLayers();state.routeMarkers=[];
-    ui.walk.actions.hidden=true;ui.walk.google.removeAttribute("href");ui.walk.variants.hidden=true;ui.google.content.hidden=true;ui.google.directions.removeAttribute("href");updateMapCount();
-  } finally {
-    delete payload.geolocation;delete payload.location_status;clearTimeout(timer);
-    if(state.walkController===controller)state.walkController=null;
-    if(flowIsCurrent(id,signature)){ui.walk.submit.disabled=false;ui.walk.submit.textContent=submitLabel();}
-  }
-}
-function initWalk() {
-  const get=id=>document.getElementById(id);ui.explorer=get("catalog-browser");
-  ui.walk={provider:get("walk-provider"),providerNote:get("provider-note"),form:get("walk-form"),query:get("walk-query"),submit:get("walk-submit"),section:get("walk-result"),heading:get("walk-result-title"),mode:get("walk-mode"),status:get("walk-status"),context:get("walk-context"),budget:get("walk-budget"),generation:get("walk-generation"),dataNote:get("walk-data-note"),placeholder:get("walk-placeholder"),cards:get("walk-cards"),actions:get("walk-route-actions"),google:get("walk-google-route"),variants:get("walk-variants"),variantsNote:get("walk-variants-note")};
-  state.walkRequestId=0;state.walkController=null;state.walkData=null;state.walkOptions=[];state.activeOption=0;state.routeMarkers=[];
-  initGoogleProvider();state.walkFormSignature=walkSignature();ui.walk.form.addEventListener("submit",submitWalk);
-  const changed=()=>{if(walkSignature()!==state.walkFormSignature)invalidateWalk();};
-  ui.walk.form.addEventListener("input",changed);ui.walk.form.addEventListener("change",changed);
-  document.querySelectorAll("[data-example]").forEach(button=>button.addEventListener("click",()=>{const example=WALK_EXAMPLES[button.dataset.example];if(!example)return;ui.walk.query.value=example.query;invalidateWalk();ui.walk.query.focus({preventScroll:true});}));
-  get("walk-show-map").addEventListener("click",focusWalkMap);ui.explorer.addEventListener("toggle",()=>{renderMarkers(false);updateMapCount();});
-}
-
-
-/* Google live provider: explicit preview/consent, isolated text and details. */
-function currentProvider() {return ui?.walk?.provider?.value==="google"?"google":"osm";}
-function safeHTTPS(value) {
-  try {const url=new URL(value);return url.protocol==="https:" && !url.username && !url.password ? url.href : null;} catch {return null;}
-}
-function safeGoogleDirections(value) {
-  try {
-    const url=new URL(value);
-    return url.origin==="https://www.google.com" && url.pathname==="/maps/dir/" && url.searchParams.get("api")==="1" && url.searchParams.get("travelmode")==="walking" && url.searchParams.get("origin")===url.searchParams.get("destination") && Boolean(url.searchParams.get("origin")) ? url.href : null;
-  } catch {return null;}
-}
-function quotaText(quota) {
-  if(!quota || !Number.isInteger(quota.used) || !Number.isInteger(quota.limit) || !Number.isInteger(quota.remaining)) return "Тестовый лимит временно неизвестен.";
-  return "Тестовый лимит: "+quota.used+" из "+quota.limit+" внешних попыток; осталось "+quota.remaining+".";
-}
-function googleWarnings(value) {return (Array.isArray(value)?value:[]).filter(item=>typeof item==="string" && item.trim()).join(" ");}
-function googleContextText(context) {
-  return (context.origin.label || "Старт")+" · "+contextSource(context.origin_source)+" · "+context.minutes+" мин · "+({day:"днём",evening:"вечером",night:"ночью"}[context.time_of_day] || "")+" · "+contextSource(context.time_of_day_source);
-}
-function validatePublicContext(context) {
-  if(!context || !validPoint(context.origin) || !Number.isInteger(context.minutes) || context.minutes<10 || context.minutes>480 || !["day","evening","night"].includes(context.time_of_day))throw new Error("Сервер вернул неполный автоматический контекст прогулки.");
-  return context;
-}
-function validateGoogleSearchParameters(parameters,text,context) {
-  const expected=["includeExtendedDetails","languageCode","locationBias","pageSize","regionCode","textQuery"],circle=parameters?.locationBias?.circle,center=circle?.center;
-  if(!parameters || typeof parameters!=="object" || Array.isArray(parameters) || JSON.stringify(Object.keys(parameters).sort())!==JSON.stringify(expected) || parameters.textQuery!==text || parameters.languageCode!=="ru" || parameters.regionCode!=="KZ" || parameters.pageSize!==5 || parameters.includeExtendedDetails!==false || !center || !validPoint({lat:center.latitude,lon:center.longitude}) || Math.abs(center.latitude-context.origin.lat)>0.000001 || Math.abs(center.longitude-context.origin.lon)>0.000001 || !Number.isInteger(circle.radiusMeters) || circle.radiusMeters<100 || circle.radiusMeters>2000)throw new Error("Не удалось проверить полные параметры передачи Google. Внешний поиск не выполнен.");
-}
-
-function clearGoogleProvider() {
-  state.googlePreview=null;state.googleData=null;state.googleDetailsId=(state.googleDetailsId || 0)+1;
-  state.googleDetailsController?.abort();state.googleDetailsController=null;
-  const g=ui.google;if(!g) return;
-  g.preview.hidden=true;g.preview.open=false;g.outbound.textContent="";g.parameters.textContent="";g.previewContext.textContent="";g.previewWarnings.textContent="";g.previewQuota.textContent="";
-  g.content.hidden=true;g.placeholder.hidden=false;g.answer.textContent="";g.sources.replaceChildren();g.context.replaceChildren();g.budget.textContent="";g.routeAttributions.replaceChildren();g.warnings.textContent="";
-  g.original.hidden=true;g.original.open=false;g.originalText.textContent="";g.originalSources.replaceChildren();g.routes.hidden=true;g.directions.removeAttribute("href");
-  g.details.hidden=true;g.detailsContent.replaceChildren();g.detailsStatus.textContent="";g.hours.disabled=false;g.reviews.disabled=false;
-}
-function applyProviderSurface() {
-  const google=currentProvider()==="google",g=ui.google;
-  ui.walk.section.classList.toggle("provider-google",google);
-  ui.walk.heading.textContent=google?"Ваша прогулка · Google":"Ваша прогулка";
-  g.consent.hidden=!google;g.result.hidden=!google;ui.walk.placeholder.hidden=google;
-  ui.walk.providerNote.textContent=google?"Нажатие кнопки разрешает Google-поиск по стартовой области и пожеланиям. Данные OSM в ответ не подмешиваются.":"Снимок OSM и локальная модель. Поиск по Google включается отдельно.";
-  ui.walk.submit.textContent=submitLabel();
-  ui.explorer.hidden=google;if(google) ui.explorer.open=false;
-  ui.datasetNote.hidden=google;ui.providerTerms.textContent=google?"Google Maps работает по условиям Google. Часы, доступность и безопасность требуют самостоятельной проверки.":"© OpenStreetMap contributors · ODbL 1.0. Google Maps работает по условиям Google. Часы, доступность и безопасность требуют самостоятельной проверки.";
-  ui.tabs.osm.hidden=google;ui.panels.osm.hidden=google;
-  ui.mapsDescription.textContent=google?"Здесь только Google-карта. Ответ Google не переносится на OSM-карту. Подключение карты — по отдельной кнопке.":"Рекомендации основаны на OSM. Google помогает рассмотреть район и открыть пеший маршрут по ссылке.";
-  ui.googleMapDescription.textContent=google?"Карта показывает выбранную область. Маршрут прогулки откроется отдельной ссылкой в ответе.":"Google-карта показывает район. Пеший маршрут откроется отдельной ссылкой в результате подбора; рекомендации и каталог — из OSM.";
-  if(google) {state.layer?.clearLayers();state.routeLayer?.clearLayers();setTab("google");}
-  else {setTab("osm");renderMarkers(false);}
-  state.walkFormSignature=walkSignature();
-}
-async function loadGoogleStatus() {
-  try {
-    const response=await fetch("/api/google/status",{cache:"no-store"});const data=await response.json();
-    if(!response.ok) throw new Error("status");
-    state.googleService=data;
-    ui.google.service.textContent=(data.available===false || data.enabled===false || data.configured===false || data.ready===false ? "Google-пилот пока недоступен. Режим OSM работает отдельно. " : "Кнопка подбора подтверждает передачу данных Google. ")+quotaText(data.quota);
-  } catch {ui.google.service.textContent="Не удалось проверить доступность Google-пилота. Подбор по OSM доступен отдельно.";}
-}
-async function jsonGoogleRequest(path,payload,controller) {
-  const response=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload),signal:controller.signal,cache:"no-store"});
-  let data;try {data=await response.json();} catch {throw new Error("Сервер Google-пилота вернул неполный ответ. Повторите действие позже.");}
-  return {response,data};
-}
-function googleRequestError(data) {
-  const message=typeof data?.error==="string"?data.error:"Google-поиск недоступен. Попробуйте позже или явно выберите OSM.";
-  const error=new Error(message+(data?.quota?" "+quotaText(data.quota):""));
-  error.contextCode=data?.code;return error;
-}
-function googleErrorMode(error) {return ["preview_mismatch","context_conflict"].includes(error.contextCode)?"Сообщение изменилось":"Запрос не выполнен";}
-
-function validateGoogleResponse(data) {
-  validatePublicContext(data?.resolved_context);
-  if(!["google-grounded-llm","google-grounding-summary"].includes(data.mode) || !data.grounding || typeof data.grounding.summary!=="string" || !Array.isArray(data.grounding.sources) || !["fits","does_not_fit","unverified"].includes(data.budget_status)) throw new Error("Ответ Google неполный. Условия и время не подтверждены.");
-  if(data.mode==="google-grounded-llm" && data.budget_status!=="fits") throw new Error("План Google не подтверждён как укладывающийся в бюджет. Рекомендация ИИ не показана.");
-  if(data.mode==="google-grounded-llm" && (!data.answer || typeof data.answer.text!=="string" || !data.answer.text.trim())) throw new Error("Не удалось получить цельный ответ ИИ по Google.");
-  if(data.grounding.sources.some(source=>!source || typeof source!=="object")) throw new Error("Google вернул неполные источники ответа.");
-  if(!data.plan || data.plan.budget_minutes!==data.resolved_context.minutes || data.plan.returns_to_origin!==true || typeof data.plan.verified!=="boolean") throw new Error("Не удалось подтвердить расчёт времени Google.");
-  for(const key of ["total_minutes","walk_minutes","outbound_minutes","return_minutes","visit_minutes","buffer_minutes"]) if(data.plan[key]!==null && (!Number.isFinite(data.plan[key]) || data.plan[key]<0)) throw new Error("Google вернул некорректный расчёт времени.");
-  if(data.budget_status==="fits" && (!data.plan.verified || !Number.isFinite(data.plan.total_minutes) || data.plan.total_minutes>data.plan.budget_minutes)) throw new Error("Укладывание в бюджет не подтверждено.");
-  return data;
-}
-function googleSourceCard(source,index) {
-  const card=node("article","google-source"),brand=node("span","google-brand","Google Maps");brand.setAttribute("translate","no");card.append(brand,node("p","","["+index+"]"+(typeof source.source_id==="string"?" · "+source.source_id:"")));
-  const title=typeof source.title==="string" && source.title ? source.title : source.attribution?.title;
-  card.append(node("h3","",typeof title==="string" && title ? title : "Источник "+(index+1)));
-  const placeURL=safeHTTPS(source.url || source.googleMapsLinks?.placeUrl),attributionURL=safeHTTPS(source.attribution?.url);
-  if(placeURL) card.append(externalLink("Открыть источник Google ↗",placeURL));
-  if(attributionURL && attributionURL!==placeURL) card.append(externalLink("Атрибуция источника ↗",attributionURL));
-  if(!placeURL && !attributionURL) card.append(node("p","","Ссылка источника не предоставлена Google."));
-  return card;
-}
-function renderGoogleSources(host,sources) {host.replaceChildren(...sources.map(googleSourceCard));}
-function googleBudgetText(data) {
-  const p=data.plan,minutes=value=>Number.isFinite(value)?value+" мин":"неизвестно";
-  const status=data.budget_status==="fits"?"План укладывается в "+p.budget_minutes+" мин":data.budget_status==="does_not_fit"?"План не укладывается в "+p.budget_minutes+" мин":"Укладывание в "+p.budget_minutes+" мин не подтверждено";
-  return status+". Всего: "+minutes(p.total_minutes)+"; туда: "+minutes(p.outbound_minutes)+"; обратно: "+minutes(p.return_minutes)+"; посещение: "+minutes(p.visit_minutes)+"; запас: "+minutes(p.buffer_minutes)+".";
-}
-function renderGoogleWalk(data) {
-  const g=ui.google;state.googleData=data;
-  state.walkData=null;state.routeLayer?.clearLayers();state.layer?.clearLayers();state.routeMarkers=[];
-  ui.walk.mode.textContent=data.mode==="google-grounded-llm"?"Google + локальный ИИ":"Исходный ответ Google";ui.walk.mode.dataset.mode=data.mode==="google-grounded-llm"?"llm":"extractive";
-  ui.walk.status.classList.remove("error");ui.walk.status.textContent=quotaText(data.quota);g.placeholder.hidden=true;g.content.hidden=false;
-  g.context.replaceChildren(node("span","context-chip",googleContextText(data.resolved_context)),...contextNotices(data.resolved_context).map(text=>node("p","sample-notice",text)));
-  g.budget.textContent=googleBudgetText(data);g.routeAttributions.replaceChildren();
-  for(const attribution of Array.isArray(data.plan.route_attributions)?data.plan.route_attributions:[]) {const url=safeHTTPS(attribution?.url);if(url && typeof attribution.title==="string")g.routeAttributions.append(externalLink(attribution.title+" ↗",url));}
-  g.warnings.textContent=googleWarnings(data.warnings);
-  g.answerLabel.textContent=data.mode==="google-grounded-llm"?"Цельный ответ локального ИИ по Google Grounding Lite":data.budget_status!=="fits"?"Google Grounding Lite · подходящий план не подтверждён; рекомендация ИИ не создавалась":"Google Grounding Lite · исходный ответ без принятой локальной генерации";
-  g.answer.textContent=data.mode==="google-grounded-llm"?data.answer.text:data.grounding.summary;
-  renderGoogleSources(g.sources,data.grounding.sources);
-  g.original.hidden=data.mode!=="google-grounded-llm";g.originalText.textContent=data.grounding.summary;renderGoogleSources(g.originalSources,data.grounding.sources);
-  const directions=safeGoogleDirections(data.directions_url);g.routes.hidden=!directions;if(directions)g.directions.href=directions;else g.directions.removeAttribute("href");
-  g.details.hidden=!(typeof data.selected_place_id==="string" && data.selected_place_id && typeof data.selection_token==="string" && data.selection_token);
-  g.hours.disabled=false;g.reviews.disabled=false;g.detailsContent.replaceChildren();g.detailsStatus.textContent="Часы и отзывы не загружены. Каждая кнопка делает отдельный запрос к Google.";
-  syncGoogleArea();setTab("google");
-}
-
-function detailText(value) {return typeof value==="string"?value:typeof value?.text==="string"?value.text:"";}
-function renderPlaceAttributions(host,data) {
-  const label=node("p","google-details-attribution","Google Maps");label.setAttribute("translate","no");host.append(label);
-  for(const item of Array.isArray(data.attributions)?data.attributions:[]) {
-    const name=typeof item.provider==="string"?item.provider:typeof item.displayName==="string"?item.displayName:"Атрибуция источника",link=safeHTTPS(item.providerUri || item.uri);
-    host.append(link?externalLink(name+" ↗",link,"google-details-attribution"):node("p","google-details-attribution",name));
-  }
-}
-function renderGoogleDetails(data) {
-  const host=ui.google.detailsContent,p=data.data || {};host.replaceChildren();
-  const name=detailText(p.displayName);if(name)host.append(node("h3","",name));
-  if(typeof p.formattedAddress==="string")host.append(node("p","",p.formattedAddress));
-  if(data.profile==="hours") {
-    const current=p.currentOpeningHours,regular=p.regularOpeningHours;
-    if(typeof current?.openNow==="boolean")host.append(node("p","",current.openNow?"По текущим сведениям Google: открыто.":"По текущим сведениям Google: закрыто."));
-    let shown=false;
-    for(const [label,hours] of [["Текущий график",current],["Обычный график",regular]]) {
-      const lines=Array.isArray(hours?.weekdayDescriptions)?hours.weekdayDescriptions.filter(line=>typeof line==="string"):[];
-      if(lines.length) {host.append(node("h4","",label));const list=node("ul","google-hours-list");lines.forEach(line=>list.append(node("li","",line)));host.append(list);shown=true;}
-    }
-    if(!shown)host.append(node("p","","Google не предоставил полный график. Актуальные часы работы остаются неизвестными."));
-    if(typeof p.businessStatus==="string")host.append(node("p","review-meta","Статус Google: "+p.businessStatus));
-  } else {
-    if(Number.isFinite(p.rating))host.append(node("p","","Рейтинг Google: "+p.rating+(Number.isInteger(p.userRatingCount)?" · оценок: "+p.userRatingCount:"")));
-    const reviews=(Array.isArray(p.reviews)?p.reviews:[]).slice(0,5);
-    if(!reviews.length)host.append(node("p","","Google не вернул отзывы для этой выборки. Это не подтверждает наличие или отсутствие розеток."));
-    for(const review of reviews) {
-      const card=node("article","google-review"),author=review.authorAttribution || {},authorName=typeof author.displayName==="string"?author.displayName:"Автор не указан";
-      const heading=node("h4","",authorName),authorURL=safeHTTPS(author.uri);if(authorURL){heading.replaceChildren(externalLink(authorName+" ↗",authorURL));}card.append(heading);
-      const meta=[Number.isFinite(review.rating)?"Оценка: "+review.rating:"",typeof review.publishTime==="string"?"Опубликовано: "+dateLabel(review.publishTime):""].filter(Boolean).join(" · ");if(meta)card.append(node("p","review-meta",meta));
-      const text=detailText(review.text),original=detailText(review.originalText);card.append(node("p","",text || original || "Текст отзыва не предоставлен."));
-      if(original && original!==text) {const originalBlock=node("details");originalBlock.append(node("summary","","Оригинал отзыва"),node("p","",original));card.append(originalBlock);}
-      const reviewURL=safeHTTPS(review.googleMapsUri),flagURL=safeHTTPS(review.flagContentUri);if(reviewURL)card.append(externalLink("Отзыв в Google ↗",reviewURL));if(flagURL)card.append(externalLink("Пожаловаться в Google ↗",flagURL));host.append(card);
-    }
-    host.append(node("p","google-details-attribution","Отзывы выражают мнение авторов; условия посещения и наличие розеток не подтверждены приложением."));
-  }
-  const placeURL=safeHTTPS(p.googleMapsUri);if(placeURL)host.append(externalLink("Место в Google Maps ↗",placeURL));
-  renderPlaceAttributions(host,p);
-}
-async function loadGoogleDetails(profile) {
-  const selected=state.googleData;
-  if(currentProvider()!=="google" || !selected || !["hours","reviews"].includes(profile) || !selected.selection_token || !selected.selected_place_id) return;
-  state.googleDetailsController?.abort();const controller=new AbortController(),detailsId=++state.googleDetailsId,requestId=state.walkRequestId,signature=walkSignature();state.googleDetailsController=controller;
-  ui.google.hours.disabled=true;ui.google.reviews.disabled=true;ui.google.detailsContent.replaceChildren();ui.google.detailsStatus.textContent=profile==="hours"?"Загружаем часы из Google…":"Загружаем отзывы из Google…";
-  const timer=setTimeout(()=>controller.abort(),45000);
-  try {
-    const {response,data}=await jsonGoogleRequest("/api/google/details",{selection_token:selected.selection_token,place_id:selected.selected_place_id,profile},controller);
-    if(detailsId!==state.googleDetailsId || requestId!==state.walkRequestId || signature!==walkSignature() || state.googleData!==selected || currentProvider()!=="google")return;
-    if(!response.ok)throw googleRequestError(data);
-    if(data.source!=="google_places" || data.place_id!==selected.selected_place_id || data.profile!==profile || !data.data || typeof data.data!=="object")throw new Error("Google вернул сведения о другом месте. Повторите действие.");
-    renderGoogleDetails(data);ui.google.detailsStatus.textContent="Получено: "+dateLabel(data.fetched_at)+". "+quotaText(data.quota)+" "+googleWarnings(data.warnings);
-  } catch(error) {
-    if(detailsId!==state.googleDetailsId || requestId!==state.walkRequestId || signature!==walkSignature() || currentProvider()!=="google")return;
-    ui.google.detailsStatus.textContent=error.name==="AbortError"?"Загрузка заняла слишком много времени. Попытка могла быть учтена в лимите.":error.message;
-  } finally {clearTimeout(timer);if(state.googleDetailsController===controller)state.googleDetailsController=null;if(detailsId===state.googleDetailsId && requestId===state.walkRequestId){ui.google.hours.disabled=false;ui.google.reviews.disabled=false;}}
-}
-function initGoogleProvider() {
-  const get=id=>document.getElementById(id);
-  ui.providerTerms=get("provider-terms");ui.mapsDescription=get("maps-description");ui.googleMapDescription=get("google-map-description");
-  ui.google={consent:get("google-consent"),service:get("google-service-status"),preview:get("google-preview"),outbound:get("google-outbound"),parameters:get("google-outbound-parameters"),previewContext:get("google-preview-context"),previewWarnings:get("google-preview-warnings"),previewQuota:get("google-preview-quota"),result:get("google-result"),placeholder:get("google-result-placeholder"),content:get("google-result-content"),context:get("google-result-context"),budget:get("google-result-budget"),routeAttributions:get("google-route-attributions"),warnings:get("google-result-warnings"),answerLabel:get("google-answer-label"),answer:get("google-answer"),sources:get("google-sources"),original:get("google-original"),originalText:get("google-original-text"),originalSources:get("google-original-sources"),routes:get("google-route-actions"),directions:get("google-directions"),details:get("google-place-details"),hours:get("google-hours"),reviews:get("google-reviews"),detailsStatus:get("google-details-status"),detailsContent:get("google-details-content")};
-  state.googleDetailsId=0;state.googleData=null;
-  ui.google.hours.addEventListener("click",()=>loadGoogleDetails("hours"));ui.google.reviews.addEventListener("click",()=>loadGoogleDetails("reviews"));
-  ui.walk.provider.addEventListener("change",()=>{if(walkSignature()!==state.walkFormSignature)invalidateWalk();});
-  window.addEventListener("pagehide",()=>{invalidateWalk();ui.walk.status.textContent="Предыдущий подбор отменён при уходе со страницы. Можно начать новый.";});
-  applyProviderSurface();loadGoogleStatus();
-}
+document.addEventListener("DOMContentLoaded", boot);

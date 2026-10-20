@@ -488,6 +488,7 @@ class GoogleGrounded:
         if not isinstance(payload, dict) or set(payload) - REQUEST_KEYS - {"consent", "preview_token"} or payload.get("consent") is not True:
             raise GoogleError("consent_required", "Для отправки в Google нужно согласие на передачу показанных параметров.", 400)
         form = {key: value for key, value in payload.items() if key in REQUEST_KEYS}
+        self.resolver(form)  # Strict known start precedes token/provider work.
         token = payload.get("preview_token")
         digest = self.signer.verify(token, "preview")
         with self._preview_lock:

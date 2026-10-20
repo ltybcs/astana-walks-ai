@@ -101,7 +101,7 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertEqual(self.budget.status()["used"], 0)
 
     def test_automatic_context_and_generic_intent_preview_have_no_network(self):
-        for form in ({"query": "кофе"}, {"query": "хочу необычное рядом с Экспо 2017"},
+        for form in ({"query": "кофе у Mega"}, {"query": "хочу необычное рядом с Экспо 2017"},
                      {"query": "что посмотреть", "origin": {"lat": 51.0892, "lon": 71.4074, "label": "PRIVATE_HOME"}}):
             with self.subTest(form=form):
                 preview = self.service.preview(form)
@@ -232,10 +232,15 @@ class GoogleGroundedTests(unittest.TestCase):
         payload = self.consent()
         with self.assertRaises(GoogleError):
             self.service.recommend({**payload, "minutes": 120})
-        # Time/context are frozen in server RAM at preview; no second resolver
-        # call can shift night/day while the user submits the same message.
-        with patch.object(self.service, "resolver", side_effect=AssertionError("must stay frozen")):
-            self.service.recommend(payload)
+        # A fresh strict-start gate may resolve again, but its clock must not
+        # replace the consented preview's frozen daytime context.
+        def gate(form):
+            return lab.resolve_request({**form, "time_of_day": "night"})
+        with patch.object(self.service, "resolver", side_effect=gate) as resolver:
+            result = self.service.recommend(payload)
+        resolver.assert_called_once()
+        self.assertEqual(result["resolved_context"]["time_of_day"], "day")
+        self.assertEqual(self.calls[-1][2]["time_of_day"], "day")
 
     def test_three_budgets_share_one_search_have_distinct_plans_and_one_model(self):
         base = deepcopy(self.provider.search["places"][0])

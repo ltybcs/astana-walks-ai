@@ -59,9 +59,9 @@ class LabContextTests(unittest.TestCase):
             self.assertTrue(pending["needs_geolocation"])
             self.assertIsNone(pending["origin"])
             self.assertFalse(self.resolve({"query": BASE}, probe=True)["needs_geolocation"])
-            denied = self.resolve({"query": "Хочу прогулку", "location_status": "denied"}, probe=True)
-            self.assertFalse(denied["needs_geolocation"])
-            self.assertTrue(denied["resolved_context"]["is_city_sample"])
+            with self.assertRaises(ContextError) as caught:
+                self.resolve({"query": "Хочу прогулку", "location_status": "denied"}, probe=True)
+            self.assertEqual(caught.exception.code, "known_start_required")
 
     def test_generic_location_goals_need_geo_and_rejected_landmark_is_not_start(self):
         for query in ("Хочу час погулять у воды", "Хочу прогулку рядом с парком", "Хочу погулять у дома"):
@@ -94,22 +94,42 @@ class LabContextTests(unittest.TestCase):
         self.assertIsNone(context["origin_id"])
         self.assertEqual(context["origin"]["lat"], 51.11)
         payload["geolocation"] = {"lat": 52.1, "lon": 72.5}
-        context = self.resolve(payload)["resolved_context"]
-        self.assertTrue(context["is_city_sample"])
-        self.assertTrue(context["sensitive_origin"])
-        self.assertIn("Пример", context["origin"]["label"])
-        self.assertTrue(context["assumptions"])
+        with self.assertRaises(ContextError) as caught:
+            self.resolve(payload)
+        self.assertEqual(caught.exception.code, "known_start_required")
+        self.assertEqual(caught.exception.status, 422)
 
-    def test_unknown_text_address_uses_labelled_sample_and_never_requests_gps(self):
+    def test_unknown_text_address_is_rejected_even_with_gps_before_any_search(self):
         for payload in ({"query": "Я возле неизвестного отеля, хочу прогулку"},
                         {"query": "Я на улице Неизвестная 55, хочу прогулку", "geolocation": {"lat": 51.11, "lon": 71.42}}):
-            result = self.resolve(payload, probe=True)
-            context = result["resolved_context"]
-            self.assertFalse(result["needs_geolocation"])
-            self.assertTrue(context["is_city_sample"])
-            self.assertTrue(context["sensitive_origin"])
-            self.assertEqual(context["origin_source"], "city_sample")
-            self.assertNotIn("Неизвестная", json.dumps(context, ensure_ascii=False))
+            with self.subTest(payload=payload), self.assertRaises(ContextError) as caught:
+                self.resolve(payload, probe=True)
+            self.assertEqual(caught.exception.code, "known_start_required")
+            self.assertEqual(caught.exception.status, 422)
+            self.assertNotIn("Неизвестная", str(caught.exception))
+
+    def test_missing_or_denied_origin_stops_existing_osm_and_google_paths_before_providers(self):
+        from app import google_lab as lab
+        from app.google_grounded import GoogleGrounded
+        from tests.test_google_lab import GoogleLabTests
+        from unittest.mock import Mock
+        fixture = GoogleLabTests(methodName="test_strict_sources_reject_overflow_and_duplicate_keys")
+        fixture.setUp()
+        try:
+            recommender, client = Mock(side_effect=AssertionError("No retrieval or model")), Mock()
+            with lab.create_server(port=0, root=fixture.root, recommender=recommender) as server:
+                google = GoogleGrounded(client, server.resolve)
+                for payload in ({"query": "Хочу гулять"}, {"query": "Хочу кофе", "location_status": "denied"},
+                                {"query": "Хочу гулять", "geolocation": {"lat": 52.0, "lon": 72.0}},
+                                {"query": "Хочу гулять возле неизвестного отеля"}):
+                    for action in (server.recommend, google.preview):
+                        with self.subTest(payload=payload, action=action.__name__), self.assertRaises(ContextError) as caught:
+                            action(payload)
+                        self.assertEqual(caught.exception.code, "known_start_required")
+                recommender.assert_not_called()
+                self.assertEqual(client.mock_calls, [])
+        finally:
+            fixture.doCleanups()
 
     def test_catalog_name_and_exact_address_use_only_existing_geometry_and_are_sensitive(self):
         catalog = {"places": [{"id": "osm:node/1", "name": "Синтетическое кафе Альфа", "source_name": "Синтетическое кафе Альфа",

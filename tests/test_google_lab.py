@@ -241,7 +241,7 @@ class GoogleLabTests(unittest.TestCase):
             [("Content-Length", "2"), ("Transfer-Encoding", "chunked")],
             [("Content-Length", "2"), ("Transfer-Encoding", "")],
             [("Content-Length", "2"), ("Content-Length", "2")],
-            [("Content-Length", "16385")], [("Content-Length", "-2")],
+            [("Content-Length", str(lab.MAX_REQUEST_BYTES + 2))], [("Content-Length", "-2")],
             [("Content-Length", "+2")], [("Content-Length", "garbage")], [],
         ):
             handler = object.__new__(lab.LabHandler)
@@ -306,15 +306,19 @@ class GoogleLabContextTests(unittest.TestCase):
         self.assertEqual(context["minutes_source"], "query")
         self.assertEqual(context["time_of_day_source"], "astana_current_time")
 
-    def test_missing_ambiguous_and_unknown_context_get_labelled_automatic_choices(self):
-        for query, budgets in (("Хочу кофе", [60, 120, 240]),
-                               ("У меня 45 минут возле неизвестной башни", [45]),
+    def test_known_start_keeps_automatic_budget_options_and_unknown_start_is_rejected(self):
+        for query, budgets in (("Хочу кофе у Mega", [60, 120, 240]),
                                ("Я у Mega, хочу прогулку 30–60 минут", [30, 45, 60]),
                                ("Прогулка 20 минут и кофе 30 минут возле Mega", [60, 120, 240])):
             context = lab.resolve_request({"query": query})["resolved_context"]
             self.assertEqual(context["budget_options"], budgets)
             self.assertEqual(context["minutes"], budgets[0])
             self.assertIsNotNone(context["origin"])
+        for query in ("Хочу кофе", "У меня 45 минут возле неизвестной башни"):
+            with self.subTest(query=query), self.assertRaises(lab.ContextError) as caught:
+                lab.resolve_request({"query": query})
+            self.assertEqual(caught.exception.code, "known_start_required")
+            self.assertEqual(caught.exception.status, 422)
         result = lab.resolve_request({"query": "У меня 45 минут, старт Mega или Байтерек"})
         self.assertEqual(result["resolved_context"]["origin_id"], "mega")
         self.assertTrue(result["resolved_context"]["assumptions"])
@@ -363,9 +367,9 @@ class GoogleLabContextTests(unittest.TestCase):
         for payload in cases:
             with self.subTest(payload=payload), self.assertRaises(lab.ContextError):
                 lab.resolve_request(payload)
-        context = lab.resolve_request({"query": "Хочу прогулку возле незнакомого отеля", "minutes": 60, "origin_id": "river"})["resolved_context"]
-        self.assertTrue(context["is_city_sample"])
-        self.assertTrue(context["sensitive_origin"])
+        with self.assertRaises(lab.ContextError) as caught:
+            lab.resolve_request({"query": "Хочу прогулку возле незнакомого отеля", "minutes": 60, "origin_id": "river"})
+        self.assertEqual(caught.exception.code, "known_start_required")
 
 
 class GoogleLabAITests(unittest.TestCase):
@@ -449,13 +453,18 @@ class GoogleLabAITests(unittest.TestCase):
                 self.assertTrue(body["fields"])
                 self.assertEqual(headers["Cache-Control"], "no-store")
             for payload, expected in (({"query": "Хочу кофе"}, True),
-                                      ({"query": EXACT_MEGA}, False),
-                                      ({"query": "Хочу кофе", "location_status": "denied"}, False)):
+                                      ({"query": EXACT_MEGA}, False)):
                 status, headers, raw = request(server, "/api/context", "POST", json.dumps(payload).encode(), {"Content-Type": "application/json"})
                 result = json.loads(raw)
                 self.assertEqual(status, 200)
                 self.assertEqual(result["needs_geolocation"], expected)
                 self.assertNotIn("query", result)
+                self.assertEqual(headers["Cache-Control"], "no-store")
+            for path in ("/api/context", "/api/recommend"):
+                payload = {"query": "Хочу кофе", "location_status": "denied"}
+                status, headers, raw = request(server, path, "POST", json.dumps(payload).encode(), {"Content-Type": "application/json"})
+                self.assertEqual(status, 422)
+                self.assertEqual(json.loads(raw)["code"], "known_start_required")
                 self.assertEqual(headers["Cache-Control"], "no-store")
             server.recommender.assert_not_called()
 

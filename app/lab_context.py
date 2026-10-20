@@ -243,9 +243,8 @@ def resolve_request(payload, *, catalog=None, now=None, probe=False):
         if legacy is not None or identifier and identifier != origin_id:
             assumptions.append("Место из текста имеет приоритет над прежним полем старта.")
     elif unresolved:
-        origin = origin_id = None
-        origin_source, sensitive = "city_sample", True
-        assumptions.append("Указанное место не найдено в локальном справочнике; показан пример, а не маршрут от вашего адреса.")
+        raise ContextError("Старт из сообщения не найден в локальном справочнике; поиск не выполнялся.",
+                           code="known_start_required", status=422, fields=("origin",))
     elif legacy is not None or identifier:
         origin = legacy if legacy is not None else deepcopy(PUBLIC_ORIGINS[identifier])
         origin_id, origin_source, sensitive = (None, "explicit_coordinates", True) if legacy is not None else (identifier, "explicit_landmark", False)
@@ -256,17 +255,11 @@ def resolve_request(payload, *, catalog=None, now=None, probe=False):
         origin = origin_id = None
         origin_source, needs_geo = "pending_geolocation", True
     else:
-        origin = origin_id = None
-        origin_source = "city_sample"
-        assumptions.append("Геолокация недоступна; показан пример от публичной точки Астаны, а не ваше положение.")
+        raise ContextError("Для поиска требуется известный старт или разрешённая геолокация; поиск не выполнялся.",
+                           code="known_start_required", status=422, fields=("origin",))
     if origin is not None and not _in_city(origin):
-        origin = origin_id = None
-        origin_source = "city_sample"
-        assumptions.append("Старт вне области локального справочника; показан городской пример.")
-    if origin is None and not needs_geo:
-        origin = deepcopy(PUBLIC_ORIGINS["baiterek"])
-        origin["label"] = "Пример от публичной точки Астаны: Байтерек"
-        origin_id, origin_source, reference = "baiterek", "city_sample", None
+        raise ContextError("Старт вне области Астаны, поддерживаемой приложением; поиск не выполнялся.",
+                           code="known_start_required", status=422, fields=("origin",))
     day_matches = []
     for period, pattern in (("night", r"\b(?:ноч\w*|полноч\w*|night|түн\w*)\b"), ("evening", r"\b(?:вечер\w*|evening)\b"), ("day", r"\b(?:днем|дневн\w*|утр\w*|day)\b")):
         for found in re.finditer(pattern, normalized):
@@ -288,6 +281,6 @@ def resolve_request(payload, *, catalog=None, now=None, probe=False):
                "origin_reference": reference, "minutes": options[0], "budget_options": options,
                "minutes_source": budget_source, "budget_source": budget_source, "requested_range": requested_range,
                "time_of_day": period, "time_of_day_source": day_source, "client_context": clock_context,
-               "assumptions": assumptions, "sensitive_origin": sensitive, "is_city_sample": origin_source == "city_sample"}
+               "assumptions": assumptions, "sensitive_origin": sensitive, "is_city_sample": False}
     return {"query": query, "minutes": options[0], "origin": origin, "time_of_day": period,
             "resolved_context": context, "needs_geolocation": needs_geo}

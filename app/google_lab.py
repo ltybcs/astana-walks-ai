@@ -24,6 +24,9 @@ from urllib.parse import urlparse
 from .google_budget import GoogleError
 from .google_client import GoogleClient
 from .google_grounded import GoogleGrounded, disabled_status
+from .unified_walks import UnifiedWalks
+from .unified_dgis import UnifiedDGIS
+from .route_map import RouteMap
 from .generation import recommend as core_recommend
 from .llm import LLMConfig
 from .retrieval import Retriever, detect_intent
@@ -234,7 +237,7 @@ class LabServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, address: tuple[str, int], root: Path, *, llm_enabled: bool = False, recommender=None, google=None):
+    def __init__(self, address: tuple[str, int], root: Path, *, llm_enabled: bool = False, recommender=None, google=None, dgis=None, route_map=None):
         self.root = Path(root).resolve()
         self.catalog = load_catalog(self.root)
         self.catalog_json = _json_bytes(self.catalog)
@@ -249,6 +252,11 @@ class LabServer(ThreadingHTTPServer):
         self.google = google
         if isinstance(self.google, GoogleGrounded):
             self.google.resolver = self.resolve
+        self.route_map = route_map or RouteMap()
+        if isinstance(self.google, GoogleGrounded) and self.route_map._key and self.route_map._key == self.google.client._key:
+            raise ValueError("Maps Embed must use a separate restricted browser key")
+        self.unified = UnifiedWalks(self.resolve, self.retriever, self.google.client if isinstance(self.google, GoogleGrounded) else None,
+                                    dgis, llm_config=self.llm_config, route_map=self.route_map)
         self._stats_lock = Lock()
         self._provider_attempts = 0
         self._validated_answers = 0
@@ -260,6 +268,7 @@ class LabServer(ThreadingHTTPServer):
         try:
             super().server_close()
         finally:
+            self.route_map.close()
             if self.google is not None:
                 self.google.close()
 
@@ -291,7 +300,7 @@ class LabServer(ThreadingHTTPServer):
             "places_count": self.catalog["summary"]["visible_count"],
             "rag_index_sha256": self.index_sha256,
             "data_source": "Shipped OSM snapshot", "google_embed": "browser-only",
-            "google": google_status,
+            "google": google_status, "unified": self.unified.status(),
         })
 
     def resolve(self, payload: object, *, probe=False) -> dict:
@@ -400,7 +409,7 @@ class LabHandler(BaseHTTPRequestHandler):
         if self.headers.get_all("Transfer-Encoding") or len(lengths) != 1 or re.fullmatch(r"[0-9]{1,6}", lengths[0]) is None:
             return 0
         length = int(lengths[0])
-        if not 0 < length <= MAX_REQUEST_BYTES:
+        if not 0 < length <= MAX_REQUEST_BYTES + 1:
             return 0
         timeout = self.connection.gettimeout()
         deadline, discarded = monotonic() + 0.2, 0
@@ -458,6 +467,8 @@ class LabHandler(BaseHTTPRequestHandler):
             self._send(200, self.server.catalog_json, head=head)
         elif self.path == "/api/health":
             self._send(200, self.server.health_json, head=head)
+        elif self.path == "/api/unified/status":
+            self._send(200, _json_bytes(self.server.unified.status()), head=head)
         elif self.path == "/api/google/status":
             self._send(200, _json_bytes(self.server.google.status() if self.server.google else disabled_status()), head=head)
         elif self.path in STATIC_FILES:
@@ -483,7 +494,7 @@ class LabHandler(BaseHTTPRequestHandler):
         if not self._local_host():
             self._reject(403, _json_bytes({"error": "Local lab requests only", "code": "forbidden"}))
             return
-        if self.path not in {"/api/context", "/api/recommend", "/api/google/preview", "/api/google/recommend", "/api/google/details"}:
+        if self.path not in {"/api/context", "/api/recommend", "/api/google/preview", "/api/google/recommend", "/api/google/details", "/api/unified/recommend", "/api/unified/map"}:
             self._reject(404, _json_bytes({"error": "Lab route not found", "code": "not_found"}))
             return
         if len(self.headers.get_all("Content-Type", [])) != 1 or self.headers.get_content_type() != "application/json":
@@ -516,6 +527,13 @@ class LabHandler(BaseHTTPRequestHandler):
             if self.path == "/api/context":
                 resolved = self.server.resolve(payload, probe=True)
                 response = {"needs_geolocation": resolved["needs_geolocation"], "resolved_context": resolved["resolved_context"]}
+            elif self.path == "/api/unified/recommend":
+                response = self.server.unified.recommend(payload)
+                with self.server._stats_lock:
+                    self.server._provider_attempts += response["diagnostics"]["llm_attempts"]
+                    self.server._validated_answers += int(response["answer"] is not None)
+            elif self.path == "/api/unified/map":
+                response = self.server.route_map.resolve(payload)
             elif self.path == "/api/recommend":
                 response = self.server.recommend(payload)
             else:
@@ -546,7 +564,7 @@ class LabHandler(BaseHTTPRequestHandler):
     do_OPTIONS = _method_not_allowed
 
 
-def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROOT, llm_enabled: bool = False, recommender=None, google=None, google_config=None) -> LabServer:
+def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROOT, llm_enabled: bool = False, recommender=None, google=None, google_config=None, dgis=None, dgis_root=None, route_map=None, map_config=None) -> LabServer:
     """Create one context-managed lab server; startup never calls inference."""
     if host == "localhost":
         host = "127.0.0.1"
@@ -569,7 +587,14 @@ def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROO
                 cache_init_error = True
         google = GoogleGrounded(client, resolve_request, llm_config=_local_llm_config() if llm_enabled else None,
                                 cache=cache, cache_init_error=cache_init_error)
-    return LabServer((host, port), Path(root), llm_enabled=llm_enabled, recommender=recommender, google=google)
+    if dgis is not None and dgis_root is not None or route_map is not None and map_config is not None:
+        raise ValueError("Choose injected services or explicit runtime files")
+    if dgis_root is not None:
+        dgis = UnifiedDGIS(Path(dgis_root))
+    if map_config is not None:
+        route_map = RouteMap.from_runtime(map_config)
+    return LabServer((host, port), Path(root), llm_enabled=llm_enabled, recommender=recommender, google=google,
+                     dgis=dgis, route_map=route_map)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -579,11 +604,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--llm", action="store_true", help="Use an already configured loopback LLM; never start or download a model")
     parser.add_argument("--google", action="store_true", help="Opt in to the separately budgeted official Google pilot")
     parser.add_argument("--google-config", help="Absolute ignored JSON with key_file, shared ledger_file and optional cache_dir; never printed")
+    parser.add_argument("--dgis-root", help="Absolute primary workspace with the existing shared 2GIS key and usage ledger")
+    parser.add_argument("--map-config", help="Absolute ignored JSON with dedicated public embed_key_file")
     args = parser.parse_args(argv)
     if bool(args.google) != bool(args.google_config):
         parser.error("--google and --google-config must be supplied together")
     try:
-        with create_server(args.host, args.port, llm_enabled=args.llm, google_config=args.google_config if args.google else None) as server:
+        with create_server(args.host, args.port, llm_enabled=args.llm, google_config=args.google_config if args.google else None,
+                           dgis_root=args.dgis_root, map_config=args.map_config) as server:
             print(f"AI walks lab: http://127.0.0.1:{server.server_port} — {server.catalog['summary']['visible_count']} OSM places", flush=True)
             try:
                 server.serve_forever(poll_interval=0.2)
