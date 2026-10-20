@@ -157,7 +157,9 @@ class HTTPTests(unittest.TestCase):
     def test_transfer_encoding_is_rejected(self):
         for value in ("chunked", ""):
             with self.subTest(value=value):
-                self.assertEqual(self.post(b"{}", {"Content-Type": "application/json", "Transfer-Encoding": value})[0], 400)
+                # Ambiguous framing must be rejected without reading a body;
+                # do not send unread bytes that can turn the close into a RST.
+                self.assertEqual(self.post(b"", {"Content-Type": "application/json", "Transfer-Encoding": value})[0], 400)
 
     def test_static_paths_cannot_expose_repo_or_traverse(self):
         for path in ("/.env", "/../app/server.py", "/%2e%2e/.env", "/data/poi.sample.json", "/unknown"):

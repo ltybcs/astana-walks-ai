@@ -5,7 +5,7 @@ from threading import Thread
 import unittest
 from unittest.mock import patch
 
-from app.dgis_live import DGISLiveError
+from app.dgis_live import DGISLiveError, LIMIT, WINDOW_SECONDS
 from app.server import create_server
 from tests.test_retrieval import index, poi
 
@@ -36,7 +36,7 @@ class DGISHTTPTests(unittest.TestCase):
             connection.close()
 
     def test_category_only_search_is_transient_and_not_a_walk_recommendation(self):
-        result = {'places': [], 'quota': {'limit': 20, 'remaining': 19}, 'category': 'park'}
+        result = {'places': [], 'quota': {'limit': LIMIT, 'remaining': LIMIT - 1, 'window_seconds': WINDOW_SECONDS}, 'category': 'park'}
         with patch('app.server.fetch_live', return_value=result) as fetch:
             status, headers, raw = self.post({'category': 'park'})
         self.assertEqual(status, 200)
@@ -57,7 +57,7 @@ class DGISHTTPTests(unittest.TestCase):
 
     def test_quota_error_is_explicit_and_unexpected_failure_is_sanitized(self):
         denied = DGISLiveError('Лимит исчерпан.', code='quota_exhausted', http_status=429,
-                               quota={'limit': 20, 'remaining': 0})
+                               quota={'limit': LIMIT, 'remaining': 0, 'window_seconds': WINDOW_SECONDS})
         with patch('app.server.fetch_live', side_effect=denied):
             status, headers, raw = self.post({'category': 'cafe'})
         self.assertEqual(status, 429)

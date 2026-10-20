@@ -107,6 +107,28 @@ def _locked(path: Path, timeout: float = 5):
                 fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
+def _replace_reserved_snapshot(source, target):
+    """Retry only transient Windows sharing collisions on this same snapshot.
+
+    The caller retains the writer lock and the already fsynced temporary file;
+    neither the counter reservation nor any HTTP operation is repeated.
+    """
+    deadline = monotonic() + 0.2
+    while True:
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError as error:
+            if getattr(error, "winerror", None) not in {5, 32, 33}:
+                raise
+            remaining = deadline - monotonic()
+            if remaining <= 0:
+                raise
+            sleep(min(0.01, remaining))
+            if monotonic() >= deadline:
+                raise
+
+
 class GoogleBudget:
     def __init__(self, path):
         self.path = _path(path)
@@ -169,7 +191,7 @@ class GoogleBudget:
                         output.flush()
                         os.fsync(output.fileno())
                     _path(self.path)
-                    os.replace(temporary, self.path)
+                    _replace_reserved_snapshot(temporary, self.path)
                     temporary = None
                 finally:
                     if temporary is not None:

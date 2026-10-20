@@ -3,10 +3,12 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
+import errno
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 
 from app.google_budget import GoogleBudget, GoogleError
 
@@ -87,6 +89,98 @@ class GoogleBudgetTests(unittest.TestCase):
             return  # Other path checks are meaningful even without Windows privilege.
         with self.assertRaises(ValueError):
             GoogleBudget(self.path)
+
+
+    @staticmethod
+    def sharing_error(code):
+        error = PermissionError(errno.EACCES, "PRIVATE_IO_ERROR")
+        error.winerror = code
+        return error
+
+    def test_windows_reader_collisions_retry_same_fsynced_snapshot_then_one_http_attempt(self):
+        from app.google_client import GoogleClient
+        GoogleBudget.initialize(self.path)
+        budget = GoogleBudget(self.path)
+        original = self.path.read_bytes()
+        real_replace, real_fsync = os.replace, os.fsync
+        elapsed, attempts, snapshots = [0.0], [], []
+        errors = iter((5, 32, 33))
+        def replace(source, target):
+            attempts.append((source, target))
+            snapshots.append(Path(source).read_bytes())
+            self.assertEqual(self.path.read_bytes(), original)
+            try:
+                code = next(errors)
+            except StopIteration:
+                real_replace(source, target)
+            else:
+                raise self.sharing_error(code)
+        def sleep(seconds):
+            elapsed[0] += seconds
+        transport = Mock(return_value=object())
+        client = GoogleClient("DUMMY_NOT_A_KEY", budget, http_open=transport)
+        with patch("app.google_budget.os.replace", side_effect=replace) as replaced, \
+             patch("app.google_budget.os.fsync", wraps=real_fsync) as fsynced, \
+             patch("app.google_budget.monotonic", side_effect=lambda: elapsed[0]), \
+             patch("app.google_budget.sleep", side_effect=sleep):
+            client._http("GET", "https://places.googleapis.com/v1/places/synthetic", "places.hours")
+        self.assertEqual(replaced.call_count, 4)
+        self.assertEqual(fsynced.call_count, 1)
+        self.assertEqual(len(set(attempts)), 1)
+        self.assertEqual(len(set(snapshots)), 1)
+        self.assertEqual(json.loads(snapshots[0])["used"], 1)
+        self.assertEqual(transport.call_count, 1)
+        self.assertAlmostEqual(elapsed[0], .03)
+        self.assertEqual(budget.status()["used"], 1)
+        self.assertEqual(json.loads(self.path.read_bytes())["operations"], {"places.hours": 1})
+        self.assertEqual(list(self.path.parent.glob("*.tmp")), [])
+
+    def test_windows_sharing_deadline_keeps_durable_counter_and_prevents_http(self):
+        from app.google_client import GoogleClient
+        GoogleBudget.initialize(self.path)
+        budget = GoogleBudget(self.path)
+        original = self.path.read_bytes()
+        elapsed, snapshots = [0.0], []
+        def replace(source, target):
+            snapshots.append((source, Path(source).read_bytes()))
+            raise self.sharing_error(5)
+        def sleep(seconds):
+            elapsed[0] += seconds
+        transport = Mock(side_effect=AssertionError("Reservation must succeed first"))
+        client = GoogleClient("DUMMY_NOT_A_KEY", budget, http_open=transport)
+        with patch("app.google_budget.os.replace", side_effect=replace) as replaced, \
+             patch("app.google_budget.monotonic", side_effect=lambda: elapsed[0]), \
+             patch("app.google_budget.sleep", side_effect=sleep):
+            with self.assertRaises(GoogleError) as caught:
+                client._http("GET", "https://places.googleapis.com/v1/places/synthetic", "places.hours")
+        self.assertEqual(caught.exception.code, "quota_unavailable")
+        self.assertNotIn("PRIVATE", str(caught.exception))
+        self.assertAlmostEqual(elapsed[0], .2)
+        self.assertGreater(replaced.call_count, 1)
+        self.assertLessEqual(replaced.call_count, 21)
+        self.assertEqual(len(set(snapshots)), 1)
+        self.assertEqual(self.path.read_bytes(), original)
+        self.assertEqual(budget.status()["used"], 0)
+        self.assertEqual(list(self.path.parent.glob("*.tmp")), [])
+        transport.assert_not_called()
+
+    def test_other_permission_or_io_errors_fail_closed_without_retry(self):
+        GoogleBudget.initialize(self.path)
+        budget = GoogleBudget(self.path)
+        original = self.path.read_bytes()
+        for error in (PermissionError(errno.EACCES, "PRIVATE_POSIX_PERMISSION"),
+                      self.sharing_error(2), OSError(errno.ENOSPC, "PRIVATE_DISK_FULL")):
+            with self.subTest(winerror=getattr(error, "winerror", None)), \
+                 patch("app.google_budget.os.replace", side_effect=error) as replaced, \
+                 patch("app.google_budget.sleep") as sleep:
+                with self.assertRaises(GoogleError) as caught:
+                    budget.reserve("places.hours")
+            self.assertEqual(caught.exception.code, "quota_unavailable")
+            self.assertNotIn("PRIVATE", str(caught.exception))
+            replaced.assert_called_once()
+            sleep.assert_not_called()
+            self.assertEqual(self.path.read_bytes(), original)
+            self.assertEqual(list(self.path.parent.glob("*.tmp")), [])
 
 
 if __name__ == "__main__":

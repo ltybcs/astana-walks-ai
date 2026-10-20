@@ -139,29 +139,43 @@ class UnifiedDGISTests(unittest.TestCase):
         restarted = module.UnifiedDGIS(self.root, http_open=self.transport, clock=lambda: self.now)
         self.assertEqual(restarted.status()["quota"]["used"], 1)
         self.now += 90001
+        self.assertEqual(restarted.status()["quota"]["used"], 1)  # Older than 24h still charged.
+        self.now += legacy.WINDOW_SECONDS
         self.assertEqual(restarted.status()["quota"]["used"], 0)
 
-    def test_legacy_and_unified_share_exactly_twenty_attempts_and_same_lock(self):
+    def test_legacy_and_unified_share_five_hundred_attempts_and_same_lock(self):
         opener = Mock()
         opener.open.side_effect = lambda *args, **kwargs: io.BytesIO(json.dumps(envelope()).encode())
+        # Keep transport work bounded: existing synthetic timestamps plus the
+        # same twenty new alternating requests reach the shared 500-attempt cap.
+        with self.legacy._locked():
+            self.legacy._write_attempts([self.now] * (legacy.LIMIT - 20))
         with patch("app.dgis_live.build_opener", return_value=opener):
             for _ in range(10):
                 self.legacy.fetch("park")
                 self.client.search("парк", ORIGIN, 1000)
-        self.assertEqual(len(self.state()["attempts"]), 20)
-        self.assertEqual(self.legacy.status()["quota"]["used"], 20)
-        self.assertEqual(self.client.status()["quota"]["used"], 20)
+        self.assertEqual(len(self.state()["attempts"]), legacy.LIMIT)
+        self.assertEqual(self.legacy.status()["quota"]["used"], legacy.LIMIT)
+        self.assertEqual(self.client.status()["quota"]["used"], legacy.LIMIT)
         for action in (lambda: self.client.search("парк", ORIGIN, 1000), lambda: self.legacy.fetch("park")):
             with self.assertRaises(legacy.DGISLiveError) as caught:
                 action()
             self.assertEqual(caught.exception.http_status, 429)
         self.assertEqual(self.transport.call_count, 10)
         self.assertEqual(opener.open.call_count, 10)
+        restarted = module.UnifiedDGIS(self.root, http_open=self.transport, clock=lambda: self.now)
+        self.assertEqual(restarted.status()["quota"]["limit"], 500)
+        self.assertEqual(restarted.status()["quota"]["used"], 500)
+        with self.assertRaises(legacy.DGISLiveError) as caught:
+            restarted.search("парк", ORIGIN, 1000)
+        self.assertEqual(caught.exception.http_status, 429)
+        self.assertIn("30 дней", str(caught.exception))
+        self.assertEqual(self.transport.call_count, 10)
         with self.legacy._locked():
             with self.assertRaises(legacy.DGISLiveError) as caught:
                 self.client.search("парк", ORIGIN, 1000)
         self.assertEqual(caught.exception.code, "busy")
-        self.assertEqual(len(self.state()["attempts"]), 20)
+        self.assertEqual(len(self.state()["attempts"]), legacy.LIMIT)
 
     def test_reservation_precedes_transport_and_no_content_is_persisted(self):
         def unavailable(request, timeout):

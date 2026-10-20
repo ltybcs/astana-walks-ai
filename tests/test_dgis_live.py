@@ -65,7 +65,7 @@ class LiveSearchTests(unittest.TestCase):
         self.assertEqual(result["attribution"], {"text": "2ГИС", "url": "http://dev.2gis.ru"})
         self.assertEqual(result["places"][0]["features"]["socket"], "unknown")
         self.assertEqual(result["quota"]["used"], 1)
-        self.assertEqual(result["quota"]["remaining"], 19)
+        self.assertEqual(result["quota"]["remaining"], live.LIMIT - 1)
 
     def test_no_cards_queries_or_keys_are_persisted(self):
         self.client.fetch("park")
@@ -127,24 +127,66 @@ class LiveSearchTests(unittest.TestCase):
         self.assertNotIn("bad.example", str(caught.exception))
 
     def test_quota_is_shared_and_exhaustion_prevents_network(self):
-        for _ in range(20):
-            live._LiveClient(self.root, lambda: self.now).fetch("park")
-        self.assertEqual(self.factory.return_value.open.call_count, 20)
+        self.client.status()
+        with self.client._locked():
+            self.client._write_attempts([self.now] * (live.LIMIT - 1))
+        live._LiveClient(self.root, lambda: self.now).fetch("park")
+        self.assertEqual(self.factory.return_value.open.call_count, 1)
         with self.assertRaises(live.DGISLiveError) as caught:
             self.client.fetch("cafe")
         self.assertEqual(caught.exception.http_status, 429)
-        self.assertEqual(caught.exception.quota["used"], 20)
-        self.assertEqual(caught.exception.quota["retry_after_seconds"], 86400)
-        self.assertEqual(self.factory.return_value.open.call_count, 20)
+        self.assertEqual(caught.exception.quota["used"], live.LIMIT)
+        self.assertEqual(caught.exception.quota["retry_after_seconds"], live.WINDOW_SECONDS)
+        self.assertEqual(self.factory.return_value.open.call_count, 1)
         self.assertFalse(self.client.status()["available"])
 
     def test_rolling_window_and_restart_do_not_reseed_expired_attempts(self):
         self.client.fetch("park")
-        self.now += 86401
+        self.now += live.WINDOW_SECONDS + 1
         restarted = live._LiveClient(self.root, lambda: self.now)
         self.assertEqual(restarted.status()["quota"]["used"], 0)
         self.assertEqual(restarted.fetch("park")["quota"]["used"], 1)
         self.assertEqual(len(self.state()["attempts"]), 1)
+
+    def test_existing_ten_timestamps_keep_schema_and_remain_charged_beyond_one_day(self):
+        self.assertEqual(live.LIMIT, 500)
+        self.assertEqual(live.WINDOW_SECONDS, 30 * 86400)
+        # Synthetic prior state, not an adjustment of any production ledger.
+        self.client.status()
+        timestamps = [self.now - 2 * 86400] + [self.now - index * 60 for index in range(9)]
+        with self.client._locked():
+            self.client._write_attempts(timestamps)
+        path = self.client.directory / "usage.json"
+        original = path.read_bytes()
+        restarted = live._LiveClient(self.root, lambda: self.now)
+        status = restarted.status()
+        self.assertEqual(status["quota"]["used"], 10)
+        self.assertEqual(status["quota"]["remaining"], 490)
+        self.assertEqual(status["quota"]["window_seconds"], 30 * 86400)
+        self.assertEqual(path.read_bytes(), original)
+        self.assertEqual(self.state(), {"schema_version": 1, "attempts": timestamps})
+        self.factory.assert_not_called()
+        self.now += live.WINDOW_SECONDS + 1
+        self.assertEqual(restarted.status()["quota"]["used"], 0)
+        self.assertEqual(path.read_bytes(), original)  # Status never resets history.
+        self.assertEqual(restarted.fetch("park")["quota"]["used"], 1)
+        self.assertEqual(self.state(), {"schema_version": 1, "attempts": [self.now]})
+
+    def test_full_future_window_cannot_escape_cap_through_clock_rollback(self):
+        self.client.status()
+        with self.client._locked():
+            self.client._write_attempts([self.now + live.WINDOW_SECONDS] * live.LIMIT)
+        self.now -= live.WINDOW_SECONDS + 1
+        restarted = live._LiveClient(self.root, lambda: self.now)
+        self.assertEqual(restarted.status()["quota"]["used"], 500)
+        self.assertEqual(restarted.status()["quota"]["remaining"], 0)
+        with self.assertRaises(live.DGISLiveError) as caught:
+            restarted.fetch("park")
+        self.assertEqual(caught.exception.http_status, 429)
+        self.assertIn("500", str(caught.exception))
+        self.assertIn("30 дней", str(caught.exception))
+        self.factory.assert_not_called()
+        self.assertEqual(len(self.state()["attempts"]), 500)
 
     def test_explicit_seed_of_prior_attempts_is_local_state_not_portable_magic(self):
         with self.client._locked():

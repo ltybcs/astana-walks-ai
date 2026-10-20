@@ -1,4 +1,4 @@
-"""Transient nearby 2GIS search sharing the primary app's existing 20/day ledger.
+"""Transient nearby 2GIS search sharing the primary app's existing 500/30-day ledger.
 
 No provider call is made by construction/status. The operator must inject the
 absolute PRIMARY workspace root; missing usage state never creates a new quota.
@@ -146,7 +146,7 @@ class UnifiedDGIS:
             attempts = self._client._attempts(now)
             quota = self._client._quota(attempts, now)
             if quota["remaining"] == 0:
-                raise DGISLiveError("Лимит 20 попыток 2ГИС за последние 24 часа исчерпан.", code="quota_exhausted", http_status=429, quota=quota)
+                raise DGISLiveError("Лимит 500 попыток 2ГИС за последние 30 дней исчерпан.", code="quota_exhausted", http_status=429, quota=quota)
             attempts.append(now)
             self._client._write_attempts(attempts)
             quota = self._client._quota(attempts, now)

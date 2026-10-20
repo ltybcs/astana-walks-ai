@@ -78,7 +78,7 @@ class UnifiedWalks:
             raise GoogleError("quota_exhausted" if quota.get("state") == "exhausted" else "quota_unavailable", "Общий лимит Google недоступен или исчерпан; поиск не выполнен.", 429 if quota.get("state") == "exhausted" else 503)
         status = self.dgis.status()
         if not status.get("available"):
-            raise GoogleError("unified_dgis_unavailable", "2ГИС недоступен или его суточный лимит исчерпан; общий поиск не выполнен.", 503)
+            raise GoogleError("unified_dgis_unavailable", "2ГИС недоступен или его общий лимит исчерпан; общий поиск не выполнен.", 503)
 
     def recommend(self, payload):
         # Strict gate precedes status, retrieval, executors, all HTTP and LLM.
