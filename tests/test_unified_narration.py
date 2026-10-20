@@ -354,5 +354,25 @@ class UnifiedNarrationTests(unittest.TestCase):
         self.assertEqual(status, "action_does_not_match_cafe_intent")
 
 
+    def test_computer_club_intent_survives_model_context_without_outdoor_substitution(self):
+        self.intent["categories"] = ["computer_club"]
+        for stop in self.stops:
+            stop["category"] = "computer_club"
+        good = {**self.answer, "text": "Компьютерный клуб соответствует выбранному занятию. "
+                                     "Предлагаю запланировать игровую паузу после проверки условий. "
+                                     "Условия посещения неизвестны."}
+        result, status = self.run_narrator(http_open=self.model(good))
+        self.assertEqual(result, good)
+        payload = self.calls[-1][0]
+        context = json.loads(payload["messages"][1]["content"])
+        self.assertEqual(context["intent"]["categories"], ["computer_club"])
+        self.assertEqual(context["grounding_lite_summary"], self.grounding["summary"])
+        self.assertEqual(len(context["all_google_source_previews"]), 5)
+        bad = {**good, "text": "Выбранное место подходит для отдыха. Предлагаю прогулку по парку. Условия посещения неизвестны."}
+        result, status = self.run_narrator(http_open=self.model(bad))
+        self.assertIsNone(result)
+        self.assertEqual(status, "action_does_not_match_computer_club_intent")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -20,7 +20,7 @@ from .dgis_live import (_LiveClient, _NoRedirect, DGISLiveError, ASTANA_BBOX,
 from .retrieval import detect_intent, distance_m
 from scripts.collect_2gis import CollectionError, normalize_items, response_items
 
-CATEGORY_QUERIES = {**CATEGORIES, "restaurant": "Рестораны", "bar": "Бары"}
+CATEGORY_QUERIES = {**CATEGORIES, "restaurant": "Рестораны", "bar": "Бары", "computer_club": "Компьютерные клубы"}
 
 
 def _invalid():
@@ -46,6 +46,9 @@ def _category(query):
     if not isinstance(query, str) or not query.strip() or len(query) > 2000:
         raise _invalid()
     intent = detect_intent(query)
+    if intent.get("unsupported_activity"):
+        raise DGISLiveError("Запрошенная активность не поддерживается; поиск 2ГИС не выполнялся.",
+                            code="unsupported_activity", http_status=422)
     requested = [name for name in intent["preferred_categories"] if name in CATEGORY_QUERIES]
     if requested:
         return requested[0]
@@ -162,7 +165,8 @@ class UnifiedDGIS:
                 items = response_items(payload)
                 stamp = datetime.fromtimestamp(self.clock(), timezone.utc).isoformat(timespec="seconds")
                 normalized = normalize_items(items[:PAGE_SIZE], stamp, bbox)
-                places = [place for place in normalized if distance_m(origin, place) <= radius]
+                places = [place for place in normalized if distance_m(origin, place) <= radius
+                          and (category != "computer_club" or place["category"] == "computer_club")]
             except DGISLiveError as error:
                 error.quota = quota
                 raise

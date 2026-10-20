@@ -106,10 +106,12 @@ class UnifiedWalks:
     def _recommend(self, form, resolved):
         # prepare reuses this exact already validated context, not a second clock.
         context, safe_intent, _, _, parameters = prepare(form, lambda _: resolved)
+        context = deepcopy(context)
         origin, query = resolved["origin"], resolved["query"]
         budgets = context["budget_options"]
         radius = parameters["locationBias"]["circle"]["radiusMeters"]
         intent = detect_intent(query, resolved["time_of_day"])
+        context["activity_mode"] = intent["activity_mode"]
         executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="unified-source")
         local_future = executor.submit(self.osm.retrieve, query, origin, max(budgets), resolved["time_of_day"])
         dgis_future = executor.submit(self.dgis.search, query, origin, radius)
@@ -124,7 +126,7 @@ class UnifiedWalks:
                 candidates = {"osm": [], "google": [], "dgis": []}
                 for index, item in enumerate(local["selected"]):
                     poi = item["poi"]
-                    if distance_m(origin, poi) <= radius:
+                    if distance_m(origin, poi) <= radius and _eligible(poi, intent):
                         candidates["osm"].append(_stop(poi, "osm", "o" + str(index)))
                 for index, poi in enumerate(live["places"]):
                     if distance_m(origin, poi) <= radius and _eligible(poi, intent):
@@ -132,7 +134,10 @@ class UnifiedWalks:
                 # Google summary remains whole. Only structured source metadata
                 # may identify candidate places; never mine its prose for facts.
                 hard_unknown = intent["socket"] or intent["accessible"] or intent["strict_quiet"] or intent["night"]
-                if not hard_unknown:
+                # A targeted search is not category evidence. Grounding source
+                # metadata currently has no verified computer-club taxonomy.
+                # Keep its entire summary/previews, but do not route to unknowns.
+                if not hard_unknown and intent["activity_mode"] != "single_venue":
                     for source in grounding["sources"]:
                         location = source.get("location")
                         if not location:
@@ -145,7 +150,7 @@ class UnifiedWalks:
                                "category": "unknown", "description": "", "features": {}, "opening_hours": None,
                                "source_url": source["url"], **point}
                         candidates["google"].append(_stop(poi, "google", source["source_id"]))
-                selected = self._select(candidates, origin)
+                selected = self._select(candidates, origin, intent)
                 alternatives = self._plans(selected, budgets, context, origin)
         finally:
             # Both adapter and local retrieval are bounded; never keep content
@@ -174,6 +179,10 @@ class UnifiedWalks:
         warnings = list(context["assumptions"]) + list(live.get("warnings", []))
         warnings += [WALK_WARNING, "Время остановок предложено приложением; часы работы, доступ и свойства мест могут быть неизвестны.",
                      "Карта рассчитывает путь отдельно: её оценка может отличаться от суммы проверенных переходов."]
+        if intent["activity_mode"] == "single_venue":
+            warnings.append("Подбирается одно заведение запрошенного типа. Бюджет включает путь туда и обратно; оставшееся время посещения предложено приложением, возможность сеанса не подтверждена.")
+            if not selected_union:
+                warnings.append("Подтверждённых подходящих заведений в полученных данных не найдено; другие категории вместо них не подбирались.")
         if answer is None:
             warnings.append("Единый текст ИИ не подтверждён. Показаны план и полный исходный ответ Google с источниками.")
         return {"mode": "llm-grounded-unified" if answer else "grounding-only", "resolved_context": context,
@@ -185,7 +194,20 @@ class UnifiedWalks:
                 "response_storage": "request-memory-only", "searches": {"osm": 1, "google": 1, "dgis": 1}}}
 
     @staticmethod
-    def _select(candidates, origin):
+    def _select(candidates, origin, intent=None):
+        if intent and intent.get("activity_mode") == "single_venue":
+            # Try at most three relevant alternatives, never one compulsory stop
+            # per source. The planner evaluates each venue independently.
+            ordered = sorted((stop for items in candidates.values() for stop in items),
+                             key=lambda stop: (distance_m(origin, stop), stop["stop_id"]))
+            unique = []
+            for stop in ordered:
+                if not any(stop["name"].casefold() == other["name"].casefold()
+                           and distance_m(stop, other) < 80 for other in unique):
+                    unique.append(stop)
+                if len(unique) == 3:
+                    break
+            return unique
         # Relevant sources have equal access to three stops; proximity orders
         # the resulting walk. No rating/sponsor boosts or speculative merging.
         selected = []
@@ -230,6 +252,7 @@ class UnifiedWalks:
         prefixes, route_checks, accepted = [], [], []
         outward, previous, ref = [], origin, "origin"
         largest_budget = max(budgets)
+        single_venue = context.get("activity_mode") == "single_venue"
         for index, stop in enumerate(selected[:3]):
             outgoing = leg(previous, stop, ref, stop["stop_id"])
             returning = leg(stop, origin, stop["stop_id"], "origin")
@@ -248,10 +271,13 @@ class UnifiedWalks:
             # The next candidate starts at the last accepted stop, not this one.
             if not fits_largest:
                 continue
-            outward.append(outgoing)
-            accepted.append(stop)
-            prefixes.append((deepcopy(accepted), deepcopy(outward + [returning])))
-            previous, ref = stop, stop["stop_id"]
+            if single_venue:
+                prefixes.append(([deepcopy(stop)], deepcopy([outgoing, returning])))
+            else:
+                outward.append(outgoing)
+                accepted.append(stop)
+                prefixes.append((deepcopy(accepted), deepcopy(outward + [returning])))
+                previous, ref = stop, stop["stop_id"]
         options = []
         for budget in budgets:
             proposal = max(10, min(60, budget // 4)) if len(budgets) > 1 else 20
@@ -263,16 +289,18 @@ class UnifiedWalks:
                 remaining = budget - walking - 5
                 if remaining < 5 * len(stops):
                     continue
-                visit_each = min(proposal, remaining // len(stops))
+                visit_each = remaining if single_venue else min(proposal, remaining // len(stops))
                 fitting.append((stops, legs, walking, visit_each))
             status = "fits" if fitting else "no_candidates" if not selected else "unverified" if any(item["minutes"] is None for item in memo.values()) else "does_not_fit"
-            stops, legs, walking, visit_each = fitting[-1] if fitting else ([], [], None, 0)
+            chosen = min(fitting, key=lambda item: (item[2], item[0][0]["stop_id"])) if fitting and single_venue else fitting[-1] if fitting else None
+            stops, legs, walking, visit_each = chosen if chosen else ([], [], None, 0)
             visits = visit_each * len(stops)
             plan = {"budget_minutes": budget, "verified": bool(fitting), "returns_to_origin": bool(fitting),
                     "walk_minutes": walking, "return_walk_minutes": legs[-1]["minutes"] if legs else None,
                     "visit_minutes": visits if fitting else None, "buffer_minutes": 5,
                     "total_minutes": walking + visits + 5 if fitting else None,
-                    "visit_is_proposal": True, "route_attributions": [item["attribution"] for item in legs if item["attribution"]],
+                    "visit_is_proposal": True, "time_allocation": "proposed_remaining_after_roundtrip" if single_venue else "proposed_stops",
+                     "route_attributions": [item["attribution"] for item in legs if item["attribution"]],
                     "legs": legs, "route_checks": deepcopy(route_checks),
                     "verification_scope": "Google WALK durations, not opening, access or safety verification"}
             shown = [{**deepcopy(stop), "visit_minutes": visit_each} for stop in stops]

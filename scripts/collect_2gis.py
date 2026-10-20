@@ -34,6 +34,7 @@ RUBRICS = {
     "достопримечательности": "attraction", "памятники": "monument",
     "памятники / мемориалы": "monument", "торговые центры": "mall",
     "торгово-развлекательные центры": "mall", "набережные": "promenade",
+    "компьютерные клубы": "computer_club", "интернет-клубы": "computer_club",
 }
 DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
@@ -115,7 +116,10 @@ def normalize_items(items, collected_at, bbox=DEFAULT_BBOX):
             continue
         rubrics = item.get("rubrics", [])
         rubrics = [r.get("name") for r in rubrics if isinstance(r, dict) and isinstance(r.get("name"), str)] if isinstance(rubrics, list) else []
-        category = next((RUBRICS[r.strip().lower()] for r in rubrics if r.strip().lower() in RUBRICS), None)
+        categories = [RUBRICS[r.strip().lower()] for r in rubrics if r.strip().lower() in RUBRICS]
+        # An explicit activity rubric is stronger than an accompanying cafe
+        # rubric. Neither the user's query nor a brand name proves the activity.
+        category = "computer_club" if "computer_club" in categories else next(iter(categories), None)
         if category is None and item.get("type") == "attraction":
             category = "attraction"
         if category is None or item.get("type") not in {"branch", "attraction", "adm_div.place"}:
