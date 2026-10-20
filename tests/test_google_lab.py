@@ -148,7 +148,7 @@ class GoogleLabTests(unittest.TestCase):
             self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
             self.assertIn("frame-src https://www.google.com", headers["Content-Security-Policy"])
             self.assertIn("connect-src 'self'", headers["Content-Security-Policy"])
-            self.assertEqual(headers["Permissions-Policy"], "geolocation=(), camera=(), microphone=()")
+            self.assertEqual(headers["Permissions-Policy"], "geolocation=(self), camera=(), microphone=()")
             self.assertEqual(headers["Referrer-Policy"], "no-referrer")
             status, _, body = request(server, "/api/health")
             health = json.loads(body)
@@ -304,65 +304,56 @@ class GoogleLabContextTests(unittest.TestCase):
         self.assertEqual(context["origin_id"], "mega")
         self.assertEqual(context["origin_source"], "query_landmark")
         self.assertEqual(context["minutes_source"], "query")
-        self.assertEqual(context["time_of_day_source"], "default_day")
+        self.assertEqual(context["time_of_day_source"], "astana_current_time")
 
-    def test_missing_ambiguous_and_unknown_context_never_get_silent_defaults(self):
+    def test_missing_ambiguous_and_unknown_context_get_labelled_automatic_choices(self):
+        for query, budgets in (("Хочу кофе", [60, 120, 240]),
+                               ("У меня 45 минут возле неизвестной башни", [45]),
+                               ("Я у Mega, хочу прогулку 30–60 минут", [30, 45, 60]),
+                               ("Прогулка 20 минут и кофе 30 минут возле Mega", [60, 120, 240])):
+            context = lab.resolve_request({"query": query})["resolved_context"]
+            self.assertEqual(context["budget_options"], budgets)
+            self.assertEqual(context["minutes"], budgets[0])
+            self.assertIsNotNone(context["origin"])
+        result = lab.resolve_request({"query": "У меня 45 минут, старт Mega или Байтерек"})
+        self.assertEqual(result["resolved_context"]["origin_id"], "mega")
+        self.assertTrue(result["resolved_context"]["assumptions"])
+
+    def test_text_context_has_priority_over_stale_legacy_controls(self):
         cases = [
-            ({"query": "Хочу кофе"}, {"origin", "minutes"}),
-            ({"query": "У меня 45 минут возле неизвестной башни"}, {"origin"}),
-            ({"query": "Я у Mega, хочу прогулку 30–60 минут"}, {"minutes"}),
-            ({"query": "У меня 45 минут, старт Mega или Байтерек"}, {"origin"}),
-            ({"query": "Прогулка 20 минут и кофе 30 минут возле Mega"}, {"minutes"}),
+            ({"query": EXACT_MEGA, "minutes": 60}, "minutes", 45),
+            ({"query": EXACT_MEGA, "origin_id": "baiterek"}, "origin_id", "mega"),
+            ({"query": "Ночью хочу прогулку 60 минут у Байтерека", "time_of_day": "day"}, "time_of_day", "night"),
+            ({"query": EXACT_MEGA, "origin": {"lat": 51.1283, "lon": 71.4305, "label": "Явно выбранная точка"}}, "origin_id", "mega"),
+            ({"query": "Я у Mega, хочу прогулку 30–60 минут", "minutes": 90}, "budget_options", [30, 45, 60]),
         ]
-        for payload, fields in cases:
-            with self.subTest(payload=payload), self.assertRaises(lab.ContextError) as caught:
-                lab.resolve_request(payload)
-            self.assertEqual(caught.exception.status, 422)
-            self.assertEqual(caught.exception.code, "needs_context")
-            self.assertEqual(set(caught.exception.fields), fields)
+        for payload, field, expected in cases:
+            context = lab.resolve_request(payload)["resolved_context"]
+            self.assertEqual(context[field], expected)
+            self.assertTrue(context["assumptions"])
 
-    def test_conflicts_are_reported_before_retrieval(self):
-        cases = [
-            ({"query": EXACT_MEGA, "minutes": 60}, "minutes"),
-            ({"query": EXACT_MEGA, "origin_id": "baiterek"}, "origin"),
-            ({"query": "Ночью хочу прогулку 60 минут у Байтерека", "time_of_day": "day"}, "time_of_day"),
-            ({"query": "Ночь, у меня 60 минут у Mega", "time_of_day": "day"}, "time_of_day"),
-            ({"query": EXACT_MEGA, "origin": {"lat": 51.1283, "lon": 71.4305, "label": "Явно выбранная точка"}}, "origin"),
-            ({"query": "Я у Mega, хочу прогулку 30–60 минут", "minutes": 90}, "minutes"),
-        ]
-        for payload, field in cases:
-            with self.subTest(payload=payload), self.assertRaises(lab.ContextError) as caught:
-                lab.resolve_request(payload)
-            self.assertEqual(caught.exception.status, 400)
-            self.assertEqual(caught.exception.code, "context_conflict")
-            self.assertIn(field, caught.exception.fields)
-
-    def test_explicit_custom_point_near_landmark_keeps_its_label_and_source(self):
+    def test_explicit_custom_point_keeps_label_unless_text_start_has_priority(self):
         point = {"lat": 51.0898, "lon": 71.4078, "label": "Своя точка рядом с ориентиром"}
-        context = lab.resolve_request({"query": EXACT_MEGA, "origin": point})["resolved_context"]
+        context = lab.resolve_request({"query": "Хочу прогулку", "minutes": 45, "origin": point})["resolved_context"]
         self.assertEqual(context["origin"], point)
         self.assertIsNone(context["origin_id"])
         self.assertEqual(context["origin_source"], "explicit_coordinates")
+        self.assertTrue(context["sensitive_origin"])
+        context = lab.resolve_request({"query": EXACT_MEGA, "origin": point})["resolved_context"]
+        self.assertEqual(context["origin_id"], "mega")
         with self.assertRaises(lab.ContextError):
             lab.resolve_request({"query": EXACT_MEGA, "origin": {"lat": 51.0892, "lon": 71.4074}})
-        far = {"lat": 51.0912, "lon": 71.4074, "label": "Более ста метров"}
-        with self.assertRaises(lab.ContextError) as caught:
-            lab.resolve_request({"query": EXACT_MEGA, "origin": far})
-        self.assertEqual(caught.exception.code, "context_conflict")
 
     def test_hours_ranges_and_explicit_long_budgets_remain_exact(self):
         for text, minutes in (("2 часа", 120), ("1,5 часа", 90), ("восемь часов", 480), ("полчаса", 30), ("375 минут", 375)):
-            with self.subTest(text=text):
-                self.assertEqual(lab.resolve_request({"query": "Прогулка " + text + " у Mega"})["minutes"], minutes)
-        range_result = lab.resolve_request({"query": "Я у Mega, хочу гулять 5–8 часов", "minutes": 375})
-        self.assertEqual(range_result["minutes"], 375)
+            self.assertEqual(lab.resolve_request({"query": "Прогулка " + text + " у Mega"})["minutes"], minutes)
+        context = lab.resolve_request({"query": "Я у Mega, хочу гулять 5–8 часов", "minutes": 375})["resolved_context"]
+        self.assertEqual(context["budget_options"], [300, 390, 480])
         for minutes in (10, 300, 375, 480):
             self.assertEqual(lab.resolve_request({"query": "Хочу гулять", "origin_id": "mega", "minutes": minutes})["minutes"], minutes)
 
     def test_invalid_types_boundaries_and_unrecognized_explicit_landmark(self):
-        cases = [
-            {"query": EXACT_MEGA, "minutes": value} for value in (True, 9, 481, 45.0, "45", None)
-        ] + [
+        cases = [{"query": EXACT_MEGA, "minutes": value} for value in (True, 9, 481, 45.0, "45", None)] + [
             {"query": EXACT_MEGA, "origin_id": "unknown"},
             {"query": EXACT_MEGA, "origin_id": "mega", "origin": {"lat": 51.0892, "lon": 71.4074, "label": "Два источника"}},
             {"query": EXACT_MEGA, "time_of_day": []},
@@ -373,8 +364,8 @@ class GoogleLabContextTests(unittest.TestCase):
             with self.subTest(payload=payload), self.assertRaises(lab.ContextError):
                 lab.resolve_request(payload)
         context = lab.resolve_request({"query": "Хочу прогулку возле незнакомого отеля", "minutes": 60, "origin_id": "river"})["resolved_context"]
-        self.assertEqual(context["origin_id"], "river")
-        self.assertEqual(context["origin_source"], "explicit_landmark")
+        self.assertTrue(context["is_city_sample"])
+        self.assertTrue(context["sensitive_origin"])
 
 
 class GoogleLabAITests(unittest.TestCase):
@@ -383,7 +374,7 @@ class GoogleLabAITests(unittest.TestCase):
 
     def test_lab_uses_full_filtered_enriched_core_index_and_exact_mega_budget(self):
         with lab.create_server(port=0) as server:
-            response = server.recommend({"query": EXACT_MEGA})
+            response = server.recommend({"query": EXACT_MEGA, "time_of_day": "day"})
             self.assertEqual(len(server.retriever.places), 1266)
             self.assertNotIn("osm:way/1419934935", server.by_id)
             self.assertEqual(response["plan"]["budget_minutes"], 45)
@@ -417,7 +408,8 @@ class GoogleLabAITests(unittest.TestCase):
                         self.assertTrue(all(p["category"] in {"park", "playground"} for p in selected))
                     if "розеткой" in query:
                         self.assertEqual(selected, [])
-                        self.assertTrue(response["clarification"])
+                        self.assertTrue(response["empty_message"])
+                        self.assertNotIn("clarification", response)
                     if day == "night":
                         self.assertTrue(all(server.by_id[p["id"]]["opening_hours"] == "24/7" for p in selected))
 
@@ -448,16 +440,22 @@ class GoogleLabAITests(unittest.TestCase):
             self.assertEqual(body["resolved_context"]["origin_source"], "query_landmark")
             self.assertIs(observed[0][0], server.retriever)
 
-    def test_http_context_errors_never_call_recommender(self):
+    def test_http_context_probe_is_local_and_malformed_inputs_never_call_recommender(self):
         with running_server(self.root, recommender=unittest.mock.Mock(side_effect=AssertionError("Must resolve first"))) as (server, _thread):
-            for payload, expected, code in (
-                ({"query": "Хочу кофе"}, 422, "needs_context"),
-                ({"query": EXACT_MEGA, "minutes": 60}, 400, "context_conflict"),
-            ):
+            for payload in ({"query": ""}, {"query": EXACT_MEGA, "minutes": True},
+                            {"query": "Хочу кофе", "geolocation": {"lat": True, "lon": 71.4}}):
                 status, headers, body = post_json(server, payload)
-                self.assertEqual(status, expected)
-                self.assertEqual(body["code"], code)
+                self.assertEqual(status, 400)
                 self.assertTrue(body["fields"])
+                self.assertEqual(headers["Cache-Control"], "no-store")
+            for payload, expected in (({"query": "Хочу кофе"}, True),
+                                      ({"query": EXACT_MEGA}, False),
+                                      ({"query": "Хочу кофе", "location_status": "denied"}, False)):
+                status, headers, raw = request(server, "/api/context", "POST", json.dumps(payload).encode(), {"Content-Type": "application/json"})
+                result = json.loads(raw)
+                self.assertEqual(status, 200)
+                self.assertEqual(result["needs_geolocation"], expected)
+                self.assertNotIn("query", result)
                 self.assertEqual(headers["Cache-Control"], "no-store")
             server.recommender.assert_not_called()
 
@@ -513,7 +511,7 @@ class GoogleLabAITests(unittest.TestCase):
         good = {"recommendations": [{"id": "osm:node/4", "why": "Парк соответствует интересу в прогулке на воздухе.", "action": "Идея: сделать короткую остановку в парке.", "citations": ["osm:node/4"], "fact_keys": ["category"]}]}
         envelope = json.dumps({"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(good)}}]}).encode()
         with running_server(self.root, llm_enabled=True) as (server, _thread), patch("app.llm.open_url", return_value=io.BytesIO(envelope)) as provider:
-            status, _, response = post_json(server, {"query": "PRIVATE_QUERY_98765 Хочу парк", "minutes": 60, "origin": {"lat": 51.104, "lon": 71.4, "label": "PRIVATE_ORIGIN_LABEL"}})
+            status, _, response = post_json(server, {"query": "PRIVATE_QUERY_98765 Хочу парк", "minutes": 60, "origin": {"lat": 51.104, "lon": 71.4, "label": "PRIVATE_ORIGIN_LABEL"}, "time_of_day": "day"})
             self.assertEqual(status, 200)
             self.assertEqual(response["mode"], "llm-grounded")
             self.assertEqual([p["id"] for p in response["recommendations"]], ["osm:node/4"])
@@ -532,7 +530,7 @@ class GoogleLabAITests(unittest.TestCase):
         bad = {"recommendations": [{"id": "invented", "why": "Парк соответствует интересу в прогулке на воздухе.", "action": "Идея: сделать короткую остановку в парке.", "citations": ["invented"], "fact_keys": ["category"]}]}
         raw = json.dumps({"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(bad)}}]}).encode()
         with running_server(self.root, llm_enabled=True) as (server, _thread), patch("app.llm.open_url", side_effect=lambda *_: io.BytesIO(raw)) as provider:
-            status, _, response = post_json(server, {"query": "Хочу парк", "minutes": 60, "origin": {"lat": 51.104, "lon": 71.4, "label": "Тестовая точка"}})
+            status, _, response = post_json(server, {"query": "Хочу парк", "minutes": 60, "origin": {"lat": 51.104, "lon": 71.4, "label": "Тестовая точка"}, "time_of_day": "day"})
             self.assertEqual(status, 200)
             self.assertEqual(response["mode"], "extractive")
             self.assertEqual(response["diagnostics"]["llm_status"], "validation_failed")
@@ -540,6 +538,44 @@ class GoogleLabAITests(unittest.TestCase):
             self.assertEqual(provider.call_count, 2)
             self.assertEqual([item["id"] for item in response["recommendations"]], ["osm:node/4"])
             self.assertTrue(any("LLM недоступна" in warning for warning in response["warnings"]))
+
+    @patch.dict("os.environ", LOCAL_ENV, clear=True)
+    def test_missing_budget_builds_three_actual_plans_and_only_primary_uses_model(self):
+        good = {"recommendations": [{"id": "osm:node/4", "why": "Парк соответствует интересу в прогулке на воздухе.", "action": "Идея: сделать короткую остановку в парке.", "citations": ["osm:node/4"], "fact_keys": ["category"]}]}
+        envelope = json.dumps({"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(good)}}]}).encode()
+        calls = []
+        def recommender(index, **kwargs):
+            calls.append(deepcopy(kwargs))
+            return lab.core_recommend(index, **kwargs)
+        with lab.create_server(port=0, root=self.root, llm_enabled=True, recommender=recommender) as server, patch("app.llm.open_url", return_value=io.BytesIO(envelope)) as provider:
+            response = server.recommend({"query": "Хочу парк", "geolocation": {"lat": 51.104, "lon": 71.4}, "time_of_day": "day"})
+            self.assertEqual([call["minutes"] for call in calls], [60, 120, 240])
+            self.assertEqual([call["use_llm"] for call in calls], [True, False, False])
+            self.assertEqual(provider.call_count, 1)
+            variants = response["alternatives"]
+            self.assertEqual([item["budget_minutes"] for item in variants], [60, 120, 240])
+            self.assertEqual([item["mode"] for item in variants], ["llm-grounded", "extractive", "extractive"])
+            for item in variants:
+                self.assertNotIn("alternatives", item)
+                self.assertEqual(item["plan"]["budget_minutes"], item["budget_minutes"])
+                self.assertEqual(item["resolved_context"]["minutes"], item["budget_minutes"])
+                self.assertLessEqual(item["plan"]["total_minutes"], item["budget_minutes"])
+                self.assertTrue(item["plan"]["returns_to_origin"])
+                self.assertTrue(item["recommendations"])
+            self.assertIsNot(response, variants[0])
+
+    def test_generic_walk_and_empty_results_never_ask_manual_context(self):
+        with lab.create_server(port=0, root=self.root) as server:
+            response = server.recommend({"query": "Хочу что-то необычное, пешком", "minutes": 60,
+                                         "geolocation": {"lat": 51.104, "lon": 71.4}, "time_of_day": "day"})
+            self.assertTrue(response["recommendations"])
+            self.assertTrue(response["diagnostics"]["lab_generic_walk_fallback"])
+            empty = server.recommend({"query": "Хочу тихое кафе с розеткой", "minutes": 60,
+                                      "origin_id": "mega", "time_of_day": "day"})
+            self.assertEqual(empty["recommendations"], [])
+            self.assertNotIn("clarification", empty)
+            self.assertTrue(empty["empty_message"])
+            self.assertNotRegex(empty["empty_message"], "Уточните|Увеличьте|выберите")
 
     def test_explicit_long_budget_reaches_the_core_without_promising_to_fill_it(self):
         with lab.create_server(port=0) as server:
@@ -551,7 +587,8 @@ class GoogleLabAITests(unittest.TestCase):
                 if minutes >= 375:
                     self.assertLess(response["plan"]["total_minutes"], minutes)
                 if not response["recommendations"]:
-                    self.assertTrue(response["clarification"])
+                    self.assertTrue(response["empty_message"])
+                    self.assertNotIn("clarification", response)
 
     def test_before_flight_warning_does_not_claim_airport_transfer_in_the_plan(self):
         with lab.create_server(port=0) as server:

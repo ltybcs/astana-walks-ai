@@ -351,6 +351,11 @@ class GoogleClient:
                     ref = schema[field]["$ref"]
                     definitions = self._schemas["compute_routes"].get("$defs", self._schemas["compute_routes"].get("definitions", {}))
                     properties = definitions.get(ref.rsplit("/", 1)[-1], {}).get("properties", {})
+                if "latLng" in value and "latLng" in properties:
+                    point = value["latLng"]
+                    if not isinstance(point, dict) or set(point) != {"latitude", "longitude"} or any(type(point.get(key)) not in {int, float} or not math.isfinite(point[key]) or not low <= point[key] <= high for key, low, high in (("latitude", -90, 90), ("longitude", -180, 180))):
+                        raise GoogleError("invalid_request", "Некорректная стартовая точка.", 400)
+                    return {"latLng": dict(point)}
                 if "address" in value and "address" in properties:
                     return {"address": value["address"]}
                 if "id" in value:

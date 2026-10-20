@@ -10,7 +10,7 @@ from unittest.mock import patch
 from app import google_lab as lab
 from app.google_budget import GoogleBudget, GoogleError
 from app.google_client import GoogleClient, json_bytes, strict_json
-from app.google_grounded import GoogleGrounded, TokenSigner, validate_grounding, make_plan, narrate, _answer_rejection, protected_claim_rejection
+from app.google_grounded import GoogleGrounded, TokenSigner, validate_grounding, make_plan, narrate, _answer_rejection, protected_claim_rejection, _contains_private_origin
 from app.llm import LLMConfig
 from tests.test_google_client import Provider, Response
 from tests import test_google_lab as lab_tests
@@ -38,7 +38,10 @@ class GoogleGroundedTests(unittest.TestCase):
         def narrator(*args):
             self.calls.append(deepcopy(args))
             return good_answer(), "mocked_validated"
-        self.service = GoogleGrounded(self.client, lab.resolve_request, llm_config=self.config, narrator=narrator)
+        # Clock behavior is tested with injected time in test_lab_context; this
+        # provider fixture fixes daytime so CI does not depend on wall clock.
+        resolver = lambda payload: lab.resolve_request({"time_of_day": "day", **payload})
+        self.service = GoogleGrounded(self.client, resolver, llm_config=self.config, narrator=narrator)
 
     def consent(self, form=None):
         form = deepcopy(form or FORM)
@@ -97,12 +100,14 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertEqual(self.provider.requests, [])
         self.assertEqual(self.budget.status()["used"], 0)
 
-    def test_unknown_context_custom_gps_and_unsupported_intent_have_no_network(self):
-        cases = ({"query": "кофе"}, {"query": "хочу бассейн", "origin_id": "mega", "minutes": 45},
-                 {"query": "прогулка", "origin": {"lat": 51.0892, "lon": 71.4074, "label": "PRIVATE_HOME"}, "minutes": 45})
-        for form in cases:
-            with self.subTest(form=form), self.assertRaises((GoogleError, lab.ContextError)):
-                self.service.preview(form)
+    def test_automatic_context_and_generic_intent_preview_have_no_network(self):
+        for form in ({"query": "кофе"}, {"query": "хочу необычное рядом с Экспо 2017"},
+                     {"query": "что посмотреть", "origin": {"lat": 51.0892, "lon": 71.4074, "label": "PRIVATE_HOME"}}):
+            with self.subTest(form=form):
+                preview = self.service.preview(form)
+                self.assertEqual(preview["resolved_context"]["budget_options"], [60, 120, 240])
+                self.assertEqual(preview["request_plan"]["max_model_calls"], 1)
+                self.assertNotIn("PRIVATE_HOME", preview["outbound_search_text"])
         self.assertEqual(self.provider.requests, [])
 
     def test_consent_changed_form_expiry_tamper_scope_and_replay_before_network(self):
@@ -225,15 +230,96 @@ class GoogleGroundedTests(unittest.TestCase):
             preview = self.service.preview({"query": "хочу прогулку", "origin_id": "mega", "minutes": minutes})
             self.assertEqual(preview["outbound_search_parameters"]["locationBias"]["circle"]["radiusMeters"], radius)
         payload = self.consent()
-        from app.google_grounded import prepare
-        with patch("app.google_grounded.prepare", wraps=prepare) as wrapped:
-            original = prepare(FORM, lab.resolve_request)
-            changed = list(original)
-            changed[3] = "0" * 64
-            wrapped.return_value = tuple(changed)
-            with self.assertRaises(GoogleError):
-                self.service.recommend(payload)
+        with self.assertRaises(GoogleError):
+            self.service.recommend({**payload, "minutes": 120})
+        # Time/context are frozen in server RAM at preview; no second resolver
+        # call can shift night/day while the user submits the same message.
+        with patch.object(self.service, "resolver", side_effect=AssertionError("must stay frozen")):
+            self.service.recommend(payload)
+
+    def test_three_budgets_share_one_search_have_distinct_plans_and_one_model(self):
+        base = deepcopy(self.provider.search["places"][0])
+        sources = []
+        for index, latitude in enumerate((51.093, 51.098, 51.103)):
+            source = deepcopy(base)
+            identifier = "mock-place" if index == 0 else "mock-place-" + str(index)
+            source.update(id=identifier, place="places/" + identifier,
+                          location={"latitude": latitude, "longitude": 71.4074})
+            source["googleMapsLinks"] = {"placeUrl": "https://www.google.com/maps/place/?q=place_id:" + identifier}
+            sources.append(source)
+        self.provider.search = {"summary": "Три целых источника [0], [1], [2].", "places": sources}
+        result = self.service.recommend(self.consent({"query": "Хочу пешком посмотреть необычное возле Mega"}))
+        options = result["alternatives"]
+        self.assertEqual([item["budget_minutes"] for item in options], [60, 120, 240])
+        self.assertEqual(len({item["selected_place_id"] for item in options}), 3)
+        self.assertEqual([item["plan"]["visit_minutes"] for item in options], [20, 40, 80])
+        self.assertTrue(all(item["plan"]["returns_to_origin"] and item["budget_status"] == "fits" for item in options))
+        self.assertTrue(all(item["grounding"] == result["grounding"] for item in options))
+        self.assertEqual(len(self.calls), 1)
+        self.assertIsNotNone(options[0]["answer"])
+        self.assertTrue(all(item["answer"] is None for item in options[1:]))
+        names = [body["params"]["name"] for _, body, _ in self.provider.requests if body["method"] == "tools/call"]
+        self.assertEqual(names, ["search_places"] + ["compute_routes"] * 6)
+        self.assertEqual(self.budget.status()["used"], 10)
+
+    def test_sensitive_geolocation_routes_without_disk_prompt_or_url_start(self):
+        class Cache:
+            def record_grounded(self, *args):
+                raise AssertionError("private-origin output must stay in RAM")
+            def record_places(self, *args):
+                raise AssertionError("private-origin details must stay in RAM")
+        self.service.cache = Cache()
+        for tool in self.provider.tools:
+            if tool["name"] == "compute_routes":
+                for name in ("origin", "destination"):
+                    tool["inputSchema"]["properties"][name]["properties"]["latLng"] = {"type": "object"}
+        form = {"query": "Хочу короткую прогулку на 45 минут", "geolocation": {"lat": 51.0892, "lon": 71.4074}}
+        preview = self.service.preview(form)
+        decoded = strict_json(__import__("base64").urlsafe_b64decode(preview["preview_token"].split(".")[0] + "=="))
+        self.assertNotIn("51.0892", json.dumps(decoded))
         self.assertEqual(self.provider.requests, [])
+        result = self.service.recommend({**form, "consent": True, "preview_token": preview["preview_token"]})
+        self.assertEqual(result["diagnostics"]["cache_status"], "disabled_sensitive_origin")
+        self.assertIsNone(result["directions_url"])
+        self.assertTrue(result["resolved_context"]["sensitive_origin"])
+        self.assertNotIn("origin", self.calls[0][2])
+        self.assertNotIn("51.0892", json.dumps(self.calls[0][2]))
+        calls = [body["params"] for _, body, _ in self.provider.requests if body["method"] == "tools/call"]
+        self.assertEqual(calls[1]["arguments"]["origin"], {"latLng": {"latitude": 51.0892, "longitude": 71.4074}})
+        details = self.service.details({"selection_token": result["selection_token"], "place_id": "mock-place", "profile": "hours"})
+        self.assertEqual(details["diagnostics"]["cache_status"], "disabled_sensitive_origin")
+        self.provider.search["summary"] = "Старт 51.0892, 71.4074, источник [0]."
+        count = len(self.calls)
+        result = self.service.recommend(self.consent(form))
+        self.assertEqual(len(self.calls), count)
+        self.assertIsNone(result["answer"])
+        self.assertEqual(result["grounding"]["summary"], self.provider.search["summary"])
+        self.assertEqual(result["diagnostics"]["llm_status"], "private_origin_in_provider_context")
+
+    def test_private_address_echo_with_comma_is_rejected_unchanged(self):
+        context = {"sensitive_origin": True, "origin_source": "query_catalog",
+                   "origin": {"lat": 51.080123, "lon": 71.400123, "label": "Тестовая улица, 12"}}
+        self.assertTrue(_contains_private_origin("Старт: Тестовая улица, 12.", context))
+        self.assertTrue(_contains_private_origin("Старт 51.0801 и 71.4001.", context))
+        self.assertFalse(_contains_private_origin("Другой публичный источник.", context))
+
+    def test_later_route_failure_never_reuses_previous_success(self):
+        original = self.client.compute_route
+        count = [0]
+        def route(*args):
+            count[0] += 1
+            if count[0] in (3, 4):
+                raise GoogleError("google_timeout", "safe")
+            return original(*args)
+        self.client.compute_route = route
+        result = self.service.recommend(self.consent({"query": "Хочу прогулку возле Mega"}))
+        options = result["alternatives"]
+        self.assertEqual(options[0]["budget_status"], "fits")
+        self.assertEqual(options[1]["budget_status"], "unverified")
+        self.assertIsNone(options[1]["plan"]["total_minutes"])
+        self.assertEqual(len(options[1]["diagnostics"]["route_errors"]), 2)
+        self.assertEqual(options[2]["budget_status"], "fits")
+        self.assertEqual(len(self.calls), 1)
 
     def test_closest_uses_metadata_not_first_or_summary_names(self):
         prototype = deepcopy(self.provider.search["places"][0])
@@ -329,7 +415,8 @@ class GoogleGroundedTests(unittest.TestCase):
         grounding = validate_grounding(self.provider.search)
         selected = "mock-place"
         context = {"origin_id": "mega", "time_of_day": "day"}
-        plan = {"verified": True, "visit_minutes": 20, "total_minutes": 45, "budget_minutes": 45}
+        plan = {"verified": True, "visit_minutes": 20, "total_minutes": 45, "budget_minutes": 45,
+                "route_attributions": [{"title": "PRIVATE_ROUTE_MARKER", "url": "https://www.google.com/maps?origin=51.0892,71.4074"}]}
         requests = []
         def model(request, timeout):
             requests.append((request, timeout))
@@ -351,6 +438,8 @@ class GoogleGroundedTests(unittest.TestCase):
             self.assertEqual(set(preview), {"id", "source_id", "title", "url", "attribution"})
             for field in preview:
                 self.assertEqual(preview[field], source.get(field))
+        self.assertNotIn("route_attributions", sent["plan"])
+        self.assertNotIn("PRIVATE_ROUTE_MARKER", json.dumps(sent))
         self.assertEqual(sent["selected_source_id"], "g0")
         self.assertEqual(set(sent), {"grounding_lite_summary", "all_google_source_previews", "selected_place_id", "selected_source_id", "public_origin_id", "intent", "time_of_day", "plan", "budget_status"})
         self.assertEqual(requests[0][0].full_url, "http://127.0.0.1:8081/v1/chat/completions")
