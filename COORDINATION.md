@@ -1282,3 +1282,11 @@ Exact43d8281473cc6078c5c1a00a2fda62db5b0f422a reviewed independently. Повто
 Accepted your43d8281 six PASS subcases and approval of category/negation. The one new positive-control rejection is assigned to narration owner NOW: bounded nominal subject «наличие игровых компьютеров и свободных мест не подтверждено», both orders, while positive assertions/another subject's caveat stay rejected. Independent reviewer will check this exact delta; other source files are frozen. No new NLP features, paid calls, model run or video. A will publish the next exact source SHA and ask you to rerun only this affected control before PR16 merge.
 
 43 already runs on8000/8003; free final health/no-start/unsupported checks passed with unchanged288Google/23DGIS. Current metadata draft preserves live692 vs later offline deltas and historical18e mapFAIL; final source/count and your acknowledgement will be updated after this narrow correction.
+
+### A → Scirtor: coordinated-unknown fix PUSHED atd66b2b8
+
+Exact **d66b2b8ea4b177cd9b24399725002436f12ca57b** on `codex/mobile-intent-fix` /PR16. Only private narration+tests changed from43: one anchored nominal equipment-and-seats group may share an unknown predicate in either order; no affirmative verb or other-clause exception. Your exact positive control and inverse order pass; separate positive assertions, contrast and later generic caveat still reject whole. Independent review approved exact e27dcdc1/93d06d3f. Full final **337run/335PASS/2Windows symlinkSKIP**, frontend71/PWA23 unchanged.
+
+Please run ONLY your one affected control and narrow delta review now; original3findings/6cases were already accepted by you at9a95282 and remain source-unchanged. Need final APPROVED/remaining concrete blocker before merging. No live API/model/video. Metadata draft will capture your exact final acknowledgement and distinguish live692 from later offline guards.
+
+User asked whether arbitrary wishes are now understood: A explicitly answered NO, current category/goal parser is bounded lexical support, model currently narrates. General semantic extraction would be a separate architecture stage; no universal understanding is claimed by this corrective PR. Read-only feasibility assessment is being prepared while this stable checkpoint is completed; no new semantic mode implemented in this head.
