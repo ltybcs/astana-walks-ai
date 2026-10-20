@@ -53,6 +53,25 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertFalse(json.loads(body)["llm"]["live_verified"])
 
+    def test_long_and_custom_duration_budget_reaches_the_planner(self):
+        for minutes in (10, 180, 240, 300, 375, 480):
+            with self.subTest(minutes=minutes), patch.dict("os.environ", {}, clear=True):
+                status, _, body = self.post(json.dumps({"query": "парк", "minutes": minutes, "origin": ORIGIN}).encode())
+                self.assertEqual(status, 200)
+                result = json.loads(body)
+                self.assertEqual(result["plan"]["budget_minutes"], minutes)
+                self.assertLessEqual(result["plan"]["total_minutes"], minutes)
+                if minutes >= 180:
+                    self.assertTrue(result["recommendations"])
+                    self.assertGreater(result["plan"]["return_walk_minutes"], 0)
+
+    def test_duration_outside_supported_range_is_rejected(self):
+        for minutes in (9, 481, 300.5, "480", True):
+            with self.subTest(minutes=minutes):
+                status, _, body = self.post(json.dumps({"query": "парк", "minutes": minutes, "origin": ORIGIN}).encode())
+                self.assertEqual(status, 400)
+                self.assertIn("10 до 480", json.loads(body)["error"])
+
     def test_malformed_json_utf8_and_duplicate_keys_are_400(self):
         for body in (b"{", b"\xff", b'{"query":"a","query":"b"}', b'{"query":NaN}'):
             with self.subTest(body=body):
@@ -90,4 +109,3 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(status, 500)
         self.assertNotIn(b"key-secret", body)
         self.assertEqual(self.request("GET", "/api/health")[0], 200)
-

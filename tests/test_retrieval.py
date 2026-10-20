@@ -125,7 +125,7 @@ class ValidationTests(unittest.TestCase):
                 validate_request({"query": "парк", "minutes": 60, "origin": {"lat": value, "lon": 71.4}})
 
     def test_rejects_invalid_budget_and_empty_question(self):
-        for minutes in (True, 0, 241, 60.0, "60"):
+        for minutes in (True, 0, 9, 481, 60.0, "60"):
             with self.subTest(minutes=minutes), self.assertRaises(ValueError):
                 validate_request({"query": "парк", "minutes": minutes, "origin": ORIGIN})
         with self.assertRaises(ValueError):
