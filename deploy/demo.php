@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // Change only this origin if the temporary Cloudflare tunnel is restarted.
-$demoOrigin = 'https://entire-burn-cricket-ashley.trycloudflare.com';
+$demoOrigin = 'https://journey-tank-arrive-overcome.trycloudflare.com';
 
 // This file must run before index.php outputs any HTML.
 header('Content-Type: text/html; charset=utf-8');

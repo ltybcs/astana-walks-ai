@@ -19,7 +19,7 @@ $env:LLM_MODEL = 'astana-local'
 $env:LLM_JSON_MODE = 'schema'
 $env:LLM_TOKEN_PARAMETER = 'max_tokens'
 $env:LLM_TIMEOUT_SECONDS = '120'
-python -B -m app.google_lab --host 127.0.0.1 --port 8000 --llm --google --google-config $taskGoogleConfig --dgis-root $taskPrimary --map-config $taskEmbedConfig --public-origin https://entire-burn-cricket-ashley.trycloudflare.com
+python -B -m app.google_lab --host 127.0.0.1 --port 8000 --llm --google --google-config $taskGoogleConfig --dgis-root $taskPrimary --map-config $taskEmbedConfig --public-origin https://journey-tank-arrive-overcome.trycloudflare.com
 ```
 
 Перед запуском завершите только прежний процесс приложения на 8000. Порт 8081 должен уже обслуживать закреплённую локальную модель. Не запускайте `run_demo.py`: он относится к старому приложению и может создать второй процесс модели. Туннель продолжает направлять тот же публичный адрес на loopback 8000.
@@ -33,7 +33,7 @@ http://127.0.0.1:8000/*
 http://localhost:8000/*
 http://127.0.0.1:8003/*
 http://localhost:8003/*
-https://entire-burn-cricket-ashley.trycloudflare.com/*
+https://journey-tank-arrive-overcome.trycloudflare.com/*
 ```
 
 Backend Places/GML key в iframe запрещён. `--public-origin` разрешает только указанный HTTPS origin в проверках Host/Origin; это не wildcard для Cloudflare и не отключение проверки POST. Слушатель остаётся loopback. Iframe передаёт только origin страницы как referrer; пользовательский запрос и GPS в referrer не включаются.

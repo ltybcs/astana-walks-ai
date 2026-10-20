@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "scope": "Conditional outdoor night plans; source-bound metadata, not raw responses",
+  "behavior_commit": "86646cbd6d57624ceb802690663fe38f648ba7c6",
+  "merge_commit": "fab05262c6f6d7e7f54ebb1c287107488f284e7d",
+  "offline": {
+    "python_methods": 493,
+    "passed": 491,
+    "windows_symlink_skips": 2,
+    "frontend_assertions": 117,
+    "pwa_assertions": 23,
+    "independent_review": "approved"
+  },
+  "live_preview": {
+    "verified": true,
+    "fixed_public_landmark_case": "EXPO, nature, 90 minutes, night",
+    "private_geolocation_used": false,
+    "route_built": true,
+    "stops": 2,
+    "source_types": [
+      "park"
+    ],
+    "plan": {
+      "budget_minutes": 90,
+      "walk_minutes": 59,
+      "proposed_visit_minutes": 26,
+      "buffer_minutes": 5,
+      "total_minutes": 90,
+      "return_minutes_included": 25
+    },
+    "opening_hours_still_unknown": true,
+    "availability_note_visible": true,
+    "llm_status": "unsupported_quality_claim",
+    "llm_attempts": 1,
+    "mode": "grounding-only",
+    "description_origin": "source-template",
+    "source_receipt": {
+      "osm": {
+        "candidate_count": 2,
+        "selected_count": 2
+      },
+      "google": {
+        "candidate_count": 0,
+        "selected_count": 0
+      },
+      "dgis": {
+        "candidate_count": 1,
+        "selected_count": 0
+      }
+    },
+    "google_summary_and_all_previews_preserved": true,
+    "google_ledger_after": {
+      "used": 414,
+      "limit": 750
+    },
+    "dgis_ledger_after": {
+      "used": 46,
+      "limit": 500
+    }
+  },
+  "live_public": {
+    "verified": true,
+    "deployed_source_commit": "fab05262c6f6d7e7f54ebb1c287107488f284e7d",
+    "completed_at": "2026-10-20T22:27:25+00:00",
+    "fixed_public_landmark_case": "EXPO, nature, 90 minutes, night",
+    "private_geolocation_used": false,
+    "route_built": true,
+    "stops": 2,
+    "source_types": [
+      "park"
+    ],
+    "plan": {
+      "budget_minutes": 90,
+      "walk_minutes": 59,
+      "proposed_visit_minutes": 26,
+      "buffer_minutes": 5,
+      "total_minutes": 90,
+      "return_minutes_included": 25
+    },
+    "opening_hours_still_unknown": true,
+    "availability_note_visibly_present_on_both_cards": true,
+    "llm_status": "unsupported_quality_claim",
+    "llm_attempts": 1,
+    "mode": "grounding-only",
+    "description_origin": "source-template",
+    "source_receipt": {
+      "osm": {
+        "status": "searched",
+        "candidate_count": 2,
+        "selected_count": 2
+      },
+      "google": {
+        "status": "no_data",
+        "candidate_count": 0,
+        "selected_count": 0
+      },
+      "dgis": {
+        "status": "no_data",
+        "candidate_count": 0,
+        "selected_count": 0
+      }
+    },
+    "google_embed_map_visually_verified": true,
+    "map_independent_estimate_minutes": 58,
+    "map_attribution_visible": true,
+    "map_different_duration_caveat_present": true,
+    "google_ledger_after": {
+      "used": 429,
+      "limit": 750,
+      "remaining": 321,
+      "state": "ready"
+    },
+    "dgis_ledger_after": {
+      "limit": 500,
+      "used": 48,
+      "remaining": 452,
+      "window_seconds": 2592000,
+      "retry_after_seconds": 0
+    },
+    "served_js_sha256": "29521976b3234dea86b91cefa2665ad3b5633cbb7105358d48f97a6357a5aa51",
+    "served_js_matches_reviewed_source": true,
+    "ledger_scope": "Shared protective ledger snapshots; not exclusive per-request usage or provider billing metrics"
+  },
+  "recovery": {
+    "old_runtime_listeners_absent_before_recovery": true,
+    "old_quick_tunnel_dns_unavailable": true,
+    "public_origin": "https://journey-tank-arrive-overcome.trycloudflare.com",
+    "main_preview_model_public_health_200": true,
+    "exact_owner_frame_parent_preserved": true,
+    "embed_referrer_replacement_user_authorized_and_saved": true,
+    "backend_keys_and_ledgers_retained": true,
+    "owner_hosted_redirect_updated": false
+  },
+  "boundaries": [
+    "Walk duration and budget verification does not confirm night access, lighting or safety.",
+    "Only parks or promenades with absent hours receive the conditional policy; explicit schedules, restricted access and hard requirements remain checked.",
+    "Explicit opening requirements need the exact own-source 24/7 fact.",
+    "Google summary prose is not imported as venue type evidence.",
+    "No raw provider body, user query, private GPS, key or model answer is stored in this receipt."
+  ]
+}
