@@ -425,6 +425,7 @@ async function submitWalk(event) {
     renderResult(validateResult(data));
     $("walk-status").textContent = "Подбор завершён. Варианты времени переключаются без нового поиска.";
     $("walk-result-title").focus({preventScroll: true});
+    $("walk-result-title").scrollIntoView({block: "start", behavior: "auto"});
   } catch (error) {
     if (!current(id, sig)) return;
     clearResult();
