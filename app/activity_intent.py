@@ -31,8 +31,8 @@ _PREFERENCES = {
     "accessible": r"коляс\w*|безбарьер\w*|wheelchair|accessible|арбамен",
 }
 _TARGET = re.compile(
-    r"(?<!\w)(?:хочу|хотел\w*|пойду|сходить|ищу|найти|посетить|"
-    r"want|need|find|visit|would\s+like)(?!\w)\s+"
+    r"(?<!\w)(?:хочу|хотел\w*|пойду|сходить|ищу|найти|посетить|нужен|нужна|нужно|нужны|"
+    r"want|need|find|visit|looking\s+for|would\s+like)(?!\w)\s+"
     r"(?:(?:бы|to|a|an)\s+)?(?:(?:в|на|to)\s+)?"
 )
 # These are generic requests, not evidence that any source has a new category.
@@ -45,6 +45,7 @@ _GENERIC = re.compile(
     r"(?:an?\s+)?(?:interesting\s+)?places?|"
     r"something(?:\s+(?:interesting|unusual))?"
 )
+_PRIORITY = re.compile(r"\b(?:главное|главн\w*\s+цел\w*|основн\w*\s+цел\w*|main\s+goal|primary\s+goal)\b")
 _PUBLIC_ANCHOR = re.compile(
     r"(?:мег[аи]|mega(?:\s+silk\s+way)?|байтерек\w*|бәйтерек\w*|"
     r"baiterek|bayterek|экспо(?:\s+2017)?|expo(?:\s+2017)?)"
@@ -110,7 +111,9 @@ def _known_goal_lead(prefix):
         r"(?:(?:найти|посетить|сходить|пойти|провести|время|посидеть|поиграть|сыграть|играть|"
         r"познакомиться|посмотреть|увидеть|побывать|попробовать|зайти|бы|только|обязательно|only|must|"
         r"в|на|с|со|для|место|to|a|an|the|find|visit|see|try|go|in|at|"
-        r"quiet|nice|good|interesting|unusual|short|nearby|family|"
+        r"quiet|nice|good|interesting|unusual|short|nearby|family|for|"
+        r"час\w*|минут\w*|полчаса|полтора|один|два|три|пару|"
+        r"hours?|minutes?|one|two|three|\d+(?:[-–—]\d+)?|"
         r"(?:хорош|интересн|необычн|тих|спокойн|уютн|ближайш|близк|"
         r"недорог|дешев|дорог|нов|коротк|небольш|красив|семейн|детск|"
         r"вечерн|ночн|дневн)\w*)\s+)*", prefix
@@ -145,7 +148,9 @@ def _unsupported_primary(query, matches):
         primary = re.split(r"\s+(?:на\s+(?:(?:\d+(?:\s*[-–—]\s*\d+)?|один|два|три|пару)\s+)?(?:минут\w*|час\w*)|"
                            r"(?:for\s+)?\d+\s+(?:minutes?|hours?))\b", primary, maxsplit=1)[0].strip()
         primary = re.sub(r"\s+(?:пожалуйста|please)$", "", primary)
-        if _GENERIC.fullmatch(primary) or _PUBLIC_ANCHOR.fullmatch(primary):
+        if (_GENERIC.fullmatch(primary) or _PUBLIC_ANCHOR.fullmatch(primary)
+                or any(re.fullmatch(pattern, primary) for pattern in _PREFERENCES.values())
+                or re.fullmatch(r"(?:место|заведение)\s+(?:24\s*/\s*7|круглосуточн\w*)", primary)):
             continue
         return True
     return False
@@ -177,14 +182,15 @@ def parse_search_intent(query: str) -> SearchIntent:
     if len(positives) > 1 and "walk" in positives:
         positives.remove("walk")
     mode = CATEGORY_CATALOG[positives[0]]["mode"] if positives else "walk"
-    if len(positives) > 1 and _TARGET.search(text) is None:
+    primary_explicit = bool(_TARGET.search(text) or _PRIORITY.search(text))
+    if len(positives) > 1 and not primary_explicit:
         # A bare list retains the existing multi-interest walk behavior. An
         # explicit "want bowling and coffee" still has one primary venue.
         mode = "walk"
     positive_spans = [(start, end, identifier) for start, end, identifier in matches
                       if identifier in positives and not _negated(text, start, end)
                       and not _location_mention(text, start)]
-    if any(first[2] != second[2] and re.search(r"\b(?:или|либо|or)\b", text[first[1]:second[0]])
+    if not _PRIORITY.search(text) and any(first[2] != second[2] and re.search(r"\b(?:или|либо|or)\b", text[first[1]:second[0]])
            for first, second in zip(positive_spans, positive_spans[1:])):
         # An explicit OR is a choice among types, not a multi-service venue.
         mode = "walk"

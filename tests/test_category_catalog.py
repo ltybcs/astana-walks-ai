@@ -161,6 +161,33 @@ class CategoryCatalogTests(unittest.TestCase):
         self.assertEqual(parse_search_intent(cases[1][0])["preferences"], ["quiet", "socket"])
         self.assertEqual(parse_search_intent(cases[2][0])["mode"], "walk")
 
+    def test_scirtor_matrix_periphrases_and_explicit_primary_modes(self):
+        cases = (
+            ("У Mega час времени: хочу покидать шары в кегли.", ["bowling"], "single_venue"),
+            ("Возле Байтерека есть полтора часа, хочу позабивать шары в лузы.", ["billiards"], "single_venue"),
+            ("Главное — боулинг возле Mega на два часа; кофе потом необязательно.", ["bowling", "cafe"], "single_venue"),
+            ("У Expo есть два часа: хочу попеть под минусовки в отдельной кабинке.", ["karaoke"], "single_venue"),
+            ("Возле Expo хочу час погулять на природе, без кафе.", ["park"], "walk"),
+            ("У Байтерека есть час поработать с ноутбуком, розетка обязательна.", ["coworking"], "single_venue"),
+            ("Нужен торговый центр возле Mega на час, заодно интересен книжный магазин.", ["mall", "bookshop"], "single_venue"),
+            ("I have 2 hours near Expo: swimming is the main goal; spa or gym afterwards is optional.", ["pool", "spa", "fitness"], "single_venue"),
+        )
+        for query, expected, mode in cases:
+            with self.subTest(query=query):
+                result = parse_search_intent(query)
+                self.assertTrue(result["supported"])
+                self.assertEqual(result["categories"], expected)
+                self.assertEqual(result["mode"], mode)
+        for query in ("Нужен планетарий возле Mega", "Looking for an observatory near Mega"):
+            self.assertFalse(parse_search_intent(query)["supported"])
+        self.assertEqual(parse_search_intent("Looking for a library near Mega")["categories"], ["library"])
+        self.assertEqual(parse_search_intent("Нужна розетка возле Mega")["preferences"], ["socket"])
+        self.assertTrue(parse_search_intent("Нужна розетка возле Mega")["supported"])
+        self.assertEqual(parse_search_intent("Кофе и парк")["mode"], "walk")
+        self.assertEqual(parse_search_intent("Хочу музей или кафе")["mode"], "walk")
+        self.assertEqual(parse_search_intent("Хочу музей или кафе возле главного входа")["mode"], "walk")
+        self.assertEqual(parse_search_intent("Не хочу кидать шары в кегли, хочу музей")["excluded_categories"], ["bowling"])
+
     def test_preferences_negation_privacy_and_legacy_wrapper(self):
         result = parse_search_intent("Хочу тихое кафе с розеткой для коляски PRIVATE_NAME 51.1,71.4 https://private.example")
         self.assertEqual(result["preferences"], ["quiet", "socket", "accessible"])
