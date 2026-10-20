@@ -1,0 +1,973 @@
+{
+  "generated_at": "2026-10-20T15:25:43+00:00",
+  "scope": "Unified OSM + Google + 2GIS; metadata only, no provider content or route timings",
+  "source_commit": "048c7b372b27b57513a4833da944483cb84b0a64",
+  "source_sha256": {
+    "README.md": "914c3bbc73e16f3d0787c1ee7fa5527570bc977878d1bd44505d197358c2d8bd",
+    "app/dgis_live.py": "cc594a509c1a32898dfc645be6936d45396e0945d48f4a2be93ead475a62ac3b",
+    "app/google_budget.py": "4eb81c16e398fc3f650fddbfd664e89ecb8e05f87d124dc453d124e4e351844c",
+    "app/google_grounded.py": "e4a7402b9c81ebea9d6a79da2485a33a658c796e040b06082c8e1c0b24a37b22",
+    "app/google_lab.py": "232f2ccd728cdb055496e94a35491e48f5a88a8b06d23335862ee391cd35db8b",
+    "app/lab_context.py": "9f4963d93de62fcc4f3a55cea0f7dec4a793ff127b7a2f858f9d05dd019df8c4",
+    "app/route_map.py": "770af1a831caa35cbea898b6895343fa6ba319b27c699b3da99d34fb39da30c2",
+    "app/server.py": "fb79243cf9788443acbc108211469182d8627adc5e9b87cd97d9367cb6cb24c9",
+    "app/unified_dgis.py": "8a99bef37666a1a41a1555dfc89593185b77c171bcda7a96cd323bf6abd7e433",
+    "app/unified_narration.py": "c161c728b14aa7ff121918bd436798e26354a2db980825e2f68cec46cefb763b",
+    "app/unified_walks.py": "4bd2f4e25f5c410a6145941e05303a43a60bfc687909d6de6e14861a84f8a05e",
+    "docs/DEPLOYMENT.md": "acca7c0a314b56d3a59e8a6bd95209ebb0348bf268fc5fe81ceb77daf9cfe5af",
+    "docs/UNIFIED_LAB.md": "2be042ceaa6a32b4b4d67a7cfcd9d687aa554765e2708d163b771c31ec2b3b3e",
+    "tests/test_dgis_http.py": "ca49fd5d327e52dd8dd211a673711380c0ae7a166a131c808fd742318b33b725",
+    "tests/test_dgis_live.py": "cabd16e2b96e3736d43abd1a0815e4c212e1fd0400f1bcfb943cafe2c221b192",
+    "tests/test_google_budget.py": "b1f2a0ea85cdb24d80731bf1a6f69be0e09f5b0b7f10cb7aebf02424222ae65b",
+    "tests/test_google_lab_frontend.js": "751e8121acdf274171ef3d3b23515e4c53de03fccb04a272849daf464813faac",
+    "tests/test_google_lab_pwa.js": "d7d5351501558652604fa6e0e048b6e05ab9ad1e85e2142fe5b0f8067ea17640",
+    "tests/test_google_lab_pwa.py": "971fdf764a8f400d7db69a6ed2979dfbc697a996d38abf7e092f2fc63e243400",
+    "tests/test_http.py": "65a0d8663521bd02399995e40784f73168289f2e73a21dd8882b6b6756c1110f",
+    "tests/test_route_map.py": "2215116260093e60cc9cd866c23ec942ced90882ab766ec7967ee60b1c2974db",
+    "tests/test_unified_dgis.py": "3b90aca43cbd46a3fc885fa687c5a79e4858aa35e7e6b56b91ddda4f2727f655",
+    "tests/test_unified_http.py": "5aa3ed04b3df16f3c0c365962847e332395af9dc6549f9ed9c7fbef40e2a6019",
+    "tests/test_unified_narration.py": "eff04cf2e56a496b4ed2e097899817c23afd3f4a7c227d5d1940d4e05a7d44f8",
+    "tests/test_unified_public.py": "41f5e80923c7115cb0fe99044ea673b285d011eb7cba25719836a7aff7c4c690",
+    "tests/test_unified_walks.py": "caba68e2eb2e0a99695eafd48609dbec147c6dcad736f374050d0b636632ae50",
+    "web/app.js": "9169f7bd8252f23cc9b9fc8e033e2cb2c688e87e83e85bca71e5ca26929dd4bb",
+    "web/google-lab/index.html": "802b693bcba6b2071ff2885e9a6f986534c4667786c673d96f0e9ac595e67fba",
+    "web/google-lab/lab.css": "240b0da3783e7fc98efb7cbe3c03a9f5cea58b9de966e87f8d07cc5100c783ff",
+    "web/google-lab/lab.js": "f09ba8ed9f67edab40c3acdb257102fba6774d67c76eb81c3d08c064095da0fc",
+    "web/google-lab/pwa.js": "36d670a5c07a8f394ce7378ccffa7b6287b08a046e4bb448877fc6a066dbe93c",
+    "web/google-lab/sw.js": "e4902c29d960822d8bf9351679b0b253c7c0fb153eba1302cc698dc6f0e65301"
+  },
+  "checks": {
+    "suite": {
+      "command": "python -B -X utf8 -m unittest discover -s tests -v",
+      "run": 315,
+      "passed": 313,
+      "skipped": 2,
+      "skip_reason": "Windows symlink support",
+      "seconds": 18.527,
+      "provider_and_model_calls": 0
+    },
+    "frontend_offline_cases": {
+      "passed": 71,
+      "failed": 0
+    },
+    "pwa_offline_cases": {
+      "passed": 23,
+      "failed": 0
+    },
+    "reviews": {
+      "strict_start_and_three_source_planner": "approved",
+      "nearby_dgis_and_shared_monthly_budget": "approved",
+      "public_host_origin_and_http_framing": "approved",
+      "source_grounded_narration_guard": "approved",
+      "minimal_pwa_and_ui": "approved",
+      "deployment_and_rollback_docs": "approved"
+    },
+    "earlier_failures": [
+      "Earlier full run303 exposed legacy Windows unread-body reset on oversized rejection; bounded drain fixed it.",
+      "A later312 run exposed nondeterministic reset in the new malformed-TE test transport; test now sends no body and still directly requires400. No server security rule was relaxed."
+    ]
+  },
+  "scirtor_review": {
+    "coordination_commit": "898a220",
+    "scope": "independent Chrome desktop initial state, empty form, attribution and install help",
+    "console_errors": 0,
+    "initial_iframe_count": 0,
+    "provider_or_model_calls": 0,
+    "physical_Android_or_mobile_viewport_verified": false,
+    "source_binding": "observed served UI; collaborator explicitly did not claim an exact Git SHA or full live workflow"
+  },
+  "scirtor_source_bound_offline_review": {
+    "coordination_commit": "ada62cb",
+    "source_commit": "149994fe55270f11ef4d1669d8f9d4679f914c6c",
+    "public_UI_files_matching_Git": 4,
+    "frontend_passed": 69,
+    "PWA_passed": 23,
+    "context_unified_HTTP_public_origin_passed": 21,
+    "provider_and_model_calls": 0,
+    "full_live_workflow_or_physical_Android_claimed": false
+  },
+  "final_presentation_delta": {
+    "finding_commits": [
+      "ada62cb",
+      "84836fb"
+    ],
+    "change": "Scroll the accepted current result into view without animation after focus",
+    "live_core_workflow_source_commit": "28ae1eeacf5f3ee560430483017f420dcae0e5d0",
+    "verification": "offline frontend71 includes current/canceled/stale responses; no repeated provider or model call",
+    "live_after_delta_claimed": false
+  },
+  "google_console_observation": {
+    "url": "https://console.cloud.google.com/google/maps-apis/metrics?project=aitubg",
+    "window": "previous24hours ending2026-10-20T20:03:43+05:00",
+    "maps_grounding_lite_requests": 115,
+    "places_new_requests": 10,
+    "sum_of_reported_API_requests": 125,
+    "maps_embed_requests": null,
+    "maps_embed_display": "dash; not interpreted as zero",
+    "scope": "Google Console reporting metric, separate from local all-HTTP-attempt safety ledger"
+  },
+  "unknown_start": {
+    "http_status": 422,
+    "code": "known_start_required",
+    "provider_and_model_calls": 0,
+    "quota_unchanged": true
+  },
+  "live_cases": [
+    {
+      "case": "first-public-rollout-search-before-Windows-sharing-fix",
+      "source_commit": "149994fe55270f11ef4d1669d8f9d4679f914c6c",
+      "result": "failed_before_next_Google_HTTP",
+      "code": "quota_unavailable",
+      "google_before": 194,
+      "google_after": 197,
+      "dgis_before": 12,
+      "dgis_after": 13,
+      "model_calls": 0,
+      "manual_quality_pass": false,
+      "mechanism_reproduced_in_disposable_same_directory_IO": "Windows PermissionError winerror5 when a reader prevents atomic replacement",
+      "exact_original_OS_error_captured": false,
+      "production_ledger_reset_or_diagnostic_write": false
+    },
+    {
+      "case": "ordinary-public-accepted-structure-but-unselected-venue-reference",
+      "source_commit": "edb83c58c89d31c31e913ac9a38be9edbcb425fb",
+      "workflow": {
+        "completed_at": "2026-10-20T15:09:52+00:00",
+        "mode": "llm-grounded-unified",
+        "llm_status": "validated_structure_sources_and_known_claims",
+        "llm_attempts": 1,
+        "source_receipt": {
+          "osm": {
+            "status": "searched",
+            "candidate_count": 3,
+            "selected_count": 1
+          },
+          "google": {
+            "status": "searched",
+            "candidate_count": 2,
+            "selected_count": 1
+          },
+          "dgis": {
+            "status": "searched",
+            "candidate_count": 5,
+            "selected_count": 1
+          }
+        },
+        "route_statuses": [
+          {
+            "budget_status": "fits",
+            "route_built": true,
+            "route_checks": [
+              {
+                "candidate_index": 0,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 1,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 2,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              }
+            ]
+          },
+          {
+            "budget_status": "fits",
+            "route_built": true,
+            "route_checks": [
+              {
+                "candidate_index": 0,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 1,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 2,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              }
+            ]
+          },
+          {
+            "budget_status": "fits",
+            "route_built": true,
+            "route_checks": [
+              {
+                "candidate_index": 0,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 1,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 2,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              }
+            ]
+          }
+        ]
+      },
+      "google_before": 197,
+      "google_after": 207,
+      "dgis_before": 10,
+      "dgis_after": 11,
+      "manual_quality_pass": false,
+      "manual_failure": "unselected_google_venue_reference",
+      "initial_iframe_count": 0,
+      "result_iframe_count": 1,
+      "ready_budgets": [
+        60,
+        120,
+        240
+      ]
+    },
+    {
+      "case": "final-ordinary-public-workflow-manual-pass",
+      "source_commit": "28ae1eeacf5f3ee560430483017f420dcae0e5d0",
+      "google_before": 207,
+      "google_after": 217,
+      "dgis_before": 11,
+      "dgis_after": 12,
+      "workflow": {
+        "completed_at": "2026-10-20T15:18:06+00:00",
+        "mode": "llm-grounded-unified",
+        "llm_status": "validated_structure_sources_and_known_claims",
+        "llm_attempts": 1,
+        "source_receipt": {
+          "osm": {
+            "status": "searched",
+            "candidate_count": 3,
+            "selected_count": 1
+          },
+          "google": {
+            "status": "searched",
+            "candidate_count": 2,
+            "selected_count": 1
+          },
+          "dgis": {
+            "status": "searched",
+            "candidate_count": 5,
+            "selected_count": 1
+          }
+        },
+        "route_statuses": [
+          {
+            "budget_status": "fits",
+            "route_built": true,
+            "route_checks": [
+              {
+                "candidate_index": 0,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 1,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 2,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              }
+            ]
+          },
+          {
+            "budget_status": "fits",
+            "route_built": true,
+            "route_checks": [
+              {
+                "candidate_index": 0,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 1,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 2,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              }
+            ]
+          },
+          {
+            "budget_status": "fits",
+            "route_built": true,
+            "route_checks": [
+              {
+                "candidate_index": 0,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 1,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 2,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              }
+            ]
+          }
+        ]
+      },
+      "manual_quality_pass": true,
+      "manual_check_scope": "whole text: chosen venue identity, cafe category, proposed coffee action, unknown conditions, no invented rating or opening claim"
+    },
+    {
+      "case": "initial-live-no-fitting-route",
+      "result": {
+        "candidate_counts": {
+          "osm": 1,
+          "google": 2,
+          "dgis": 9
+        },
+        "selected_counts": {
+          "osm": 0,
+          "google": 0,
+          "dgis": 0
+        },
+        "route_built": false,
+        "model_calls": 0,
+        "manual_quality_pass": false,
+        "reason": "No verified fitting route; model was correctly not invoked",
+        "google_after": 130,
+        "dgis_after": 6
+      },
+      "source_sha256": {
+        "app/google_lab.py": "7a646777ef7cb67ddbf639e2a16dc4c6648b643291592f9a33913c29cdc0ef0a",
+        "app/google_grounded.py": "e4a7402b9c81ebea9d6a79da2485a33a658c796e040b06082c8e1c0b24a37b22",
+        "app/lab_context.py": "9f4963d93de62fcc4f3a55cea0f7dec4a793ff127b7a2f858f9d05dd019df8c4",
+        "app/unified_walks.py": "6ba8be99f9c7efa692f0efc8483744467dad3768a0d6020744867e05151bdc75",
+        "app/unified_dgis.py": "cc251b13caf6c88ade5471f42bbe3955fcf73d8177c8aa75045f2755a9559c49",
+        "app/unified_narration.py": "0713683f2c7c003eabccfb88d64b8bfaced55ed8e7264671002336a3a84c7358",
+        "app/route_map.py": "912fb01a86113ce964b8e0bc298e91ea846e37f4d3f73ccf8ca0e2332d2a12c9",
+        "web/google-lab/index.html": "718849cb804622b1fdd5d396bb2324a25b49c74f0fb53437d9fe9c85a92c7df2",
+        "web/google-lab/lab.js": "e60e5172aea4ac682cd5ff3923a3308d22f760bf5182589aea8e7cb94b32624d",
+        "web/google-lab/lab.css": "b01a1945a8719f9747febd360da13eb47aa46fc43f5bdded1441a42b5d635dd9",
+        "tests/test_unified_walks.py": "f04afc1c4fef93bfd0097840d2e57529f5d3d6eb575de9c10af2b6b8a93e12f7",
+        "tests/test_unified_http.py": "5aa3ed04b3df16f3c0c365962847e332395af9dc6549f9ed9c7fbef40e2a6019",
+        "tests/test_unified_dgis.py": "8b8ba1beb3895456372ded3214c70c2618a2489b4557c2e55fd7ff17a3e6cf3b",
+        "tests/test_unified_narration.py": "1cfa34884be9f2a3262e52b753c26b6c4c8a0a500248fcb0511d1cae9658fce8",
+        "tests/test_route_map.py": "9a950436949eef5172a81ef9c932ab82f5219fa0503acfad171757a4535c5d88",
+        "tests/test_google_lab_frontend.js": "2c05c9478f36296af9c7e59941440406179c938fc006b24661c81341105c2fc1"
+      },
+      "google_before": 120,
+      "dgis_before": 5,
+      "source_scope": "historical full source manifest, before planner fixes"
+    },
+    {
+      "case": "isolated-public-walk-diagnostic",
+      "google_before": 130,
+      "google_after": 134,
+      "dgis_calls": 0,
+      "model_calls": 0,
+      "schema_and_attribution_accepted": true,
+      "source_scope": "historical diagnostic, not an AI recommendation"
+    },
+    {
+      "mode": "grounding-only",
+      "diagnostics": {
+        "llm_attempts": 1,
+        "llm_status": "invalid_text",
+        "response_storage": "request-memory-only",
+        "searches": {
+          "osm": 1,
+          "google": 1,
+          "dgis": 1
+        }
+      },
+      "source_receipt": {
+        "osm": {
+          "status": "searched",
+          "candidate_count": 2,
+          "selected_count": 1
+        },
+        "google": {
+          "status": "searched",
+          "candidate_count": 1,
+          "selected_count": 1
+        },
+        "dgis": {
+          "status": "searched",
+          "candidate_count": 8,
+          "selected_count": 1
+        }
+      },
+      "alternatives": [
+        {
+          "id": "budget-60",
+          "budget_minutes": 60,
+          "budget_status": "fits",
+          "route_built": true,
+          "route_checks": [
+            {
+              "candidate_index": 0,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            },
+            {
+              "candidate_index": 1,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            },
+            {
+              "candidate_index": 2,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            }
+          ]
+        }
+      ],
+      "google_before": 144,
+      "google_after": 154,
+      "dgis_before": 7,
+      "dgis_after": 8,
+      "narration_sha256": "0713683f2c7c003eabccfb88d64b8bfaced55ed8e7264671002336a3a84c7358",
+      "case": "live-before-whitespace-fix",
+      "source_scope": "historical partial hashes; not final rollout certification"
+    },
+    {
+      "mode": "grounding-only",
+      "diagnostics": {
+        "llm_attempts": 1,
+        "llm_status": "invalid_text",
+        "response_storage": "request-memory-only",
+        "searches": {
+          "osm": 1,
+          "google": 1,
+          "dgis": 1
+        }
+      },
+      "source_receipt": {
+        "osm": {
+          "status": "searched",
+          "candidate_count": 2,
+          "selected_count": 1
+        },
+        "google": {
+          "status": "searched",
+          "candidate_count": 2,
+          "selected_count": 1
+        },
+        "dgis": {
+          "status": "searched",
+          "candidate_count": 8,
+          "selected_count": 1
+        }
+      },
+      "alternatives": [
+        {
+          "id": "budget-60",
+          "budget_minutes": 60,
+          "budget_status": "fits",
+          "route_built": true,
+          "route_checks": [
+            {
+              "candidate_index": 0,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            },
+            {
+              "candidate_index": 1,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            },
+            {
+              "candidate_index": 2,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            }
+          ]
+        }
+      ],
+      "google_before": 154,
+      "google_after": 164,
+      "dgis_before": 8,
+      "dgis_after": 9,
+      "narration_sha256": "0713683f2c7c003eabccfb88d64b8bfaced55ed8e7264671002336a3a84c7358",
+      "local_replays": [
+        {
+          "local_replay": 1,
+          "status": "validated_structure_sources_and_known_claims",
+          "accepted": true,
+          "narration_sha256": "1c9bcfe7aa569b91d5ea998def855527d13ea13b9e495bf72d8e3c680cc11b12"
+        }
+      ],
+      "case": "instrumented-before-fix-and-local-replay",
+      "source_scope": "historical partial hashes; not final rollout certification"
+    },
+    {
+      "mode": "llm-grounded-unified",
+      "diagnostics": {
+        "llm_attempts": 1,
+        "llm_status": "validated_structure_sources_and_known_claims",
+        "response_storage": "request-memory-only",
+        "searches": {
+          "osm": 1,
+          "google": 1,
+          "dgis": 1
+        }
+      },
+      "source_receipt": {
+        "osm": {
+          "status": "searched",
+          "candidate_count": 3,
+          "selected_count": 1
+        },
+        "google": {
+          "status": "searched",
+          "candidate_count": 2,
+          "selected_count": 1
+        },
+        "dgis": {
+          "status": "searched",
+          "candidate_count": 5,
+          "selected_count": 1
+        }
+      },
+      "alternatives": [
+        {
+          "id": "budget-60",
+          "budget_minutes": 60,
+          "budget_status": "fits",
+          "route_built": true,
+          "route_checks": [
+            {
+              "candidate_index": 0,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            },
+            {
+              "candidate_index": 1,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            },
+            {
+              "candidate_index": 2,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            }
+          ]
+        },
+        {
+          "id": "budget-120",
+          "budget_minutes": 120,
+          "budget_status": "fits",
+          "route_built": true,
+          "route_checks": [
+            {
+              "candidate_index": 0,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            },
+            {
+              "candidate_index": 1,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            },
+            {
+              "candidate_index": 2,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            }
+          ]
+        },
+        {
+          "id": "budget-240",
+          "budget_minutes": 240,
+          "budget_status": "fits",
+          "route_built": true,
+          "route_checks": [
+            {
+              "candidate_index": 0,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            },
+            {
+              "candidate_index": 1,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            },
+            {
+              "candidate_index": 2,
+              "outgoing_verified": true,
+              "return_verified": true,
+              "verified_legs": true,
+              "fits_largest_budget": true,
+              "error_code": null
+            }
+          ]
+        }
+      ],
+      "google_before": 174,
+      "google_after": 184,
+      "dgis_before": 10,
+      "dgis_after": 11,
+      "narration_sha256": "1c9bcfe7aa569b91d5ea998def855527d13ea13b9e495bf72d8e3c680cc11b12",
+      "case": "fresh-default-budgets-accepted-in-service",
+      "source_scope": "historical partial hashes; not final rollout certification"
+    },
+    {
+      "case": "browser-auto-budget-before-whitespace-fix",
+      "engine_sha256": "21dc064d3d7dc53be2cf72e0379745b7f447f647fdacda867ab92d2abf07f212",
+      "narration_sha256": "0713683f2c7c003eabccfb88d64b8bfaced55ed8e7264671002336a3a84c7358",
+      "candidate_counts": {
+        "osm": 3,
+        "google": 3,
+        "dgis": 5
+      },
+      "selected_counts": {
+        "osm": 1,
+        "google": 0,
+        "dgis": 1
+      },
+      "budgets": [
+        60,
+        120,
+        240
+      ],
+      "route_built": true,
+      "actual_map_observed": true,
+      "model_calls": 1,
+      "mode": "grounding-only",
+      "model_rejection_reason": "not_observed_in_browser",
+      "manual_quality_pass": false,
+      "google_before": 134,
+      "google_after": 144,
+      "dgis_before": 6,
+      "dgis_after": 7,
+      "variant_switch_provider_calls": 0,
+      "whole_text_unchanged_on_switch": true,
+      "map_count": 1,
+      "source_scope": "historical partial hashes; not final rollout certification"
+    },
+    {
+      "case": "browser-auto-budget-after-whitespace-fix-negative",
+      "engine_sha256": "bced518a151f25f965c3798d64d3fd642f830137283a827aafc47b82cb45a2ab",
+      "narration_sha256": "1c9bcfe7aa569b91d5ea998def855527d13ea13b9e495bf72d8e3c680cc11b12",
+      "candidate_counts": {
+        "osm": 3,
+        "google": 1,
+        "dgis": 5
+      },
+      "selected_counts": {
+        "osm": 1,
+        "google": 1,
+        "dgis": 1
+      },
+      "budgets": [
+        60,
+        120,
+        240
+      ],
+      "route_built": true,
+      "model_calls": 1,
+      "mode": "grounding-only",
+      "model_rejection_reason": "not_observed_in_browser",
+      "manual_quality_pass": false,
+      "google_before": 164,
+      "google_after": 174,
+      "dgis_before": 9,
+      "dgis_after": 10,
+      "source_scope": "historical partial hashes; not final rollout certification"
+    },
+    {
+      "case": "ordinary-ui-before-public-rollout",
+      "result": {
+        "completed_at": "2026-10-20T14:36:59+00:00",
+        "mode": "grounding-only",
+        "llm_status": "unsupported_number",
+        "llm_attempts": 1,
+        "source_receipt": {
+          "osm": {
+            "status": "searched",
+            "candidate_count": 2,
+            "selected_count": 1
+          },
+          "google": {
+            "status": "searched",
+            "candidate_count": 1,
+            "selected_count": 1
+          },
+          "dgis": {
+            "status": "searched",
+            "candidate_count": 8,
+            "selected_count": 1
+          }
+        },
+        "route_statuses": [
+          {
+            "budget_status": "fits",
+            "route_built": true,
+            "route_checks": [
+              {
+                "candidate_index": 0,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 1,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 2,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              }
+            ]
+          }
+        ]
+      },
+      "google_before": 184,
+      "google_after": 194,
+      "dgis_before": 11,
+      "dgis_after": 12,
+      "manual_quality_pass": false,
+      "actual_single_route_map_observed": true,
+      "source_scope": "engine 2731c25e, narrator 1c9bcfe7 before provider-brand exemption"
+    }
+  ],
+  "current_quota": {
+    "google": {
+      "used": 217,
+      "limit": 500,
+      "remaining": 283,
+      "state": "ready"
+    },
+    "dgis": {
+      "limit": 500,
+      "used": 12,
+      "remaining": 488,
+      "window_seconds": 2592000,
+      "retry_after_seconds": 0
+    }
+  },
+  "grants": {
+    "google_backend_attempt_limit": 500,
+    "dgis_shared_rolling_30day_limit": 500,
+    "dgis_window_seconds": 2592000,
+    "automatic_quota_reset_or_key_pool": false,
+    "embed_browser_loads_separate": true,
+    "operator_baseline_correction": {
+      "previous": 13,
+      "current_at_correction": 10,
+      "authority": "explicit user instruction based on provider API counter",
+      "same_ledger_and_lock": true,
+      "ignored_backup_and_metadata_audit": true,
+      "HTTP_calls": 0
+    }
+  },
+  "limits": [
+    "Successful structural validation is not a guarantee of future model factual correctness.",
+    "Some real model responses were rejected whole and displayed as clearly labelled Google grounding fallback.",
+    "No actual user GPS or current Android installation test was performed by these automated checks.",
+    "Google map computes its own route; its estimate can differ from planning-leg sums.",
+    "One bounded page of 2GIS and bounded Google sources are not a complete city catalogue.",
+    "Combined source content, model prompts/answers and map coordinates are not stored in this report."
+  ],
+  "rollout_browser_check": {
+    "source_commit": "28ae1eeacf5f3ee560430483017f420dcae0e5d0",
+    "public_url": "https://entire-burn-cricket-ashley.trycloudflare.com/",
+    "initial_map_count": 0,
+    "mode": "ИИ · три источника проверены",
+    "google_previews": 4,
+    "iframe_count": 1,
+    "ready_budgets": [
+      60,
+      120,
+      240
+    ],
+    "switched_to": 120,
+    "whole_answer_unchanged": true,
+    "whole_answer_sha256": "966dcb43e4b5530f987b0f495f21b62e2e22d913321a2c7ef603991bbb39a82c",
+    "manual_quality_pass": true,
+    "physical_mobile_verified": false,
+    "variant_switch_provider_calls": 0,
+    "variant_switch_model_calls": 0,
+    "actual_walking_map_observed": true
+  },
+  "rollout_runtime_check": {
+    "public_url": "https://entire-burn-cricket-ashley.trycloudflare.com",
+    "primary_port": 8000,
+    "preview_port": 8003,
+    "model_health": 200,
+    "assets": {
+      "/": {
+        "http_status": 200,
+        "sha256": "802b693bcba6b2071ff2885e9a6f986534c4667786c673d96f0e9ac595e67fba"
+      },
+      "/lab.js": {
+        "http_status": 200,
+        "sha256": "e60e5172aea4ac682cd5ff3923a3308d22f760bf5182589aea8e7cb94b32624d"
+      },
+      "/lab.css": {
+        "http_status": 200,
+        "sha256": "240b0da3783e7fc98efb7cbe3c03a9f5cea58b9de966e87f8d07cc5100c783ff"
+      },
+      "/pwa.js": {
+        "http_status": 200,
+        "sha256": "36d670a5c07a8f394ce7378ccffa7b6287b08a046e4bb448877fc6a066dbe93c"
+      },
+      "/sw.js": {
+        "http_status": 200,
+        "sha256": "e4902c29d960822d8bf9351679b0b253c7c0fb153eba1302cc698dc6f0e65301"
+      },
+      "/manifest.webmanifest": {
+        "http_status": 200,
+        "sha256": "95f66280a276e5870d6dd3fc08ee162fe6f1bc213ada131e47fc20e9e9ae3e6e"
+      },
+      "/icons/icon-192.png": {
+        "http_status": 200,
+        "sha256": "79eb9267e67023b64858efc0f5e2971f1d367cc6af663e1aa7acfe782a785e63"
+      },
+      "/api/health": {
+        "http_status": 200,
+        "sha256": "c521434743a333afe62fe15a03e5b680ea976b70068fca06e47754fe962e6f08"
+      }
+    },
+    "strict_start": {
+      "http_status": 422,
+      "code": "known_start_required",
+      "provider_and_model_calls": 0,
+      "quotas_unchanged": true
+    },
+    "legacy_public_routes": 404,
+    "google_quota": {
+      "used": 217,
+      "limit": 500,
+      "remaining": 283,
+      "state": "ready"
+    },
+    "dgis_quota": {
+      "limit": 500,
+      "used": 12,
+      "remaining": 488,
+      "window_seconds": 2592000,
+      "retry_after_seconds": 0
+    }
+  }
+}
