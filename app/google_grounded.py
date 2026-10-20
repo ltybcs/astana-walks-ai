@@ -298,6 +298,16 @@ def _answer_rejection(answer, grounding, selected_id, plan):
     return None
 
 
+def _model_source_previews(sources):
+    """All mandatory previews, without extra action URLs or duplicate metadata.
+
+    Full provider sources remain unchanged for UI/source attribution and archive.
+    Never extract facts from the summary or remove a source from model context.
+    """
+    fields = ("id", "source_id", "title", "url", "attribution")
+    return [{field: deepcopy(source.get(field)) for field in fields} for source in sources]
+
+
 def narrate(grounding, selected_id, context, intent, plan, budget_status, config, *, http_open=None):
     if budget_status != "fits":
         return None, "route_not_budget_verified"
@@ -309,7 +319,7 @@ def narrate(grounding, selected_id, context, intent, plan, budget_status, config
         "selected_place_ids": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"type": "string", "enum": [selected_id]}},
         "source_ids": {"type": "array", "minItems": 1, "maxItems": len(source_ids), "items": {"type": "string", "enum": source_ids}}},
         "required": ["text", "selected_place_ids", "source_ids"]}
-    full_context = {"grounding_lite_summary": grounding["summary"], "all_google_source_previews": grounding["sources"],
+    full_context = {"grounding_lite_summary": grounding["summary"], "all_google_source_previews": _model_source_previews(grounding["sources"]),
                     "selected_place_id": selected_id, "public_origin_id": context["origin_id"], "intent": intent,
                     "time_of_day": context["time_of_day"], "plan": plan, "budget_status": budget_status}
     system = ("Ты помощник по пешим прогулкам в Астане. Верни JSON по схеме с одним цельным связным русским text. "

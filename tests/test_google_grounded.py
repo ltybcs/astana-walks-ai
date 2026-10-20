@@ -341,7 +341,11 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertEqual(payload["temperature"], 0)
         sent = strict_json(payload["messages"][1]["content"])
         self.assertEqual(sent["grounding_lite_summary"], grounding["summary"])
-        self.assertEqual(sent["all_google_source_previews"], grounding["sources"])
+        self.assertEqual(len(sent["all_google_source_previews"]), len(grounding["sources"]))
+        for preview, source in zip(sent["all_google_source_previews"], grounding["sources"]):
+            self.assertEqual(set(preview), {"id", "source_id", "title", "url", "attribution"})
+            for field in preview:
+                self.assertEqual(preview[field], source.get(field))
         self.assertEqual(set(sent), {"grounding_lite_summary", "all_google_source_previews", "selected_place_id", "public_origin_id", "intent", "time_of_day", "plan", "budget_status"})
         self.assertEqual(requests[0][0].full_url, "http://127.0.0.1:8081/v1/chat/completions")
         self.assertNotIn("api-key", str(dict(requests[0][0].headers)).lower())
@@ -349,6 +353,51 @@ class GoogleGroundedTests(unittest.TestCase):
             self.assertIsNone(narrate(grounding, selected, context, {}, plan, "fits", config, http_open=model)[0])
         self.assertIsNone(narrate(grounding, selected, context, {}, plan, "does_not_fit", self.config, http_open=model)[0])
         self.assertEqual(len(requests), 1)
+
+    def test_five_long_link_sources_keep_full_summary_all_previews_and_ui_unchanged(self):
+        places = []
+        for index in range(5):
+            identifier = "mock-source-" + str(index)
+            url = "https://www.google.com/maps/place/?q=place_id:" + identifier
+            links = {"placeUrl": url}
+            for action in ("photosUrl", "writeAReviewUrl", "reviewsUrl", "directionsUrl"):
+                links[action] = "https://www.google.com/maps/" + action + "?opaque=" + ("encoded-metadata-" * 100) + str(index)
+            places.append({"id": identifier, "place": "places/" + identifier,
+                           "location": {"latitude": 51.09 + index / 10000, "longitude": 71.41},
+                           "googleMapsLinks": links,
+                           "attribution": {"title": "Фиктивный источник " + str(index), "url": url}})
+        summary = ("Полный неизменённый тестовый текст. " * 40) + " Источники [0], [1], [2], [3], [4]."
+        grounding = validate_grounding({"summary": summary, "places": places})
+        original = deepcopy(grounding)
+        captured = []
+        def model(request, timeout):
+            captured.append((strict_json(request.data), timeout))
+            answer = {"text": GOOD_TEXT, "selected_place_ids": ["mock-source-0"], "source_ids": ["g0"]}
+            return Response({"choices": [{"message": {"content": json.dumps(answer, ensure_ascii=False)}}]})
+        plan = {"verified": True, "visit_minutes": 20, "total_minutes": 45, "budget_minutes": 45}
+        with patch("app.google_grounded.open_local_model", side_effect=AssertionError("No actual model")):
+            answer, status = narrate(grounding, "mock-source-0", {"origin_id": "mega", "time_of_day": "day"},
+                                    {"categories": ["walk"], "preferences": []}, plan, "fits", self.config, http_open=model)
+        self.assertIsNotNone(answer)
+        self.assertEqual(len(captured), 1)
+        payload, timeout = captured[0]
+        self.assertEqual(timeout, 120)
+        self.assertIs(payload["cache_prompt"], False)
+        self.assertEqual(payload["max_tokens"], 900)
+        sent = strict_json(payload["messages"][1]["content"])
+        self.assertEqual(sent["grounding_lite_summary"], summary)
+        previews = sent["all_google_source_previews"]
+        self.assertEqual(len(previews), 5)
+        self.assertEqual([item["id"] for item in previews], [item["id"] for item in original["sources"]])
+        for preview, source in zip(previews, original["sources"]):
+            self.assertEqual(set(preview), {"id", "source_id", "title", "url", "attribution"})
+            for field in preview:
+                self.assertEqual(preview[field], source.get(field))
+        before = {**sent, "all_google_source_previews": original["sources"]}
+        self.assertLess(len(json_bytes(sent)), len(json_bytes(before)) * 0.4)
+        self.assertEqual(grounding, original)  # UI and archive still have every original URL/location.
+        self.assertTrue(all("photosUrl" in source["googleMapsLinks"] for source in grounding["sources"]))
+        self.assertEqual(self.provider.requests, [])
 
     def test_whole_answer_guard_rejects_source_numeric_transport_and_protected_claims(self):
         grounding = validate_grounding(self.provider.search)
