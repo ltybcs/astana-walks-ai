@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "mode": "shared-iframe-no-api-key",
+  "default_id": "baiterek",
+  "maps": [
+    {
+      "id": "baiterek",
+      "name": "Байтерек и бульвар Нуржол",
+      "embed_url": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2503.9236678261136!2d71.4305155!3d51.128316000000005!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4245841e0caadcf7%3A0x4f6ce0ff87111d39!2z0JHQsNC50YLQtdGA0LXQug!5e0!3m2!1sru!2skz!4v1792476391930!5m2!1sru!2skz"
+    },
+    {
+      "id": "mega",
+      "name": "MEGA Silk Way и EXPO",
+      "embed_url": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2506.044925696549!2d71.407207!3d51.089178399999994!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x424585af46faabe1%3A0x4bf7a1badd3a8837!2z0KLQoNCmIE1FR0EgU2lsayBXYXk!5e0!3m2!1sru!2skz!4v1792476448331!5m2!1sru!2skz"
+    },
+    {
+      "id": "astana",
+      "name": "Астана — обзор города",
+      "embed_url": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d320668.45270979754!2d71.50148345000001!3d51.1043588!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x424580c47db54609%3A0x97f9148dddb19228!2z0JDRgdGC0LDQvdCw!5e0!3m2!1sru!2skz!4v1792476234385!5m2!1sru!2skz"
+    }
+  ],
+  "provenance": {
+    "obtained_at": "2026-10-20T06:08:26+00:00",
+    "method": "Google Maps desktop: place > Share > Embed a map; exact src copied from displayed HTML, no generated/guessed pb parameters.",
+    "help": "https://support.google.com/maps/answer/7101463?hl=ru",
+    "maps_urls": "https://developers.google.com/maps/documentation/urls/get-started",
+    "scope": "Three public landmarks/areas. No account data, personal location, reviews or POI catalog extracted."
+  }
+}

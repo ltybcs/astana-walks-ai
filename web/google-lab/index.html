@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light">
+<title>Astana Walks · Maps Lab</title>
+<link rel="stylesheet" href="/vendor/leaflet/1.9.4/leaflet.css"><link rel="stylesheet" href="/lab.css">
+<script defer src="/vendor/leaflet/1.9.4/leaflet.js"></script><script defer src="/lab.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#catalog">К каталогу мест</a>
+<header class="site-header"><a class="brand" href="/"><strong>Astana Walks</strong><span>Maps Lab</span></a><a class="stable-link" href="https://entire-burn-cricket-ashley.trycloudflare.com/" target="_blank" rel="noopener noreferrer">Основное демо ↗</a></header>
+<main>
+<section class="intro" aria-labelledby="page-title"><p class="eyebrow">Эксперимент · бесплатно · без API-ключей</p><h1 id="page-title">Астана на двух картах</h1><p class="intro-text">Исследуйте каталог OpenStreetMap с источниками. Google Maps открывается отдельно для просмотра города.</p><div id="catalog-summary" class="catalog-summary" role="status">Загружаем локальный каталог…</div></section>
+<div class="workspace">
+<section class="map-panel" aria-label="Просмотр карты">
+<div class="map-tabs" role="tablist" aria-label="Источник карты"><button id="tab-osm" role="tab" aria-selected="true" aria-controls="panel-osm" tabindex="0">Карта OSM <span>и наш каталог</span></button><button id="tab-google" role="tab" aria-selected="false" aria-controls="panel-google" tabindex="-1">Google Maps <span>отдельный просмотр</span></button></div>
+<div id="panel-osm" class="map-tab-panel" role="tabpanel" aria-labelledby="tab-osm"><div class="map-toolbar"><p id="map-result-count">Готовим точки каталога</p><button id="fit-map" class="quiet-button" type="button">Все найденные точки</button></div><div id="osm-map" tabindex="0" aria-label="Уличная карта OpenStreetMap с выбранными местами"></div><div class="map-footnote"><p id="tile-status" role="status">Тайлы OSM загружаются из интернета: сервис видит IP и область карты. Личная геолокация не запрашивается.</p><p>Маркеры — данные OSM. Карта помогает выбрать место; проходы и доступность не проверены.</p></div></div>
+<div id="panel-google" class="map-tab-panel google-panel" role="tabpanel" aria-labelledby="tab-google" hidden>
+<div class="google-controls"><label for="google-area">Публичная область</label><select id="google-area" disabled><option>Загружаем варианты…</option></select><div class="google-actions"><button id="load-google" class="primary-button" type="button" disabled>Загрузить Google-карту</button><button id="unload-google" class="quiet-button" type="button" disabled>Выгрузить карту</button></div></div>
+<div id="google-frame-host" class="google-frame-host"><div class="google-placeholder"><span class="placeholder-label">Google Maps</span><h2>Вы решаете, когда подключить карту</h2><p>Кнопка выше подключит Google-карту. Google получит IP и выбранную публичную область.</p></div></div>
+<div class="google-note"><p id="google-status" role="status">Карта пока не подключена.</p><p>Google-карта служит для просмотра города. Фильтры и список мест относятся к каталогу OSM.</p><a id="google-external" href="https://www.google.com/maps/search/?api=1&amp;query=Astana" target="_blank" rel="noopener noreferrer">Открыть область в Google Maps ↗</a></div>
+</div></section>
+<aside id="catalog" class="catalog-panel" aria-labelledby="catalog-title"><div class="catalog-controls"><div class="section-heading"><h2 id="catalog-title">Места OSM</h2><span class="source-badge">Открытый каталог</span></div><label class="search-label" for="place-search">Поиск по названию и фактам</label><input id="place-search" type="search" autocomplete="off" placeholder="Например, музей или кофе" maxlength="160"><div id="group-filters" class="group-filters" role="group" aria-label="Категории мест"></div><label class="toggle-label"><input id="show-unnamed" type="checkbox"><span>Показывать безымянные места <span id="unnamed-count" class="muted"></span></span></label><p id="filter-summary" class="filter-summary" role="status"></p></div>
+<div id="catalog-error" class="error-box" role="alert" hidden><p id="catalog-error-text"></p><button id="retry-catalog" class="quiet-button" type="button">Повторить загрузку</button></div><div id="place-list" class="place-list" aria-label="Найденные места"></div><div class="list-footer"><p id="list-count" class="muted"></p><button id="load-more" class="quiet-button" type="button" hidden>Ещё 60 мест</button></div><p class="external-note">Ссылки «Открыть в Google» ведут на внешний сайт и передают выбранное публичное место. Это отдельный переход по вашему нажатию.</p></aside>
+</div>
+<footer class="page-footer"><p id="dataset-note">Источник каталога: OpenStreetMap.</p><p>© OpenStreetMap contributors · ODbL 1.0. Google Maps работает по условиям Google. Личная геолокация не запрашивается.</p></footer><noscript><p class="error-box">Для карты, фильтров и загрузки каталога нужен JavaScript. Основное демо доступно по ссылке вверху.</p></noscript>
+</main></body></html>
