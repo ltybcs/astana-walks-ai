@@ -274,8 +274,11 @@ class LabServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, address: tuple[str, int], root: Path, *, llm_enabled: bool = False, recommender=None, google=None, dgis=None, route_map=None, public_origin=None):
+    def __init__(self, address: tuple[str, int], root: Path, *, llm_enabled: bool = False, recommender=None, google=None, dgis=None, route_map=None, public_origin=None, frame_parent_origin=None):
         self.public_origin = _public_origin(public_origin)
+        self.frame_parent_origin = _public_origin(frame_parent_origin)
+        self.content_security_policy = (CSP if self.frame_parent_origin is None else
+            CSP.replace("frame-ancestors 'none'", "frame-ancestors " + self.frame_parent_origin))
         self.public_host = urlparse(self.public_origin).netloc if self.public_origin else None
         self.root = Path(root).resolve()
         self.catalog = load_catalog(self.root)
@@ -432,10 +435,11 @@ class LabHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("Pragma", "no-cache")
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Content-Security-Policy", CSP)
+        self.send_header("Content-Security-Policy", self.server.content_security_policy)
         self.send_header("Permissions-Policy", "geolocation=(self), camera=(), microphone=()")
         self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header("X-Frame-Options", "DENY")
+        if self.server.frame_parent_origin is None:
+            self.send_header("X-Frame-Options", "DENY")
         super().end_headers()
 
     def _discard_small_rejected_body(self):
@@ -617,7 +621,7 @@ class LabHandler(BaseHTTPRequestHandler):
     do_OPTIONS = _method_not_allowed
 
 
-def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROOT, llm_enabled: bool = False, recommender=None, google=None, google_config=None, dgis=None, dgis_root=None, route_map=None, map_config=None, public_origin=None) -> LabServer:
+def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROOT, llm_enabled: bool = False, recommender=None, google=None, google_config=None, dgis=None, dgis_root=None, route_map=None, map_config=None, public_origin=None, frame_parent_origin=None) -> LabServer:
     """Create one context-managed lab server; startup never calls inference."""
     if host == "localhost":
         host = "127.0.0.1"
@@ -628,6 +632,7 @@ def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROO
     if address.version != 4 or not address.is_loopback or type(port) is not int or not 0 <= port <= 65535:
         raise ValueError("Lab binds only to IPv4 loopback and a valid port")
     public_origin = _public_origin(public_origin)
+    frame_parent_origin = _public_origin(frame_parent_origin)
     if google is not None and google_config is not None:
         raise ValueError("Choose injected Google service or explicit runtime config")
     if google_config is not None:
@@ -648,7 +653,7 @@ def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROO
     if map_config is not None:
         route_map = RouteMap.from_runtime(map_config)
     return LabServer((host, port), Path(root), llm_enabled=llm_enabled, recommender=recommender, google=google,
-                     dgis=dgis, route_map=route_map, public_origin=public_origin)
+                     dgis=dgis, route_map=route_map, public_origin=public_origin, frame_parent_origin=frame_parent_origin)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -661,12 +666,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dgis-root", help="Absolute primary workspace with the existing shared 2GIS key and usage ledger")
     parser.add_argument("--map-config", help="Absolute ignored JSON with dedicated public embed_key_file")
     parser.add_argument("--public-origin", help="Exact HTTPS DNS origin allowed through a tunnel; bind remains loopback")
+    parser.add_argument("--frame-parent-origin", help="One exact HTTPS origin allowed to embed the app; does not grant API access")
     args = parser.parse_args(argv)
     if bool(args.google) != bool(args.google_config):
         parser.error("--google and --google-config must be supplied together")
     try:
         with create_server(args.host, args.port, llm_enabled=args.llm, google_config=args.google_config if args.google else None,
-                           dgis_root=args.dgis_root, map_config=args.map_config, public_origin=args.public_origin) as server:
+                           dgis_root=args.dgis_root, map_config=args.map_config, public_origin=args.public_origin,
+                           frame_parent_origin=args.frame_parent_origin) as server:
             print(f"AI walks lab: http://127.0.0.1:{server.server_port} — {server.catalog['summary']['visible_count']} OSM places", flush=True)
             try:
                 server.serve_forever(poll_interval=0.2)
