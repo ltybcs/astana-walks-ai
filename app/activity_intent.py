@@ -139,7 +139,51 @@ def _known_goal_lead(prefix):
     ))
 
 
+_RELATIVE_PLACE = re.compile(
+    r"(?:\s+со?\s+(?:" + "|".join(_PREFERENCES.values()) + r"))?"
+    r"(?:\s*,\s*|\s+)(?:(?:в|на)\s+котор(?:ый|ую|ое|ые|ом|ой|ых)|"
+    r"котор(?:ый|ую|ое|ые)|куда|где)\s+(?:можно|стоит)\s+"
+)
+_RELATIVE_VISIT = re.compile(r"(?:сходить|пойти|зайти|побывать|посетить)(?!\w)")
+_RELATIVE_CONTEXT = re.compile(
+    r"(?:(?:в\s+течение|на|за|в)\s+)?"
+    r"(?:(?:ближайш(?:ие|ий|ую)|следующ(?:ие|ий|ую))\s+)?"
+    r"(?:(?:\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+(?:[.,]\d+)?)?|"
+    r"один|одну|два|две|три|четыре|пару|полтора|полторы)\s*)?"
+    r"(?:час(?:а|ов)?|минут(?:а|ы)?|мин|ч|полчаса)(?!\w)|"
+    r"(?:рядом|поблизости|недалеко)(?:\s+(?:со?\s+мной|от\s+меня))?(?!\w)|"
+    r"около\s+меня(?!\w)|(?:сейчас|сегодня|завтра|днем|вечером|ночью|пожалуйста)(?!\w)"
+)
+
+
+def _relative_place_ranges(query, matches):
+    """Recognize a visit relative clause, never an extra service at that place."""
+    ranges = []
+    for start, end, _ in matches:
+        if _negated(query, start, end) or _location_mention(query, start):
+            continue
+        relative = _RELATIVE_PLACE.match(query, end)
+        if relative is None:
+            continue
+        boundary = re.search(r"[;!?]|\.(?!\d)", query[relative.end():])
+        limit = relative.end() + boundary.start() if boundary else len(query)
+        visit = _RELATIVE_VISIT.match(query, relative.end())
+        if visit is None:
+            return None
+        tail = query[visit.end():limit].strip(" \t\r\n,")
+        while tail:
+            context = _RELATIVE_CONTEXT.match(tail)
+            if context is None:
+                return None
+            tail = tail[context.end():].lstrip(" \t\r\n,")
+        ranges.append((relative.end(), limit))
+    return ranges
+
+
 def _unsupported_primary(query, matches):
+    relative_ranges = _relative_place_ranges(query, matches)
+    if relative_ranges is None:
+        return True
     targets = list(_TARGET.finditer(query))
     # An unknown replacement after a rejected known activity is still a goal:
     # "not a pharmacy, but a vet clinic" must not fall back to parks/museums.
@@ -149,6 +193,8 @@ def _unsupported_primary(query, matches):
                and _negated(query, start, end) for start, end, _ in matches):
             targets.append(replacement)
     for target in sorted(targets, key=lambda value: value.start()):
+        if any(begin <= target.start() < end for begin, end in relative_ranges):
+            continue
         # "don't want X" and "не хочу X" reject X; they are not new goals.
         if (_negated(query, target.start(), target.end())
                 or re.search(r"\b(?:don\x27t|do\s+not)\s+$", _clause_prefix(query, target.start()))):

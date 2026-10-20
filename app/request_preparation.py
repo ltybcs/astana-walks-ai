@@ -19,6 +19,7 @@ from .google_budget import GoogleError
 from .google_client import json_bytes
 from .lab_context import ContextError
 from .semantic_intent import deterministic_plan, explicit_start_quote, IntentError
+from .route_request import validate_walking_request
 
 
 @dataclass(frozen=True)
@@ -142,13 +143,18 @@ class RequestPreparation:
     def _new(self, form):
         started = self.clock()
         # Validate structure, time, location fields and city scope before model I/O.
-        self.stager(form)
+        draft = self.stager(form)
         query = form["query"].strip()
+        validate_walking_request(query, draft["resolved_context"]["budget_options"])
         plan, status, attempts = self.gateway.extract(query, started + self.lifetime) if self.gateway else (None, "unconfigured", 0)
         if plan is None:
             try:
                 plan = deterministic_plan(query)
             except IntentError:
+                if status == "deadline":
+                    raise GoogleError("intent_timeout", "Разбор пожелания занял слишком много времени. Попробуйте снова.", 504) from None
+                if status in {"invalid_intent", "invalid_response", "provider_json", "content_json", "truncated_response"}:
+                    raise GoogleError("intent_not_understood", "Не удалось надёжно разобрать пожелание. Поиск по источникам не запускался.", 422) from None
                 raise GoogleError("intent_temporarily_unavailable", "Не удалось обработать пожелание: локальный ИИ временно недоступен. Попробуйте позже.", 503) from None
         if self.clock() >= started + self.lifetime:
             raise GoogleError("context_timeout", "Истекло время подготовки запроса.", 504)
