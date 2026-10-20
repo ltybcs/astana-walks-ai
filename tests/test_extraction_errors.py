@@ -5,7 +5,7 @@ import json
 from time import monotonic
 import unittest
 from unittest.mock import Mock, patch
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 
 from app.google_budget import GoogleError
 from app.lab_context import resolve_request, stage_request
@@ -55,6 +55,14 @@ class ExtractionErrorsTests(unittest.TestCase):
                 self.assertNotIn('PRIVATE', repr(result))
                 opener.assert_called_once()
 
+    def test_input_schema_rejection_is_not_transport_unavailability(self):
+        gateway, opener = self.gateway(b'{}')
+        with patch('app.model_gateway._PROCESS_LOCK') as lock:
+            self.assertEqual(gateway.extract('Хочу кофе https://example.test', monotonic()+5),
+                             (None, 'invalid_intent', 0))
+            lock.acquire.assert_not_called()
+        opener.assert_not_called()
+
     def test_busy_and_elapsed_deadline_are_distinct_zero_attempt_failures(self):
         gateway, opener = self.gateway(b'{}')
         with patch('app.model_gateway._PROCESS_LOCK') as lock:
@@ -74,6 +82,21 @@ class ExtractionErrorsTests(unittest.TestCase):
                 result = gateway.extract('Хочу кофе', monotonic()+5)
                 self.assertEqual(result, (None, expected, 1))
                 self.assertNotIn('PRIVATE', repr(result))
+                opener.assert_called_once()
+
+    def test_http_format_rejection_is_not_transport_and_never_reads_private_body(self):
+        for status, expected in ((400,'invalid_response'),(422,'invalid_response'),(429,'busy'),
+                (503,'busy'),(408,'deadline'),(504,'deadline'),(401,'unconfigured'),(500,'transport')):
+            with self.subTest(status=status):
+                response = io.BytesIO(b'PRIVATE_PROVIDER_ERROR')
+                error = HTTPError('http://127.0.0.1:8081/v1/chat/completions', status,
+                                  'PRIVATE_PROVIDER_REASON', {}, response)
+                opener=Mock(side_effect=error)
+                gateway=ModelGateway(LLMConfig('http://127.0.0.1:8081/v1', 'mock', '', 2),http_open=opener)
+                result=gateway.extract('Хочу кофе',monotonic()+5)
+                self.assertEqual(result,(None,expected,1))
+                self.assertNotIn('PRIVATE',repr(result))
+                self.assertTrue(response.closed)
                 opener.assert_called_once()
 
     def test_shared_os_lock_timeout_is_busy_without_model_http(self):
@@ -117,6 +140,62 @@ class PreparationFailureTests(unittest.TestCase):
                 self.assertEqual(final.resolved['minutes'], 120)
                 gateway.extract.assert_called_once()
                 google.resolve_place.assert_not_called()
+
+    def test_generic_arrival_query_requests_gps_without_inventing_airport_or_flags(self):
+        for status in ('busy', 'transport', 'deadline', 'provider_json', 'content_json', 'invalid_intent', 'truncated_response'):
+            with self.subTest(status=status):
+                prep, gateway, google = self.build(status)
+                form = {'query': 'Я только что прилетел, что можно посмотреть в Астане', 'consent': True}
+                first = prep.prepare(form)
+                self.assertTrue(first['needs_geolocation'])
+                self.assertIsNone(first['resolved_context']['origin'])
+                self.assertEqual(first['resolved_context']['budget_options'], [60,120,240])
+                resumed = {**form, 'preparation_token':first['preparation_token'], 'location_status':'granted',
+                           'geolocation':{'lat':51.09125,'lon':71.412806,'accuracy':20}}
+                second = prep.prepare(resumed)
+                resumed['preparation_token'] = second['preparation_token']
+                final = prep.consume(resumed)
+                self.assertEqual(final.intent_plan.mode, 'walk')
+                self.assertEqual(final.intent_plan.context, ())
+                self.assertEqual(final.resolved['resolved_context']['origin_source'], 'browser_geolocation')
+                self.assertIsNone(final.resolved['resolved_context']['origin_id'])
+                gateway.extract.assert_called_once()
+                google.resolve_place.assert_not_called()
+
+    @staticmethod
+    def numbered_place(identifier='synthetic-1'):
+        # Synthetic resolver data at a fixed public stand-in point, not an actual building record.
+        return {'id':identifier, 'name':'Камал-5', 'address':'Астана', 'lat':51.09125, 'lon':71.412806,
+                'source_url':'https://www.google.com/maps/search/?api=1&query=synthetic', 'attributions':[]}
+
+    def test_named_departure_and_whole_day_resolve_once_without_gps_or_reextraction(self):
+        for status in ('busy', 'transport', 'deadline', 'provider_json', 'invalid_intent', 'truncated_response'):
+            with self.subTest(status=status):
+                prep, gateway, google = self.build(status)
+                google.resolve_place.return_value = [self.numbered_place()]
+                form = {'query':'Мне скучно, у меня есть целый день. Куда можно пойти с Камал-5', 'consent':True}
+                response = prep.prepare(form)
+                self.assertFalse(response['needs_geolocation'])
+                self.assertEqual(response['resolved_context']['budget_options'], [240,360,480])
+                self.assertEqual(response['resolved_context']['origin_source'], 'google_places_text_search')
+                final = prep.consume({**form, 'preparation_token':response['preparation_token']})
+                self.assertEqual(final.place_attempts, 1)
+                self.assertEqual(final.intent_plan.mode, 'walk')
+                gateway.extract.assert_called_once()
+                google.resolve_place.assert_called_once()
+                self.assertEqual(google.resolve_place.call_args.args[0].casefold(), 'камал-5')
+
+    def test_ambiguous_named_departure_does_not_switch_to_available_gps(self):
+        for candidates in ([], [self.numbered_place(), self.numbered_place('synthetic-2')]):
+            prep, gateway, google = self.build('invalid_intent')
+            google.resolve_place.return_value = candidates
+            with self.assertRaises(Exception) as caught:
+                prep.prepare({'query':'Мне скучно, у меня есть целый день. Куда можно пойти с Камал-5',
+                    'consent':True, 'location_status':'granted',
+                    'geolocation':{'lat':51.09125,'lon':71.412806,'accuracy':20}})
+            self.assertEqual((caught.exception.code,caught.exception.status), ('location_unresolved',422))
+            gateway.extract.assert_called_once()
+            google.resolve_place.assert_called_once()
 
     def test_unknown_goal_error_distinguishes_interpretation_outage_and_deadline(self):
         statuses = {'busy': (503, 'intent_temporarily_unavailable'),

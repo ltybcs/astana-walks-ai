@@ -156,6 +156,37 @@ def _recover_start_span(value, query):
     begin, end = next(iter(candidates))
     return query[begin:end]
 
+_DEPARTURE_QUESTION = re.compile(
+    r"(?<!\w)(?:куда|где)\s+(?:можно\s+)?(?:пойти|сходить|погулять|пройтись)"
+    r"\s+(?:с|со|из|от)\s+(?P<place>[^,;.!?\n]{2,100})\s*[.!?]*$", re.I
+)
+_NUMBERED_PLACE = re.compile(
+    r"[А-ЯЁA-Z][А-Яа-яЁёA-Za-z]{2,}(?:\s+[А-Яа-яЁёA-Za-z]{2,}){0,3}"
+    r"(?:\s*[-–—]\s*|\s+)\d{1,4}[А-Яа-яЁёA-Za-z]?"
+)
+
+
+def _numbered_departure_spans(query):
+    """A numbered departure name is a start role, never a guessed place ID."""
+    candidates = []
+    for match in _DEPARTURE_QUESTION.finditer(query):
+        name = match["place"].strip()
+        if not _NUMBERED_PLACE.fullmatch(name):
+            continue
+        # Existing hard-service/companion terms must not become place names.
+        excluded = (r"ребен\w*|ребён\w*|деть\w*|дети|друз\w*|friend\w*|child\w*|"
+                    r"vr|rtx\w*|пк|pc|ps[1-9]\w*|playstation\w*|оборудован\w*|"
+                    r"компьютер\w*|видеокарт\w*|монитор\w*|консол\w*|приставк\w*")
+        if re.search(r"(?<!\w)(?:" + excluded + r")(?!\w)", name, re.I):
+            continue
+        normalized, begin, end = _quote_position(name, query)
+        _, question_begin, _ = _quote_position(match[0].strip(), query)
+        if _negated(normalized, question_begin, end):
+            continue
+        candidates.append((begin, end, query[match.start("place"):match.end("place")].strip()))
+    return candidates
+
+
 def _start(value, query):
     if value is None:
         return None
@@ -173,14 +204,17 @@ def _start(value, query):
     prefix = _spatial_role_prefix(normalized[max(0, begin - 100):begin])
     if _NEGATIVE_START.search(prefix):
         raise IntentError("Отвергнутое место не может быть стартом.")
+    departure_role = any(begin == first and _norm(value) == _norm(name)
+                         for first, _, name in _numbered_departure_spans(query))
     # A destination after 'want to visit' is not the current position.
-    if _DESTINATION.search(prefix) and not re.search(
+    if _DESTINATION.search(prefix) and not departure_role and not re.search(
         r"\b(?:я\s+(?:сейчас\s+)?(?:нахожусь|стою|сижу)|i\s+am|старт(?:ую)?)\b[^,;.!?]*$", prefix
     ):
         # 'хочу кофе возле X' still explicitly supplies a start at X.
         if not re.search(r"\b(?:возле|около|рядом\s+с|у|от|near|around)\s*$", prefix):
             raise IntentError("Место назначения не может подменять старт.")
     has_cue = bool(_LOCATION.search(prefix) or re.search(r"^(?:я\s+)?(?:возле|около|у|near|at)\s+", _norm(value)))
+    has_cue = has_cue or departure_role
     has_address = bool(re.search(r"\b(?:улиц\w*|ул\.|просп\w*|street|avenue)\b", _norm(value)))
     if (begin > 0 or recovered) and not has_cue and not has_address:
         raise IntentError("Нет подтверждения, что фрагмент обозначает старт.")
@@ -192,7 +226,7 @@ def explicit_start_quote(query):
     from .lab_context import ORIGIN_PATTERNS, _positioned, _negated_origin, _has_unresolved_address
     query = _query(query)
     normalized = _norm(query)
-    candidates = []
+    candidates = [(begin, name) for begin, _, name in _numbered_departure_spans(query)]
     for pattern in ORIGIN_PATTERNS.values():
         for match in re.finditer(pattern, normalized):
             if _positioned(normalized, match.start()) and not _negated_origin(normalized, match.start()):
@@ -217,11 +251,51 @@ def explicit_start_quote(query):
     return None
 
 
+_GENERIC_QUESTION = re.compile(
+    r"(?<!\w)(?:что(?:\s+(?:интересного|необычного))?\s+(?:можно\s+)?(?:посмотреть|увидеть)|"
+    r"куда\s+(?:можно\s+)?(?:пойти|сходить)|где\s+(?:можно\s+)?(?:погулять|прогуляться))(?!\w)", re.I
+)
+_NEUTRAL_QUESTION_FRAME = re.compile(
+    r"(?:(?:я\s+)?(?:(?:только\s+что|недавно)\s+)?(?:прилетел[а]?|приехал[а]?|прибыл[а]?)"
+    r"(?:\s+в\s+астан[уы])?|(?:я\s+)?(?:сейчас\s+)?в\s+астане|мне\s+скучно|"
+    r"у\s+меня\s+(?:есть\s+)?(?:(?:целый|весь|свободный)\s+день|"
+    r"(?:\d+(?:[.,]\d+)?|один|два|три|четыре|пять|пару|полтора)\s*(?:час(?:а|ов)?|минут(?:а|ы)?)))(?!\w)", re.I
+)
+_GENERIC_QUESTION_TAIL = re.compile(
+    r"(?:в\s+астане|в\s+этом\s+городе|(?:рядом|поблизости|недалеко)(?:\s+со?\s+мной)?)?"
+    r"\s*[.!?]*", re.I
+)
+
+
+def _generic_question_goal(query):
+    """Return a literal broad question only after accounting for every clause."""
+    matches = list(_GENERIC_QUESTION.finditer(query))
+    if len(matches) != 1:
+        return None
+    match = matches[0]
+    prefix = query[:match.start()].strip(" \t\r\n,;.!?")
+    while prefix:
+        frame = _NEUTRAL_QUESTION_FRAME.match(prefix)
+        if frame is None:
+            return None
+        prefix = prefix[frame.end():].lstrip(" \t\r\n,;.!?")
+    tail = query[match.end():].strip()
+    if not _GENERIC_QUESTION_TAIL.fullmatch(tail):
+        departures = _numbered_departure_spans(query)
+        if len(departures) != 1:
+            return None
+        _, _, name = departures[0]
+        # The complete suffix must be the same proven departure expression.
+        if not re.fullmatch(r"(?:с|со|из|от)\s+" + re.escape(name) + r"\s*[.!?]*", tail, re.I):
+            return None
+    return match[0]
+
+
 def _broad_walk_witness(quote):
     """Only broad outdoor/viewing language may remove venue-type requirements."""
     from .activity_intent import _GENERIC
     normalized = _norm(quote)
-    if _GENERIC.fullmatch(normalized):
+    if _GENERIC.fullmatch(normalized) or _GENERIC_QUESTION.fullmatch(normalized):
         return True
     # This is a safety witness for broadness, not a place/category alias table.
     allowed = re.compile(
@@ -629,7 +703,8 @@ def deterministic_plan(query):
     """Fallback only to recognized positive goals; never invent a broad goal."""
     query = _query(query)
     search = parse_search_intent(query)
-    if not search["supported"]:
+    question = _generic_question_goal(query) if not search["preferences"] and not search["excluded_categories"] else None
+    if not search["supported"] and question is None:
         raise IntentError("Цель не распознана автономным разбором.", code="unsupported_activity")
     # Import lazily: retrieval consumers can import this module without a cycle.
     from .retrieval import detect_intent
@@ -651,8 +726,8 @@ def deterministic_plan(query):
     if not goals:
         # A full generic phrase is safe; a random unknown noun with no marker is not.
         from .activity_intent import _GENERIC
-        if _GENERIC.fullmatch(normalized):
-            goals.append(Goal(query, CATEGORY_CATALOG["walk"]["google_query"], "walk", "generic_walk"))
+        if _GENERIC.fullmatch(normalized) or question is not None:
+            goals.append(Goal(question or query, CATEGORY_CATALOG["walk"]["google_query"], "walk", "generic_walk"))
         else:
             raise IntentError("Цель не распознана автономным разбором.", code="unsupported_activity")
     requirements = []
@@ -666,7 +741,7 @@ def deterministic_plan(query):
     context = []
     for key, pattern in (("child", r"ребен\w*|ребён\w*|деть\w*|дети|детск\w*|семь[яеюи]\w*|family|child\w*|kids|бала\w*"),
                          ("tourist", r"турист\w*|достопримеч\w*|tourist\w*|sightsee\w*")):
-        found = re.search(pattern, query, re.I)
+        found = re.search(r"(?<!\w)(?:" + pattern + r")(?!\w)", query, re.I)
         if legacy[key] and found:
             context.append(ContextFlag(found[0], key))
     excluded = tuple(ExcludedGoal(category, category) for category in search["excluded_categories"])

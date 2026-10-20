@@ -84,3 +84,6 @@ python -m unittest discover -s tests -v
 Новый source-bound протокол `qa/semantic-context-check.json` добавляется интегратором отдельно. [Unified](../qa/unified-search-check.json), [категорийный](../qa/category-coverage-check.json) и [аптечный](../qa/pharmacy-question-check.json) receipts **исторические**: их исходники и живые результаты не переносятся на семантический этап. Презентация и материалы сдачи этим документом не меняются.
 
 [Maps Embed](https://developers.google.com/maps/documentation/embed/embedding-map) · [Grounding Lite](https://developers.google.com/maps/ai/grounding-lite) · [условия Google](https://cloud.google.com/maps-platform/terms/maps-service-terms) · [2ГИС](https://docs.2gis.com/en/api/ai/mcp-server/overview).
+
+
+Общие вопросы о прогулке могут содержать нейтральное вступление о приезде, скуке или свободном времени. Резервный разбор проверяет вопрос целиком и сохраняет дословную цель; неизвестное конкретное пожелание не заменяется прогулкой. Нумерованное название после выражения отправления проверяется как названный старт через существующий Places resolver, без новой таблицы ориентиров. «Целый день» при явной доступности времени означает предложенные варианты 4/6/8 часов, а не точное равенство дня восьми часам; числовое время имеет приоритет.

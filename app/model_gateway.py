@@ -9,7 +9,7 @@ from contextlib import contextmanager, nullcontext
 from threading import Lock, local
 from time import monotonic
 from urllib.request import Request
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 
 from .google_budget import _locked, GoogleError
 from .google_client import json_bytes, strict_json
@@ -88,6 +88,17 @@ class ModelGateway:
             raise ModelUnavailable("Local model busy", code="busy") from None
         except TimeoutError:
             raise ModelUnavailable("Local model deadline", code="deadline") from None
+        except HTTPError as error:
+            if error.code in {408, 504}:
+                code = "deadline"
+            elif error.code in {429, 503}:
+                code = "busy"
+            elif error.code in {401, 403, 404}:
+                code = "unconfigured"
+            else:
+                code = "invalid_response" if 400 <= error.code < 500 else "transport"
+            error.close()
+            raise ModelUnavailable("Local model request failed", code=code) from None
         except URLError as error:
             code = "deadline" if isinstance(error.reason, TimeoutError) else "transport"
             raise ModelUnavailable("Local model unavailable", code=code) from None
@@ -112,13 +123,18 @@ class ModelGateway:
             return None, "unconfigured", 0
         from .semantic_intent import extraction_request, validate_intent, IntentError
         attempts = 0
+        # Input/schema validation is interpretation, not a transport failure.
+        # Keep it outside session(), whose boundary converts I/O exceptions.
+        try:
+            payload = extraction_request(query, self.config.model)
+        except IntentError:
+            return None, "invalid_intent", attempts
+        payload.pop("max_completion_tokens", None)
+        payload.pop("max_tokens", None)
+        payload[self.config.token_parameter] = 512
+        payload["cache_prompt"] = False
         try:
             with self.session(deadline, seconds=40):
-                payload = extraction_request(query, self.config.model)
-                payload.pop("max_completion_tokens", None)
-                payload.pop("max_tokens", None)
-                payload[self.config.token_parameter] = 512
-                payload["cache_prompt"] = False
                 request = Request(self.config.base_url + "/chat/completions", data=json_bytes(payload),
                                   headers={"Content-Type": "application/json"}, method="POST")
                 attempts = 1
