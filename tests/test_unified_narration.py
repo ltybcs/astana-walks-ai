@@ -202,6 +202,25 @@ class UnifiedNarrationTests(unittest.TestCase):
                 self.assertIsNone(result)
                 self.assertTrue(reason.startswith("unsupported_protected_"), reason)
 
+    def test_exact_selected_provider_label_is_not_a_number_but_nearby_claims_still_are(self):
+        text = "Места выбраны по данным OpenStreetMap, Google Maps и 2ГИС. Идея: осмотреть их облик снаружи. Условия посещения неизвестны. "
+        value = {**self.answer, "text": text}
+        answer, reason = self.run_narrator(http_open=self.model(value))
+        self.assertEqual(answer, value)
+        self.assertEqual(reason, "validated_structure_sources_and_known_claims")
+        for claim in ("2ГИС: идти 999 метров.", "2ГИС: идти пять минут.", "2ГИС999 предлагает прогулку."):
+            with self.subTest(claim=claim):
+                value = {**self.answer, "text": claim + " Идея: осмотреть место. Условия посещения неизвестны."}
+                answer, reason = self.run_narrator(http_open=self.model(value))
+                self.assertIsNone(answer)
+                self.assertEqual(reason, "unsupported_number")
+        self.stops = self.stops[:1]
+        self.alternatives = self.alternatives[:1]
+        value = {"text": text, "stop_ids": [self.stops[0]["stop_id"]], "source_ids": ["o0"]}
+        answer, reason = self.run_narrator(http_open=self.model(value))
+        self.assertIsNone(answer)
+        self.assertEqual(reason, "unsupported_number")
+
     def test_literal_source_name_can_have_numbers_and_protected_words(self):
         self.stops[0]["name"] = "Тихий сад 42"
         text = "Предлагаю осмотреть Тихий сад 42 [o0] и другие выбранные места. "

@@ -115,6 +115,10 @@ def _prose(text, facts):
     # Exemption applies only to the selected source name, not the rest of prose.
     for name in sorted({fact["name"] for fact in facts if fact["name"]}, key=len, reverse=True):
         text = re.sub(r"(?<!\w)" + re.escape(name) + r"(?!\w)", "", text, flags=re.IGNORECASE)
+    # This exact provider label is identity, not a quantitative assertion.
+    # Only exempt it when that provider actually supplies selected facts.
+    if any(fact["provider"] == "dgis" for fact in facts):
+        text = re.sub(r"(?<!\w)2ГИС(?!\w)", "", text, flags=re.IGNORECASE)
     return re.sub(r"\[(?:[gdo])?\d+\]", "", text)
 
 
