@@ -20,7 +20,7 @@ _LOCATION = re.compile(r"(?:\b(?:возле|около|у|от|рядом\s+с|�
                        r"\b(?:старт(?:ую)?|нахожусь|стою|сижу|остановился|starting|located)(?:\s+(?:в|на|у|at))?)\s*[:—-]?\s*$")
 _DESTINATION = re.compile(r"\b(?:хочу|хочется|пойду|сходить|посетить|ищу|нужен|нужна|"
                           r"want|visit|looking\s+for|would\s+like)\b[^,;.!?]{0,90}$")
-_NEGATIVE_START = re.compile(r"\b(?:не|not)\s+(?:возле|около|у|рядом\s+с|в|на|near|at)\s*$")
+_NEGATIVE_START = re.compile(r"\b(?:не|not)\s+(?:возле|около|у|от|рядом\s+с|в|на|near|around|at|by)\s*$")
 
 
 class IntentError(ValueError):
@@ -87,14 +87,90 @@ def _records(value, minimum, maximum):
     return value
 
 
+
+_VENUE_CLASSIFIER_SUFFIX = re.compile(
+    r"(?<!\w)(?:(?:the|a|an)\s+)?(?:"
+    r"отел(?:ь|я|е|ем|ю)|гостиниц(?:а|ы|е|у|ей|ою)|тц|трц|"
+    r"торгов(?:ый|ого|ом|ому|ым)\s+(?:развлекательн(?:ый|ого|ом|ому|ым)\s+)?центр(?:а|е|ом|у)?|"
+    r"монумент(?:а|е|ом|у)?|памятник(?:а|е|ом|у)?|музе(?:й|я|е|ем|ю)|"
+    r"ресторан(?:а|е|ом|у)?|кафе|клуб(?:а|е|ом|у)?|парк(?:а|е|ом|у)?|"
+    r"здани(?:е|я|и|ем|ю)|hotel|shopping\s+(?:centre|center|mall)|mall|"
+    r"monument|memorial|museum|restaurant|cafe|club|park|building"
+    r")\s*(?:[«\"“„]\s*)?$"
+)
+
+
+def _spatial_role_prefix(prefix):
+    """Remove one grammatical classifier, never arbitrary words or a place name.
+
+    Models often quote only the proper name in 'near the hotel X'. The location
+    cue and its negation must still be checked before that classifier.
+    """
+    match = _VENUE_CLASSIFIER_SUFFIX.search(prefix)
+    if match:
+        return prefix[:match.start()]
+    # When the quoted fragment includes 'hotel X', only its preceding article
+    # remains outside the quote; the same spatial/negative checks still apply.
+    return re.sub(r"(?<!\w)(?:the|a|an)\s+$", "", prefix)
+
+
+_START_CASE_ENDINGS = {"", "ь", "а", "я", "у", "ю", "е", "и", "ы", "ом", "ем", "ой", "ей",
+                       "ов", "ев", "ах", "ях", "ам", "ям", "ами", "ями", "ого", "его", "ому", "ему",
+                       "ий", "ый", "ая", "яя", "ое", "ее", "ую", "юю", "ые", "ие", "ых", "их", "ыми", "ими"}
+
+
+def _same_case_word(first, second, minimum=5):
+    first, second = _norm(first), _norm(second)
+    if first == second:
+        return True
+    if not re.fullmatch(r"[а-я]+", first) or not re.fullmatch(r"[а-я]+", second):
+        return False
+    return any(first[:cut] == second[:cut] and first[cut:] in _START_CASE_ENDINGS
+               and second[cut:] in _START_CASE_ENDINGS
+               for cut in range(minimum, min(len(first), len(second)) + 1))
+
+
+def _recover_start_span(value, query):
+    """Recover ONLY one actual start span, not a provider/place identity.
+
+    A public multiword anchor must keep the same existing anchor ID. Other
+    recovery is restricted to a single Cyrillic word with bounded case endings.
+    Ambiguous mentions never select the first match; role checks follow later.
+    """
+    from .lab_context import ORIGIN_PATTERNS
+    candidates = set()
+    wanted = _norm(value)
+    identifiers = [key for key, pattern in ORIGIN_PATTERNS.items() if re.fullmatch(pattern, wanted)]
+    if len(identifiers) == 1:
+        words = re.findall(r"[\w]+", wanted)
+        for match in re.finditer(ORIGIN_PATTERNS[identifiers[0]], query, re.I):
+            actual = re.findall(r"[\w]+", _norm(match[0]))
+            if len(words) == len(actual) and all(_same_case_word(a, b, 3) for a, b in zip(words, actual)):
+                candidates.add(match.span())
+    if re.fullmatch(r"[а-я]+", wanted):
+        for match in re.finditer(r"(?<!\w)[А-Яа-яЁё]+(?!\w)", query):
+            if _same_case_word(wanted, match[0]):
+                candidates.add(match.span())
+    if len(candidates) != 1:
+        raise IntentError("Дословный фрагмент старта отсутствует или неоднозначен.")
+    begin, end = next(iter(candidates))
+    return query[begin:end]
+
 def _start(value, query):
     if value is None:
         return None
-    value = _quote(value, query, 200)
-    normalized, begin, _ = _quote_position(value, query)
+    value = _text(value, 200)
+    recovered = False
+    try:
+        value = _quote(value, query, 200)
+        normalized, begin, _ = _quote_position(value, query)
+    except IntentError:
+        value = _recover_start_span(value, query)
+        normalized, begin, _ = _quote_position(value, query)
+        recovered = True
     if _DESTINATION.search(_norm(value)):
         raise IntentError("Фрагмент старта не должен содержать желаемое назначение.")
-    prefix = normalized[max(0, begin - 100):begin]
+    prefix = _spatial_role_prefix(normalized[max(0, begin - 100):begin])
     if _NEGATIVE_START.search(prefix):
         raise IntentError("Отвергнутое место не может быть стартом.")
     # A destination after 'want to visit' is not the current position.
@@ -106,7 +182,7 @@ def _start(value, query):
             raise IntentError("Место назначения не может подменять старт.")
     has_cue = bool(_LOCATION.search(prefix) or re.search(r"^(?:я\s+)?(?:возле|около|у|near|at)\s+", _norm(value)))
     has_address = bool(re.search(r"\b(?:улиц\w*|ул\.|просп\w*|street|avenue)\b", _norm(value)))
-    if begin > 0 and not has_cue and not has_address:
+    if (begin > 0 or recovered) and not has_cue and not has_address:
         raise IntentError("Нет подтверждения, что фрагмент обозначает старт.")
     return value
 
@@ -635,6 +711,11 @@ def extraction_request(query, model):
         "venue_visit, requirements=[], context=[]. 'Я турист с сыном, хочу клуб с RTX' -> "
         "context tourist/child по цитатам 'турист'/'сыном', equipment required по 'RTX'. "
         "Не добавляй ребёнка или туриста по игре, месту или длительности. "
+        "Сохраняй падежные окончания в quote: 'около Байтерека' -> start_quote='Байтерека', не 'Байтерек'. "
+        "Цель можно понять без названия категории: 'спеть любимые песни с друзьями' -> karaoke, venue_visit; "
+        "'поиграть шарами на столе с лузами' -> billiards, venue_visit. Не заменяй их парком. "
+        "'Хочу в планетарий' -> category_hint=null, search_text='планетарий', venue_visit; "
+        "'Хочу погладить капибару' -> category_hint=null, specific_activity, activity required. "
         "Никогда не создавай координаты, часы, факты мест или provider IDs. Время разбирает отдельный код. "
         "Доступные category_hint (не ограничивают свободный поиск): " + str(labels)
     )

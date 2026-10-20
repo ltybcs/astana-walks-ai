@@ -318,7 +318,7 @@ test("selected description origin is labelled honestly without changing whole an
     const data=result({alternatives:[option(45,{stops:[{...stop(),user_description:description,description_origin,why_text:why}]})]});
     const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();
     const content=h.elements["walk-stops"].children[0].children[0],origin=content.children.find(el=>el.className==="stop-description-origin"),text=content.children.find(el=>el.className==="stop-description"),whyDetails=content.children.find(el=>el.className==="stop-why-details");
-    assert.equal(origin.tagName,"SMALL");assert.equal(origin.textContent,label);assert.equal(origin.children.length,0);assert.equal(text.textContent,description);assert.equal(text.children.length,0);assert.notEqual(whyDetails.open,true);
+    assert.equal(origin.tagName,"P");assert.equal(origin.textContent,label);assert.equal(origin.children.length,0);assert.equal(text.textContent,description);assert.equal(text.children.length,0);assert.notEqual(whyDetails.open,true);
     assert.equal(h.elements["walk-answer"].textContent,data.answer.text);assert.equal(h.elements["google-original-text"].textContent,data.grounding.summary);assert.equal(h.elements["google-sources"].children.length,data.grounding.sources.length+1);
   }
 });

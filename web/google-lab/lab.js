@@ -426,7 +426,7 @@ function selectOption(id) {
     if (typeof stop.user_description === "string" && stop.user_description.trim() && stop.user_description.length <= 600) {
       const originLabel = stop.description_origin === "source-template" ? "Идея приложения"
         : stop.description_origin === "local-model" ? "Описание ИИ" : null;
-      if (originLabel) content.append(node("small", originLabel, "stop-description-origin"));
+      if (originLabel) content.append(node("p", originLabel, "stop-description-origin"));
       content.append(node("p", stop.user_description, "stop-description"));
     }
     if (typeof stop.why_text === "string" && stop.why_text.trim()) {
