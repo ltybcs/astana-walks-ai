@@ -157,6 +157,42 @@ class UnifiedNarrationTests(unittest.TestCase):
         self.assertEqual(answer, value)
         self.assertEqual(reason, "validated_structure_sources_and_known_claims")
 
+    def test_known_unselected_google_venue_rejects_whole_despite_valid_selected_ids(self):
+        self.grounding["sources"][4]["title"] = "Kul'tura Diktuyet - Google Maps"
+        original = deepcopy(self.grounding)
+        text = "Выбранные места подходят для прогулки. Идея: сделать паузу у Kul’tura Diktuyet. Условия посещения неизвестны."
+        answer, reason = self.run_narrator(http_open=self.model({**self.answer, "text": text}))
+        self.assertIsNone(answer)
+        self.assertEqual(reason, "unselected_google_venue")
+        self.assertEqual(len(self.calls), 1)
+        sent = strict_json(self.calls[0][0]["messages"][1]["content"])
+        self.assertEqual(sent["grounding_lite_summary"], original["summary"])
+        self.assertEqual(len(sent["all_google_source_previews"]), 5)
+        for sent_source, source in zip(sent["all_google_source_previews"], original["sources"]):
+            for key in ("id", "source_id", "title", "url", "attribution"):
+                self.assertEqual(sent_source[key], source[key])
+        self.assertEqual(self.grounding, original)
+
+    def test_selected_google_title_and_selected_longer_name_remain_allowed(self):
+        self.stops[2]["name"] = "Selected Coffee - Google Maps"
+        self.grounding["sources"][2]["title"] = self.stops[2]["name"]
+        self.stops[1]["name"] = "Cult Coffee"
+        self.grounding["sources"][4]["title"] = "Cult - Google Maps"
+        text = "Выбранные места подходят для прогулки. Идея: осмотреть Selected Coffee и Cult Coffee снаружи. Условия посещения неизвестны."
+        value = {**self.answer, "text": text}
+        answer, reason = self.run_narrator(http_open=self.model(value))
+        self.assertEqual(answer, value)
+        self.assertEqual(reason, "validated_structure_sources_and_known_claims")
+
+    def test_selected_short_name_does_not_hide_a_longer_unselected_google_venue(self):
+        self.stops[1]["name"] = "Cult"
+        self.grounding["sources"][4]["title"] = "Cult Coffee - Google Maps"
+        value = {**self.answer, "text": "Выбранные места подходят для прогулки. Идея: осмотреть Cult Coffee снаружи. Условия посещения неизвестны."}
+        answer, reason = self.run_narrator(http_open=self.model(value))
+        self.assertIsNone(answer)
+        self.assertEqual(reason, "unselected_google_venue")
+        self.assertEqual(len(self.calls), 1)
+
     def test_all_selected_ids_required_exact_no_extra_sources_or_stops(self):
         for key, values in (
             ("source_ids", ["o0", "d0"]), ("source_ids", ["o0", "d0", "g2", "g0"]),
