@@ -234,6 +234,20 @@ class CategoryCatalogTests(unittest.TestCase):
         self.assertEqual(categories_from_rubrics(["Аптека — название кафе", "Лекарства"]), ())
         self.assertNotIn("наличие лекарств подтверждено", CATEGORY_CATALOG["pharmacy"]["proposed_activity"])
 
+    def test_existence_goals_are_not_swallowed_by_a_nearby_origin(self):
+        for query in ("Есть ли рядом с аэропортом аптека? У меня два часа.",
+                      "Рядом с аэропортом есть аптека? У меня два часа.",
+                      "Есть ли аптека рядом с музеем?", "Рядом с музеем аптека"):
+            with self.subTest(query=query):
+                intent = parse_search_intent(query)
+                self.assertTrue(intent["supported"])
+                self.assertEqual(intent["categories"], ["pharmacy"])
+                self.assertEqual(intent["mode"], "single_venue")
+        for query in ("Есть ли рядом ветклиника?", "Рядом с аэропортом есть ветклиника?",
+                      "Есть ли рядом с аэропортом ломбард?", "Есть ли рядом планетарий?"):
+            self.assertFalse(parse_search_intent(query)["supported"])
+        self.assertTrue(parse_search_intent("Рядом с Байтереком есть два часа, хочу прогулку")["supported"])
+
     def test_preferences_negation_privacy_and_legacy_wrapper(self):
         result = parse_search_intent("Хочу тихое кафе с розеткой для коляски PRIVATE_NAME 51.1,71.4 https://private.example")
         self.assertEqual(result["preferences"], ["quiet", "socket", "accessible"])

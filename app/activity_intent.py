@@ -10,6 +10,7 @@ import unicodedata
 from typing import Literal, TypedDict
 
 from .category_catalog import CATEGORY_CATALOG
+from .lab_context import ORIGIN_PATTERNS
 
 
 class SearchIntent(TypedDict):
@@ -30,7 +31,11 @@ _PREFERENCES = {
     "socket": r"розет\w*|заряд\w*|sockets?|power\s+outlets?",
     "accessible": r"коляс\w*|безбарьер\w*|wheelchair|accessible|арбамен",
 }
+_ORIGIN_TEXT = "(?:" + "|".join(ORIGIN_PATTERNS.values()) + ")"
 _TARGET = re.compile(
+    r"\bесть\s+ли\s+(?:(?:рядом|поблизости|недалеко)(?:\s+(?:с|со|к|от)\s+" + _ORIGIN_TEXT + r")?\s+)?|"
+    r"\b(?:рядом|поблизости|недалеко)\b[^,;.!?]{0,100}?\bесть\s+"
+    r"(?!(?:\d+|один|два|три|полтора|пару)\s+(?:час\w*|минут\w*)\b|(?:час|полчаса)\b)|"
     r"\bгде\b[^,;.!?]{0,100}?\b(?:есть|находится|находятся)\s+|"
     r"\bгде\s+(?:(?:поблизости|рядом|тут|здесь|можно)\s+)*(?:найти\s+)?|"
     r"(?<!\w)(?:хочу|хотел\w*|пойду|сходить|ищу|найти|посетить|нужен|нужна|нужно|нужны|"
@@ -89,6 +94,14 @@ def _location_mention(query, start):
     goal_markers = list(_TARGET.finditer(prefix))
     if goal_markers:
         prefix = prefix[goal_markers[-1].end():]
+    # A completed known landmark ends the location span. The following venue
+    # noun is a goal, not another arbitrary qualifier swallowed by "near".
+    cue = re.search(r"(?:\bрядом\s+(?:с|со)|\bвозле|\bоколо|\bнеподалеку\s+от|\bу|\bnear|\bnext\s+to)\s+", prefix)
+    if cue:
+        tail = prefix[cue.end():]
+        if (any(pattern.search(tail) for pattern in _CATEGORY_PATTERNS.values())
+                or any(re.search(pattern, tail) for pattern in ORIGIN_PATTERNS.values())):
+            return False
     # A venue named as a landmark is context, not a second requested activity.
     return bool(re.search(
         r"(?:\bрядом\s+(?:с|со)|\bвозле|\bоколо|\bнеподалеку\s+от|\bу|"
