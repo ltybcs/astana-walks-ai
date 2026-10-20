@@ -67,6 +67,20 @@ def _minutes(number, unit):
     return int(value)
 
 
+def _whole_day_available(query):
+    """A stated free day is a budget hint, not venue hours or an exact duration."""
+    pattern = (r"\b(?:у\s+(?:меня|нас)\s+(?:есть\s+)?(?:целый|весь)\s+день|"
+               r"(?:целый|весь)\s+день\s+(?:свободен|свободна|свободны)|"
+               r"(?:свободен|свободна|свободны)\s+(?:целый|весь)\s+день)\b")
+    for match in re.finditer(pattern, query):
+        prefix = re.split(r"[,;.!?]", query[:match.start()])[-1]
+        suffix = re.split(r"[,;.!?]", query[match.end():])[0]
+        occupied = re.search(r"\b(?:не|нет|занят\w*|работ\w*|учусь|учеб\w*|друг\w*|подруг\w*)\b", suffix)
+        if not occupied and not re.search(r"\b(?:не|нет|без)(?:\s+\w+){0,3}\s*$", prefix):
+            return True
+    return False
+
+
 def _time_options(query, explicit):
     covered, exact, intervals = [], set(), []
     def free(match):
@@ -110,6 +124,8 @@ def _time_options(query, explicit):
         options, source, requested_range = [next(iter(exact))], "query", None
     elif explicit is not None:
         options, source, requested_range = [explicit], "explicit", None
+    elif _whole_day_available(query):
+        return [240, 360, 480], "query_day_options", None, ["Для свободного дня предложены варианты на 4, 6 и 8 часов."]
     else:
         return list(DEFAULT_BUDGETS), "default_options", None, ["Время не указано; показаны варианты на 1, 2 и 4 часа."]
     if explicit is not None and explicit != options[0] and source != "explicit":
