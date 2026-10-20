@@ -65,3 +65,5 @@ Node.js в PATH включает автономные JS-проверки инт
 Прежние Leaflet/PWA/extractive-проверки, [PDF](output/pdf/astana-walks-presentation.pdf), [PPTX](output/presentations/astana-walks.pptx), [сценарии PDF](output/pdf/astana-walks-scenarios.pdf), [речь](output/speaker-script.md) и [видео 4:10,64](output/video/final/astana-walks-demo.mp4) сохранены с собственной датой, SHA и областью проверки. Они **не сертифицируют новый объединённый интерфейс**. Пользователь загрузит MP4 на YouTube самостоятельно; `video_url=null` не является выполненной публикацией.
 
 [Историческая сдача](docs/SUBMISSION.md) · [команда и передача](docs/HANDOFF.md) · [правила](AGENTS.md) · [координация](COORDINATION.md). Закрытый репозиторий требует доступа; ссылка сама по себе не открывает его жюри. История отдельных Google/OSM/viewer режимов в GOOGLE_* документах и qa сохранена с явными историческими пометками.
+
+Последнее исправление запроса аптеки и вопросительных форм: [qa/pharmacy-question-check.json](qa/pharmacy-question-check.json). 386 Python checks (384 PASS, 2 Windows skip); живой точный запрос не подставляет кафе. Предыдущий category-протокол относится к указанному в нём0bb648c.

@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-20T17:57:38+00:00",
+  "scope": "Explicit question goals and pharmacy-only relevance; narrow follow-up to category release",
+  "behavior_commit": "8d49dc461101091392ebf77e1b4b90c0821769f1",
+  "parent_behavior_commit": "0bb648cfdd8ed652fc31bbf8b03091a613b72773",
+  "parent_receipt": "qa/category-coverage-check.json",
+  "parent_receipt_sha256_lf": "86aa0cbe363e6d2c7670d2202516ae51d4ef2c974c3bb85fe057e2acbca0863e",
+  "source_sha256": {
+    "app/activity_intent.py": "265365c675d820741351818a82b0ec995fcc9217806e9ace54b8a5a02a1ce776",
+    "app/category_catalog.py": "57563f5a756a88945ed47320bcc2606fb86eeecf70cf5c04535436d63838fcd4",
+    "app/google_grounded.py": "fc67997fdf69dc01cfd7a5b57a8844a8356f7cf8b6941a6651445e0f4fe57f01",
+    "app/lab_context.py": "38be909847d9fe98e3e646bb980fa5346153497a33f2fc63aff68378aae50c06",
+    "app/retrieval.py": "64ca6827e1d71e66c080cd083580104cf993e63b6ad9f3411bc65c5ff5bcf6e6",
+    "app/unified_dgis.py": "410e885fa9fdaa810ed2684c613ac8042476c9c30756674d2e2b918b65d723ac",
+    "app/unified_narration.py": "8a6ddbca59a4e04acaba8c911137b73383d197fa598f9c62be0fad2dbc57a303",
+    "app/unified_walks.py": "6475bfc192364e6ec780afc6ae643dc9f63cada7bdd0f7c30c94b7852c8728d9",
+    "app/google_client.py": "202b63d645f24283ce5a4ffc9580e7b8be6303ab4e23e97dcfd7fee9cf1a7634",
+    "app/google_budget.py": "4eb81c16e398fc3f650fddbfd664e89ecb8e05f87d124dc453d124e4e351844c",
+    "app/google_lab.py": "232f2ccd728cdb055496e94a35491e48f5a88a8b06d23335862ee391cd35db8b",
+    "app/route_map.py": "88b59df071291a92817332b467f6af600b3b3a022e88fd9acf353122eb71541e",
+    "app/llm.py": "f2a1cd73fb21caae8c1f3dbfdf8173a1eb71190714b5f1882cd4002541c78b4e",
+    "scripts/collect_2gis.py": "bf2f7590e52e3e55ad079f1d551ecc55764423b6c3881611e777c4f65bfae20a",
+    "web/google-lab/index.html": "333d40f871085ca9fa2c03411547095f66a4e85c19daf4d3eecf928818d35987",
+    "web/google-lab/lab.js": "79db06699f445a2413226c2d6bbb4a988265f84347505e9f4078896ad2503974",
+    "web/google-lab/lab.css": "9756d25f2a20e052d0619863ed479d3a9b96cf9863698ff2ee57ea30fcebb50c",
+    "web/google-lab/sw.js": "5c2d61afc24f39ec2d1cebb1c7228a2538c77353c5eaf17bf53daad6c299ffa2",
+    "web/google-lab/pwa.js": "36d670a5c07a8f394ce7378ccffa7b6287b08a046e4bb448877fc6a066dbe93c",
+    "tests/test_activity_intent.py": "9f76af863667487f400ffee99dc43ec4d64358d44f8d13ecffe8339ccc22fb10",
+    "tests/test_category_catalog.py": "e412ed1734f353955a9e0e6a16298d5dd244d3283319b70abe1919600f22cd57",
+    "tests/test_category_context.py": "b6c376989768b06179d315a2b5e4c3aec2378565478b70d7442bdba0a15056e7",
+    "tests/test_category_search.py": "a3d963bc871a17b74696d5eacf56cea5c9ce9ff4321c943afe47a13d62d8f45f",
+    "tests/test_category_unified.py": "a683ba591a9f300e8d8a2d69ca481ef2c5ac725599a9d0c7a3688f015aac8559",
+    "tests/test_stop_reason.py": "e4e3c5d4e361ca593f925e1bc78bd8a8060aa93fa5b36fb5413dfe367ee9c6cf",
+    "tests/test_collection_2gis.py": "034970a399cc641295c6c5304f5a99c9763f644bfbcf694ca534dce2a9f03461",
+    "tests/test_unified_dgis.py": "3695098ed68dc63bf303007f17b1df1f86e5d12fa7eca119ae98660818bc151a",
+    "tests/test_google_grounded.py": "89bcab7e7966e6c95a36dba218156883272b054826f8fdae051b499781769214",
+    "tests/test_google_lab_frontend.js": "3109b3b831ce545d6178ef1d1ccd4270520303b8e32bd630f18f3b1355ac506d",
+    "tests/test_google_lab_pwa.js": "64878c89582beac23637984925037c0f7e2c69a7f578eba2aa21c57630ae58ba",
+    "tests/test_unified_walks.py": "adc0583c99338ae6479f6a2ebb9ec579d3f23af27244806f1789b11274fa9ccd"
+  },
+  "hash_normalization": "CRLF to LF only",
+  "offline": {
+    "python_methods_run": 386,
+    "passed": 384,
+    "skipped": 2,
+    "skip_reason": "Windows symlink privileges",
+    "frontend_cases_passed": 82,
+    "pwa_cases_passed": 23,
+    "actual_provider_http_calls": 0,
+    "actual_model_http_calls": 0,
+    "canonical_categories": 31,
+    "exact_pharmacy_question": {
+      "origin_id": "airport",
+      "minutes": 120,
+      "categories": [
+        "pharmacy"
+      ],
+      "mode": "single_venue",
+      "cafes_or_parks_substituted": false
+    },
+    "absent_typed_pharmacy": {
+      "route_calls": 0,
+      "model_calls": 0
+    },
+    "unknown_question_or_unknown_replacement": {
+      "supported": false,
+      "provider_or_model_calls": 0
+    },
+    "ordinary_generic_walk_and_known_replacements_preserved": true,
+    "night_hours_and_socket_access_quiet_gates_preserved": true,
+    "nearby_existence_question_orders": {
+      "both_orders": "pharmacy-only single_venue",
+      "unknown_target": "unsupported before provider/model calls"
+    }
+  },
+  "live_pharmacy": {
+    "case": "pharmacy",
+    "http_status": 200,
+    "elapsed_seconds": 2.33,
+    "before": {
+      "google_used": 325,
+      "dgis_used": 32
+    },
+    "after": {
+      "google_used": 329,
+      "dgis_used": 33
+    },
+    "mode": "grounding-only",
+    "llm_status": "no_verified_plan",
+    "llm_attempts": 0,
+    "budget_options": [
+      120
+    ],
+    "activity_mode": "single_venue",
+    "categories": [
+      "pharmacy"
+    ],
+    "google_preview_count": 1,
+    "whole_google_summary_present": true,
+    "receipt": {
+      "osm": {
+        "candidate_count": 0,
+        "selected_count": 0
+      },
+      "google": {
+        "candidate_count": 0,
+        "selected_count": 0
+      },
+      "dgis": {
+        "candidate_count": 0,
+        "selected_count": 0
+      }
+    },
+    "plans": [
+      {
+        "budget_minutes": 120,
+        "status": "no_candidates",
+        "route_built": false,
+        "stop_categories": [],
+        "total_minutes": null,
+        "walk_minutes": null,
+        "return_minutes": null
+      }
+    ],
+    "behavior_commit": "a0f3b9e9e47caf31120d5d86493e8aeb05fd103a"
+  },
+  "live_interpretation": "The exact public-airport query completed with no verified candidates and zero model calls. No cafe was substituted. This is an abstention check, not proof that an open pharmacy exists nearby. Earlier accepted club answer/map and rejected EXPO answer are historical at the parent behavior commit and were not repeated for this narrow delta. Final existence-question order changes were checked offline; the live pharmacy case remains explicitly bound to a0f3b9e.",
+  "quota_interpretation": "Same shared 500 Google and 500/30-day 2GIS ledgers; one additional controlled pharmacy request. Shared counters before this test already included unattributed concurrent activity. No ledger reset or new API/key pool.",
+  "local_independent_review": {
+    "status": "APPROVED",
+    "catalog_sha256": "57563f5a756a88945ed47320bcc2606fb86eeecf70cf5c04535436d63838fcd4",
+    "parser_sha256": "265365c675d820741351818a82b0ec995fcc9217806e9ace54b8a5a02a1ce776"
+  },
+  "external_review": {
+    "status": "unavailable for final delta",
+    "reason": "User reports Scirtor technical failure. Earlier source-bound approval remains in parent receipt."
+  },
+  "storage": {
+    "raw_provider_responses_saved": false,
+    "raw_user_text_saved": false,
+    "personal_location_saved": false,
+    "provider_keys_saved": false
+  },
+  "limitations": [
+    "A bounded 31-category lexical parser, not universal intent understanding.",
+    "Public landmark aliases and local OSM matching, not general geocoding.",
+    "No pharmacy stock, medicine availability, prices, treatment or medical advice established by category.",
+    "No physical GPS or new phone installation verified.",
+    "The prior source-bound report remains historical; its source hashes are not claimed as the current delta."
+  ]
+}

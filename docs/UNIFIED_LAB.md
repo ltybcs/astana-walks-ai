@@ -60,3 +60,5 @@ Offline fixtures проверяют одновременность трёх ис
 Финальный протокол с хешами исходников и границами реальных проверок: [qa/unified-search-check.json](../qa/unified-search-check.json).
 
 Текущий протокол категорий, компактного UI и исправления пустой выдачи: [qa/category-coverage-check.json](../qa/category-coverage-check.json). Предыдущие протоколы выше исторические.
+
+Текущий узкий патч вопросительных целей и аптеки: [qa/pharmacy-question-check.json](../qa/pharmacy-question-check.json); предыдущий category-протокол исторический.
