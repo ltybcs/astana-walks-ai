@@ -1,7 +1,7 @@
 {
   "format": "1920x1080, H.264, 25 fps, silent",
   "kind": "captioned actual UI scenario screenshots",
-  "duration_seconds": 100.0,
+  "duration_seconds": 84.0,
   "scenes": [
     {
       "image": "video-frames/01-initial.png",
@@ -32,12 +32,6 @@
       "sha256": "3ab20962a290551ac9bcc0ec2d57dbf71b747d8faec708cc5e361196337da2f1",
       "caption": "Одна карта с возвращением. Google показывает 16 мин / 1,2 км; оценки различаются.",
       "seconds": 26.0
-    },
-    {
-      "image": "video-frames/06-unsupported.png",
-      "sha256": "11519fced8b7307017cdf217b7b7fcf10cf67d190cd6148d40ea30c40bb5c219",
-      "caption": "Неизвестная категория: честный отказ. Другие занятия вместо неё не предлагаются.",
-      "seconds": 16.0
     }
   ]
 }
