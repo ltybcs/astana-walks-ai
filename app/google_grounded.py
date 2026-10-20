@@ -247,7 +247,7 @@ def protected_claim_rejection(text):
     groups = [
         (r"открыт\w*|работает|работают|закрыт\w*|круглосуточ\w*|open now", "hours"),
         (r"розет\w*|socket\w*|wifi|wi-fi|вай.?фай", "amenity"),
-        (r"тихо|тихий|тихая|тихое|тихие|бесшум\w*|quiet", "quiet"),
+        (r"тих\w*|тишин\w*|бесшум\w*|quiet", "quiet"),
         (r"безопас\w*|доступен|доступн\w*|недоступн\w*|бесплатн\w*|accessible", "access_safety"),
         (r"скамей\w*|качел\w*|горк\w*|песочниц\w*|розет\w*|детск\w* площад\w*|туалет\w*|парковк\w*|меню|обслуживан\w*", "infrastructure"),
     ]
@@ -261,7 +261,7 @@ def protected_claim_rejection(text):
                 local_uncertainty = (
                     re.search(r"(?:нет (?:данных|информации)|не подтвержден\w*|не гарант\w*)(?:\s+\w+){0,3}\s*$", prefix)
                     or re.search(r"(?:проверь\w*|уточн\w*|неизвест\w*)(?:\s+(?:наличие|условия|есть|ли|возможность)){0,3}\s*$", prefix)
-                    or re.match(r"\s+(?:ли\b|неизвест\w*|не подтверж\w*|не гарант\w*)", suffix)
+                    or re.match(r"\s+(?:(?:и|или)\s+(?:безопасност\w*|доступност\w*|тишин\w*|тих\w*|розет\w*|час\w*)\s+){0,2}(?:ли\b|неизвест\w*|не подтверж\w*|не гарант\w*)", suffix)
                 )
                 if local_uncertainty:
                     continue

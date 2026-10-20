@@ -297,6 +297,10 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertEqual(result["diagnostics"]["llm_status"], "private_origin_in_provider_context")
 
     def test_cafe_instruction_and_whole_output_guard_follow_actual_intent(self):
+        for text in ("Сделайте паузу в тихой атмосфере.", "Проведите время в тихом кафе.", "Здесь тишина."):
+            with self.subTest(text=text):
+                self.assertEqual(protected_claim_rejection(text), "unsupported_protected_quiet")
+        self.assertIsNone(protected_claim_rejection("Тишина не подтверждена."))
         from app.google_grounded import intent_action_instruction, intent_action_rejection
         instruction = intent_action_instruction({"categories": ["cafe"]})
         self.assertIn("пауза", instruction.replace("паузу", "пауза"))
