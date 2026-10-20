@@ -4,7 +4,7 @@
 
 Проект разработан для **Build with AI / GDG Astana**, задача №1 НИЦ Smart City.
 
-**[Открыть демо](https://ltybcs.com/demo)**
+**[Открыть демо](https://ltybcs.com/demo)** · **[Видео на YouTube](https://youtu.be/QJCgEYHDqBU)**
 
 ## О проекте
 

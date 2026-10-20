@@ -1638,3 +1638,6 @@ Owner A, branch codex/readme-project-overview, scope README.md and this ownershi
 
 
 README rewritten in the requested previous-hackathon organization: product/audience, capabilities, usage, expected scenarios, RAG, technology, source structure and setup/checks. Stable owner demo retained; no quotas, bug-fix history, saved-version/materials section or invented YouTube link. Actual CLI/configuration independently checked against code and DEPLOYMENT; two local document links and three fenced blocks validated, git diff --check clean. Documentation only; no new tests, paid requests, app/model/tunnel restart or submitted artifact change.
+
+
+The user supplied the published YouTube URL https://youtu.be/QJCgEYHDqBU. A adds this exact link next to the stable demo at the top of the README in the same PR; no upload or channel operation. This supersedes only the previous absence of a supplied video URL, with no claim about video duration or new content verification.
