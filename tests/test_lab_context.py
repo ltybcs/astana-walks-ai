@@ -29,6 +29,37 @@ class LabContextTests(unittest.TestCase):
                     self.assertEqual(context["minutes_source"], "query")
                     self.assertFalse(context["sensitive_origin"])
 
+    def test_pair_of_hours_in_exact_user_request_is_120_minutes(self):
+        for activity in ("комп клуб", "компьютерный клуб"):
+            for duration in ("на пару часов", "на пары часов", "на два часа", "на 120мин"):
+                query = f"Я хочу в {activity} {duration} рядом с Байтереком"
+                with self.subTest(activity=activity, duration=duration):
+                    result = self.resolve({"query": query})
+                    context = result["resolved_context"]
+                    self.assertEqual(context["minutes"], 120)
+                    self.assertEqual(context["budget_options"], [120])
+                    self.assertEqual(context["minutes_source"], "query")
+                    self.assertEqual(context["origin_id"], "baiterek")
+                    self.assertEqual(result["query"], query)
+
+    def test_pair_hour_forms_share_existing_coverage_and_ambiguity_rules(self):
+        cases = (
+            (BASE + " на пару часов", [120], "query"),
+            (BASE + " в течение пары часов", [120], "query"),
+            (BASE + " есть пара часов", [120], "query"),
+            (BASE + " на пару часов, то есть два часа", [120], "query"),
+            (BASE + " на пару часов или 120 минут", [120], "query"),
+            (BASE + " на пару часов и 30 минут", [60, 120, 240], "ambiguous_text_options"),
+            (BASE + " на 1–2 часа или пару часов", [60, 120, 240], "ambiguous_text_options"),
+            (BASE + " посмотреть пару мест", [60, 120, 240], "default_options"),
+            (BASE + " для пары друзей", [60, 120, 240], "default_options"),
+        )
+        for query, budgets, source in cases:
+            with self.subTest(query=query):
+                context = self.resolve({"query": query})["resolved_context"]
+                self.assertEqual(context["budget_options"], budgets)
+                self.assertEqual(context["minutes_source"], source)
+
     def test_defaults_ranges_and_ambiguity_are_actual_bounded_options(self):
         for query, budgets, source in ((BASE, [60, 120, 240], "default_options"),
                                        (BASE + " на 1–2 часа", [60, 90, 120], "query_range"),

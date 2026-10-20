@@ -354,5 +354,96 @@ class UnifiedNarrationTests(unittest.TestCase):
         self.assertEqual(status, "action_does_not_match_cafe_intent")
 
 
+    def test_computer_club_intent_survives_model_context_without_outdoor_substitution(self):
+        self.intent["categories"] = ["computer_club"]
+        for stop in self.stops:
+            stop["category"] = "computer_club"
+        good = {**self.answer, "text": "Компьютерный клуб соответствует выбранному занятию. "
+                                     "Предлагаю запланировать игровую паузу после проверки условий. "
+                                     "Условия посещения неизвестны."}
+        result, status = self.run_narrator(http_open=self.model(good))
+        self.assertEqual(result, good)
+        payload = self.calls[-1][0]
+        context = json.loads(payload["messages"][1]["content"])
+        self.assertEqual(context["intent"]["categories"], ["computer_club"])
+        self.assertEqual(context["grounding_lite_summary"], self.grounding["summary"])
+        self.assertEqual(len(context["all_google_source_previews"]), 5)
+        bad = {**good, "text": "Выбранное место подходит для отдыха. Предлагаю прогулку по парку. Условия посещения неизвестны."}
+        result, status = self.run_narrator(http_open=self.model(bad))
+        self.assertIsNone(result)
+        self.assertEqual(status, "action_does_not_match_computer_club_intent")
+
+
+    def test_unknown_club_equipment_or_current_capacity_rejects_whole_answer(self):
+        self.intent["categories"] = ["computer_club"]
+        for stop in self.stops:
+            stop.update(category="computer_club", features={}, opening_hours=None)
+        for assertion, expected in (
+            ("В компьютерном клубе есть мощные игровые компьютеры.", "equipment"),
+            ("В компьютерном клубе есть свободные места.", "availability"),
+            ("Клуб оснащён игровыми компьютерами.", "equipment"),
+            ("Свободные места есть, но условия неизвестны.", "availability"),
+            ("Свободных мест нет.", "availability"),
+        ):
+            with self.subTest(assertion=assertion):
+                self.calls.clear()
+                value = {**self.answer, "text": assertion + " Предлагаю запланировать игровую паузу. Условия посещения неизвестны."}
+                original = deepcopy(value)
+                answer, status = self.run_narrator(http_open=self.model(value))
+                self.assertIsNone(answer)
+                self.assertEqual(status, "unsupported_computer_club_" + expected)
+                self.assertEqual(len(self.calls), 1)
+                self.assertEqual(value, original)
+
+    def test_club_equipment_advice_unknown_and_source_identity_are_not_claims(self):
+        self.intent["categories"] = ["computer_club"]
+        for stop in self.stops:
+            stop.update(category="computer_club", features={}, opening_hours=None)
+        for statement in ("Уточните наличие мощных игровых компьютеров и свободных мест.",
+                          "Наличие компьютеров неизвестно. Наличие свободных мест не подтверждено.",
+                          "Уточните, есть ли компьютеры. Если есть свободные места, проверьте условия."):
+            with self.subTest(statement=statement):
+                value = {**self.answer, "text": "Компьютерный клуб соответствует выбранному занятию. " + statement + " Предлагаю запланировать игровую паузу. Условия посещения неизвестны."}
+                answer, status = self.run_narrator(http_open=self.model(value))
+                self.assertEqual(answer, value)
+                self.assertEqual(status, "validated_structure_sources_and_known_claims")
+        # A literal source name is identity, not proof or an assertion of capacity.
+        self.stops[1]["name"] = "Компьютеры и свободные места"
+        value = {**self.answer, "text": "Выбранный источник «Компьютеры и свободные места» соответствует интересу к компьютерному клубу. Предлагаю запланировать игровую паузу. Условия посещения неизвестны."}
+        answer, status = self.run_narrator(http_open=self.model(value))
+        self.assertEqual(answer, value)
+        self.assertEqual(status, "validated_structure_sources_and_known_claims")
+
+
+    def test_coordinated_club_unknown_subjects_share_only_their_own_predicate(self):
+        self.intent["categories"] = ["computer_club"]
+        for stop in self.stops:
+            stop.update(category="computer_club", features={}, opening_hours=None)
+        for statement in ("Наличие игровых компьютеров и свободных мест не подтверждено.",
+                          "Наличие свободных мест и игровых компьютеров не подтверждено.",
+                          "Игровые компьютеры и свободные места неизвестны.",
+                          "Наличие свободных мест и мощных игровых компьютеров пока неизвестно."):
+            with self.subTest(statement=statement):
+                self.calls.clear()
+                value = {**self.answer, "text": statement + " Предлагаю игровую паузу в компьютерном клубе."}
+                answer, status = self.run_narrator(http_open=self.model(value))
+                self.assertEqual(answer, value)
+                self.assertEqual(status, "validated_structure_sources_and_known_claims")
+                self.assertEqual(len(self.calls), 1)
+        for statement, expected in (
+            ("Есть компьютеры; наличие свободных мест не подтверждено.", "equipment"),
+            ("Есть свободные места; наличие игровых компьютеров неизвестно.", "availability"),
+            ("Есть компьютеры и свободные места. Условия посещения неизвестны.", "equipment"),
+            ("Наличие игровых компьютеров и свободных мест не подтверждено, но есть компьютеры.", "equipment"),
+        ):
+            with self.subTest(statement=statement):
+                self.calls.clear()
+                value = {**self.answer, "text": statement + " Предлагаю игровую паузу в компьютерном клубе."}
+                answer, status = self.run_narrator(http_open=self.model(value))
+                self.assertIsNone(answer)
+                self.assertEqual(status, "unsupported_computer_club_" + expected)
+                self.assertEqual(len(self.calls), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

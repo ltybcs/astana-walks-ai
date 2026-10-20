@@ -252,5 +252,59 @@ class UnifiedDGISTests(unittest.TestCase):
         self.assertNotIn(SECRET, str(fetched.exception))
 
 
+    def test_computer_club_aliases_send_only_allowlisted_query_with_explicit_rubric(self):
+        item = card(type="branch", name="Синтетическое место для проверки категории",
+                    rubrics=[{"name": "Компьютерные клубы"}])
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(envelope([item])).encode())
+        for alias in ("комп клуб", "компьютерный клуб", "киберклуб", "интернет-клуб",
+                      "computer club", "gaming lounge", "PC club"):
+            with self.subTest(alias=alias):
+                result = self.client.search("Хочу в " + alias + " PRIVATE_RAW_QUERY", ORIGIN, 1000)
+                params = parse_qs(urlsplit(self.transport.call_args.args[0].full_url).query)
+                self.assertEqual(params["q"], ["Компьютерные клубы"])
+                self.assertNotIn("PRIVATE", self.transport.call_args.args[0].full_url)
+                self.assertEqual(result["category"], "computer_club")
+                self.assertEqual([place["category"] for place in result["places"]], ["computer_club"])
+                self.assertEqual(result["places"][0]["source_rubrics"], ["Компьютерные клубы"])
+                self.assertEqual(result["places"][0]["features"]["socket"], "unknown")
+                self.assertIsNone(result["places"][0]["opening_hours"])
+        self.assertEqual(self.transport.call_count, 7)
+        self.assertNotIn("computer_club", legacy.CATEGORIES)
+
+    def test_computer_club_is_supported_only_by_exact_rubrics_not_brand_or_query(self):
+        # Source order must not hide an explicit club rubric behind a cafe.
+        items = [card(id="1", type="branch", name="Нейтральное имя", rubrics=[{"name": "Компьютерные клубы"}]),
+                 card(id="2", type="branch", name="Другое имя", rubrics=[{"name": "Интернет-клубы"}]),
+                 card(id="3", type="branch", name="Третье имя", rubrics=[{"name": "Кафе"}, {"name": "Компьютерные клубы"}]),
+                 card(id="4", type="branch", name="Gaming Club — только бренд", rubrics=[{"name": "Кафе"}]),
+                 card(id="5", type="branch", name="Компьютерный клуб — только имя", rubrics=[]),
+                 card(id="6", type="branch", name="Клуб", rubrics=[{"name": "Компьютерный ремонт"}])]
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(envelope(items)).encode())
+        result = self.client.search("computer club", ORIGIN, 1000)
+        self.assertEqual([place["id"] for place in result["places"]], ["2gis:1", "2gis:2", "2gis:3"])
+        self.assertTrue(all(place["category"] == "computer_club" for place in result["places"]))
+        self.assertEqual(result["search_scope"]["filtered_count"], 3)
+        self.assertEqual(self.transport.call_count, 1)
+
+    def test_unrelated_cafe_or_park_results_do_not_replace_requested_computer_club(self):
+        items = [card(type="branch", name="Gaming Club Cafe", rubrics=[{"name": "Кафе"}]), card(id="2")]
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(envelope(items)).encode())
+        result = self.client.search("Хочу в комп клуб", ORIGIN, 1000)
+        self.assertEqual(result["places"], [])
+        self.assertEqual(result["category"], "computer_club")
+        self.assertEqual(result["search_scope"]["filtered_count"], 2)
+        self.assertEqual(self.transport.call_count, 1)
+
+    def test_unknown_explicit_activity_is_rejected_before_key_ledger_or_http(self):
+        with patch.object(self.client._client, "_key", side_effect=AssertionError("No key access")), \
+             patch.object(self.client, "_existing_state", side_effect=AssertionError("No ledger access")):
+            with self.assertRaises(legacy.DGISLiveError) as caught:
+                self.client.search("Хочу в обсерваторию", ORIGIN, 1000)
+        self.assertEqual(caught.exception.code, "unsupported_activity")
+        self.assertEqual(caught.exception.http_status, 422)
+        self.assertEqual(self.state()["attempts"], [])
+        self.transport.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

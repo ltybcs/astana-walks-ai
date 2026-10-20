@@ -23,12 +23,14 @@ from urllib.request import Request, ProxyHandler, build_opener
 from .google_budget import GoogleError
 from .google_client import GoogleClient, json_bytes, strict_json, valid_place_id, maps_url
 from .llm import LLMConfig, NoRedirect
+from .activity_intent import activity_intent, COMPUTER_CLUB_PATTERN
 
 PUBLIC_NAMES = {"mega": "MEGA Silk Way, Astana, Kazakhstan", "baiterek": "Baiterek, Astana, Kazakhstan", "river": "Ishim River embankment, Astana, Kazakhstan", "expo": "EXPO 2017, Astana, Kazakhstan"}
 # Operator-authored public search context, not imported Google place facts.
 # Routing still starts/ends at PUBLIC_NAMES, not at these wider search areas.
 SEARCH_AREAS = {**PUBLIC_NAMES, "mega": "EXPO / Nur Alem рядом с MEGA Silk Way, Астана"}
 CATEGORY_WORDS = {
+    "computer_club": (COMPUTER_CLUB_PATTERN, "компьютерные клубы"),
     "walk": (r"прогул\w*|погуля\w*|пешком|необычн\w*|walk\w*", "достопримечательности, архитектура, площади и бульвары для внешнего осмотра"),
     "park": (r"парк\w*|сад\w*|park\w*|garden\w*", "парки и сады"),
     "playground": (r"площадк\w*|ребен\w*|дет\w*|child\w*|playground\w*", "детские площадки или парки для семейной прогулки"),
@@ -95,12 +97,17 @@ class TokenSigner:
 
 def safe_intent(query):
     normalized = query.casefold().replace("ё", "е")
-    categories = [name for name, (pattern, _) in CATEGORY_WORDS.items() if re.search(r"\b(?:" + pattern + r")\b", normalized)]
+    categories = [name for name, (pattern, _) in CATEGORY_WORDS.items() if name != "computer_club" and re.search(r"\b(?:" + pattern + r")\b", normalized)]
     # A generic walk does not imply a park. Explicit park/playground interests
     # stay narrower, and an explicitly requested park is not lost for families.
     if "park" in categories or "playground" in categories:
         categories = [name for name in categories if name != "walk"]
     preferences = [name for name, (pattern, _) in PREF_WORDS.items() if re.search(r"\b(?:" + pattern + r")\b", normalized)]
+    activity = activity_intent(query, categories)
+    if activity["unsupported"]:
+        raise GoogleError("unsupported_activity", "Этот тип места пока не поддерживается; другие места вместо него не подбирались.", 422)
+    if activity["categories"]:
+        categories = activity["categories"]
     if not categories:
         categories = ["walk"]
     return {"categories": categories, "preferences": preferences}
@@ -314,6 +321,9 @@ def _answer_rejection(answer, grounding, selected_id, plan):
 
 def intent_action_instruction(intent):
     categories = intent.get("categories", [])
+    if categories == ["computer_club"]:
+        return ("Пользователь хочет провести время в компьютерном клубе. Предложи запланировать игровую паузу после проверки условий. "
+                "Не подменяй посещение клуба прогулкой в парке или осмотром фасада, не обещай оборудование, игры, места или сеанс. ")
     if categories == ["cafe"]:
         return ("Пользователь хочет кафе и кофе. Предложи короткую паузу на кофе у выбранного источника. "
                 "Действие должно быть связано с кофе; не предлагай осмотр фасада или здания. ")
@@ -328,6 +338,12 @@ def intent_action_instruction(intent):
 
 
 def intent_action_rejection(answer, intent):
+    if intent.get("categories") == ["computer_club"]:
+        text = answer["text"].casefold()
+        if (re.search(r"фасад|осмотр\w*\s+(?:облик|здани)|прогул\w*\s+(?:по|в)\s+парк", text)
+                or not re.search(r"компьютер|кибер|игр\w*|гейм", text)):
+            return "action_does_not_match_computer_club_intent"
+        return None
     if intent.get("categories") != ["cafe"]:
         return None
     text = answer["text"].casefold()

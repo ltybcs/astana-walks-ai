@@ -16,12 +16,15 @@ from typing import Any
 from itertools import permutations
 from urllib.parse import urlparse
 
+from .activity_intent import activity_intent, COMPUTER_CLUB_PATTERN
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA = ROOT / "data" / "poi.astana.json"
 WALK_METRES_PER_MINUTE = 75
 PATH_FACTOR = 1.3
 CATEGORY_TEXT = {
+    "computer_club": "компьютерный комп клуб киберклуб интернет-клуб gaming computer pc esports club",
     "park": "парк сад природа зелень прогулка гулять воздух ребёнок дети семья park garden nature саябақ серуен отбасы",
     "playground": "детская площадка ребёнок дети семья играть playground бала балалар",
     "cafe": "кафе кофе чай перекус посидеть coffee cafe",
@@ -98,8 +101,15 @@ def detect_intent(query: str, time_of_day: str = "day") -> dict[str, Any]:
         "bar": r"\bбар\w*|\bпаб\w*|\bpub\b|\bbar\b",
         "mall": r"шопинг|покуп\w*|shopping",
     }
-    requested = [category for category, pattern in category_patterns.items() if _wanted(query, pattern)]
+    category_patterns["computer_club"] = COMPUTER_CLUB_PATTERN
+    requested = [category for category, pattern in category_patterns.items()
+                 if category != "computer_club" and _wanted(query, pattern)]
+    activity = activity_intent(query, requested)
+    if activity["categories"]:
+        requested = activity["categories"]
     excluded = [category for category, pattern in category_patterns.items() if re.search(pattern, query) and not _wanted(query, pattern)]
+    if not activity["categories"] and re.search(r"(?<!\w)(?:" + COMPUTER_CLUB_PATTERN + r")(?!\w)", query) and "computer_club" not in excluded:
+        excluded.append("computer_club")
     return {
         "coffee": "cafe" in requested,
         "socket": _wanted(query, r"розет\w*|заряд\w*|socket|power outlet"),
@@ -112,6 +122,8 @@ def detect_intent(query: str, time_of_day: str = "day") -> dict[str, Any]:
         "accessible": _wanted(query, r"коляс\w*|безбарьер\w*|wheelchair|accessible|арбамен"),
         "outdoor": _wanted(query, r"прогул\w*|погуля\w*|гуля\w*|walk\w*|серуен\w*|воздух"),
         "preferred_categories": requested,
+        "activity_mode": activity["mode"],
+        "unsupported_activity": activity["unsupported"],
         "excluded_categories": excluded,
         "time_of_day": time_of_day,
         "general_suggestion": bool(re.search(r"куда|где|посовету\w*|рядом|near\w*|where|suggest\w*", query)),
@@ -266,11 +278,16 @@ class Retriever:
         filtered = Counter()
         terms = tokens(query)
         preferred = set(intent["preferred_categories"])
-        allowed_requested = preferred | {"monument", "theatre", "museum", "attraction"} if preferred and intent["architecture"] else preferred
+        allowed_requested = (preferred | {"monument", "theatre", "museum", "attraction"}
+                             if preferred and intent["architecture"] and intent["activity_mode"] != "single_venue"
+                             else preferred)
         outdoor_categories = {"park", "playground", "promenade", "monument", "attraction", "viewpoint", "theatre"}
         tourist_categories = (outdoor_categories - {"playground"}) | {"museum"}
         for index, poi in enumerate(self.places):
             category = poi["category"]
+            if intent["unsupported_activity"]:
+                filtered["unsupported_activity"] += 1
+                continue
             if poi["id"] in self.duplicate_of:
                 filtered["duplicate_source"] += 1
                 continue

@@ -2,6 +2,7 @@ from urllib.parse import parse_qs, urlsplit
 import unittest
 from app.google_budget import GoogleError
 from app.route_map import RouteMap
+from app.lab_context import PUBLIC_ORIGINS
 
 
 class RouteMapTests(unittest.TestCase):
@@ -25,13 +26,15 @@ class RouteMapTests(unittest.TestCase):
     def test_public_anchor_and_google_id_match_backend_route_semantics(self):
         service = RouteMap("PUBLIC_EMBED_TEST_KEY_ONLY")
         self.addCleanup(service.close)
-        ticket = service.issue({"lat": 51.0892, "lon": 71.4074},
-                               [{"lat": 51.09125, "lon": 71.4128, "provider": "google", "id": "Google_mock"}],
-                               context={"origin_id": "mega", "sensitive_origin": False})
-        params = parse_qs(urlsplit(service.resolve({"ticket": ticket})["url"]).query)
-        self.assertEqual(params["origin"], ["MEGA Silk Way, Astana, Kazakhstan"])
-        self.assertEqual(params["origin"], params["destination"])
-        self.assertEqual(params["waypoints"], ["place_id:Google_mock"])
+        for identifier, origin in PUBLIC_ORIGINS.items():
+            with self.subTest(identifier=identifier):
+                ticket = service.issue(origin,
+                                       [{"lat": 51.09125, "lon": 71.4128, "provider": "google", "id": "Google_mock"}],
+                                       context={"origin_id": identifier, "sensitive_origin": False})
+                params = parse_qs(urlsplit(service.resolve({"ticket": ticket})["url"]).query)
+                self.assertEqual(params["origin"], [f"{origin['lat']:.7f},{origin['lon']:.7f}"])
+                self.assertEqual(params["origin"], params["destination"])
+                self.assertEqual(params["waypoints"], ["place_id:Google_mock"])
 
     def test_ticket_expiry_and_no_key_are_explicit(self):
         time = [0]

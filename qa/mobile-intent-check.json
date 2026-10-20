@@ -1,0 +1,336 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "scope": "Requested computer-club activity, pair-of-hours duration and narrow mobile layout correction",
+  "source_hash_normalization": "CRLF normalized to LF; trailing bytes otherwise preserved",
+  "final_behavior_code_commit": "d66b2b8ea4b177cd9b24399725002436f12ca57b",
+  "source_sha256": {
+    "app/activity_intent.py": "70ef043cea9971484676034cdd0dc186b65867d25dd86c1df590d567753732ab",
+    "app/google_grounded.py": "3ee017367ce0407b1004f4128b687de7d691d6ee00a3b5c3487dfc7f643c8562",
+    "app/lab_context.py": "464073d3441a82b612e1af24f78384c947754f6e10802f1aa649ca10bac95d5f",
+    "app/retrieval.py": "0f129b1b68739d647c28821df91d88e7eaa135ca13f50bd872b7c82fef7664b9",
+    "app/unified_dgis.py": "bc991e10d13d465eacbbebe8a78b3a2da74e932519d77c5ce169d57e949db736",
+    "app/unified_narration.py": "e27dcdc10cc61a12093ac017660c732b7bc9f9e84f73ecd962faf7babc067ae7",
+    "app/unified_walks.py": "7050c68e896d71e2a15a58c7922c2525aefcb7d57e2353c7935ad4c79df19316",
+    "app/route_map.py": "88b59df071291a92817332b467f6af600b3b3a022e88fd9acf353122eb71541e",
+    "scripts/collect_2gis.py": "d9af840559550be502b627c1a8e1dba50d442f41ae35c7f64930132aafcc268b",
+    "web/google-lab/index.html": "802b693bcba6b2071ff2885e9a6f986534c4667786c673d96f0e9ac595e67fba",
+    "web/google-lab/lab.js": "f09ba8ed9f67edab40c3acdb257102fba6774d67c76eb81c3d08c064095da0fc",
+    "web/google-lab/lab.css": "d733a876b825533959855ff458e3dd1b3499e5172243095f3c8330eca549acbc",
+    "web/google-lab/pwa.js": "36d670a5c07a8f394ce7378ccffa7b6287b08a046e4bb448877fc6a066dbe93c",
+    "web/google-lab/sw.js": "e4902c29d960822d8bf9351679b0b253c7c0fb153eba1302cc698dc6f0e65301",
+    "tests/test_activity_intent.py": "c839a8418d51177c164c53f4d571782089b5858e2009e9fec2a60848f040814e",
+    "tests/test_lab_context.py": "e391ae026c68bed10a011219e841f2d9fea520175990a51eb02a651c16c79956",
+    "tests/test_unified_dgis.py": "34317990aba88d956fd9341197d01cad972dfbbae163b82906d271ae5d301809",
+    "tests/test_unified_narration.py": "93d06d3fa3776df222efce7cf9fbdc49759b53b3fd8b6faf5ca87de58e6ff0f0",
+    "tests/test_unified_walks.py": "adc0583c99338ae6479f6a2ebb9ec579d3f23af27244806f1789b11274fa9ccd",
+    "tests/test_route_map.py": "f4b59155e4a77534988cb825f93ceb35b0632a76d8cbf3296820b10bc4a863a2",
+    "tests/test_google_lab_frontend.js": "751e8121acdf274171ef3d3b23515e4c53de03fccb04a272849daf464813faac",
+    "tests/test_google_lab_pwa.js": "d7d5351501558652604fa6e0e048b6e05ab9ad1e85e2142fe5b0f8067ea17640"
+  },
+  "automated": {
+    "python_tests_run": 337,
+    "python_tests_passed": 335,
+    "windows_symlink_skips": 2,
+    "frontend_cases": 71,
+    "pwa_cases": 23,
+    "external_provider_calls": 0,
+    "model_calls": 0
+  },
+  "technical_offline_cases": [
+    "Exact user gaming request resolves public landmark and120-minute budget",
+    "Canonical computer_club preserved across reconstructed Google query, local retrieval and2GIS query",
+    "Explicit provider rubric proves2GIS category; query or brand alone does not",
+    "Google unknown category metadata never becomes a computer-club stop; whole summary/all previews retained",
+    "No matching club gives no substitute parks, no route calls and no model generation",
+    "At most3 relevant venues evaluated independently; choose one verified shortest roundtrip",
+    "Proposed visit fills budget minus directed outward/return paths and five-minute reserve",
+    "Unrouteable nearest club does not block another relevant venue",
+    "Computer-club intent reaches model; park/facade substitute action rejected as a whole",
+    "Architecture as a secondary interest cannot widen single-venue category at retrieval or adapter eligibility",
+    "English ASCII and typographic contracted want negations preserve the positive museum/cafe request",
+    "Known club equipment/current-seat assertions reject the whole answer despite a later generic caveat; local unknown/advice/conditional and source names remain allowed",
+    "Unknown start gate, quotas, no persistence and stale-response guards retain full-suite coverage",
+    "All four public starts and custom/GPS start keep the same coordinates in outward/return WALK legs and Embed start/end",
+    "Google stop place ID and OSM/2GIS coordinate stop identity remain intact"
+  ],
+  "mobile_browser": {
+    "tested_in": "desktop in-app browser with measured viewport",
+    "physical_phone": false,
+    "physical_gps": false,
+    "physical_installation": false,
+    "production_initial_390": {
+      "innerWidth": 390,
+      "clientWidth": 375,
+      "scrollWidth": 375,
+      "textareaFontPx": 16,
+      "submitHeightPx": 60.7083,
+      "installHelpHeightPx": 44
+    },
+    "synthetic_long_before_fix_320": {
+      "clientWidth": 305,
+      "scrollWidth": 3139
+    },
+    "synthetic_long_after_fix": [
+      {
+        "buttons": [
+          {
+            "height": 44.125,
+            "width": 114.66667175292967
+          },
+          {
+            "height": 44.125,
+            "width": 114.66667175292967
+          },
+          {
+            "height": 44.125,
+            "width": 237.33334350585935
+          }
+        ],
+        "client": 305,
+        "height": 844,
+        "overflow": [],
+        "scroll": 305,
+        "width": 320
+      },
+      {
+        "buttons": [
+          {
+            "height": 68.91667175292969,
+            "width": 87.10417175292969
+          },
+          {
+            "height": 68.91667175292969,
+            "width": 87.11458587646484
+          },
+          {
+            "height": 68.91667175292969,
+            "width": 87.11458587646484
+          }
+        ],
+        "client": 345,
+        "height": 844,
+        "overflow": [],
+        "scroll": 345,
+        "width": 360
+      },
+      {
+        "buttons": [
+          {
+            "height": 44.125,
+            "width": 97.10417175292967
+          },
+          {
+            "height": 44.125,
+            "width": 97.11458587646484
+          },
+          {
+            "height": 44.125,
+            "width": 97.11458587646484
+          }
+        ],
+        "client": 375,
+        "height": 844,
+        "overflow": [],
+        "scroll": 375,
+        "width": 390
+      },
+      {
+        "buttons": [
+          {
+            "height": 44.125,
+            "width": 110.4375
+          },
+          {
+            "height": 44.125,
+            "width": 110.44792175292967
+          },
+          {
+            "height": 44.125,
+            "width": 110.44792175292967
+          }
+        ],
+        "client": 415,
+        "height": 844,
+        "overflow": [],
+        "scroll": 415,
+        "width": 430
+      },
+      {
+        "buttons": [
+          {
+            "height": 44.125,
+            "width": 85
+          },
+          {
+            "height": 44.125,
+            "width": 91.36458587646484
+          },
+          {
+            "height": 44.125,
+            "width": 91.36458587646484
+          }
+        ],
+        "client": 829,
+        "height": 390,
+        "overflow": [],
+        "scroll": 829,
+        "width": 844
+      }
+    ],
+    "synthetic_install_320": {
+      "clientWidth": 305,
+      "scrollWidth": 305,
+      "installHeightPx": 44.125
+    },
+    "synthetic_normal_result_390": {
+      "titleTopPx": -0.0417,
+      "answerTopPx": 405.78125,
+      "answerBottomPx": 573.78125,
+      "focusId": "walk-result-title",
+      "scrollWidthEqualsClient": true
+    },
+    "synthetic_variant_switch": {
+      "recommend_before": 2,
+      "recommend_after": 2,
+      "context_before": 2,
+      "context_after": 2,
+      "map_before": 2,
+      "map_after": 3,
+      "provider_calls": 0,
+      "model_calls": 0
+    },
+    "public_unknown_address_390": {
+      "errorVisible": true,
+      "errorTopPx": 704.729,
+      "errorBottomPx": 808.437,
+      "viewportHeightPx": 844,
+      "clientWidth": 375,
+      "scrollWidth": 375,
+      "searchBlocked": true
+    }
+  },
+  "independent_reviews": {
+    "local_reviewers": "Core, context,2GIS,coordinate map,CSS,and final3regression deltas approved with exact source hashes",
+    "scirtor_18e5aff": {
+      "targeted_tests_passed": 82,
+      "outcome": "CHANGES_REQUESTED",
+      "three_findings_preserved_and_addressed": true
+    },
+    "scirtor_692630b": {
+      "targeted_tests_passed": 25,
+      "public_anchor_probes_passed": 4,
+      "outcome": "coordinate_delta_APPROVED_offline"
+    },
+    "scirtor_43d8281": {
+      "original_red_subcases_passed": 6,
+      "original_three_findings_closed": true,
+      "outcome": "one_new_false_rejection_changes_requested",
+      "coordination_commit": "9a95282",
+      "finding": "Coordinated nominal subject unknown equipment and seats was rejected; corrected separately offline"
+    },
+    "scirtor_final_delta": {
+      "outcome": "APPROVED",
+      "coordination_commit": "36fb12d",
+      "scope": "final narrow technical delta after the coordinated-unknown correction"
+    }
+  },
+  "live_acceptance": {
+    "performed": true,
+    "surface": "existing primary HTTPS site in measured390x844 desktop browser viewport",
+    "scenario": "User-reported computer-club request with public landmark and a pair of hours",
+    "raw_query_or_provider_payload_stored": false,
+    "attempts": [
+      {
+        "source_commit": "18e5aff773472f1e35bf12a08d1a518a80ef6089",
+        "activity_and_time_outcome": "PASS",
+        "requested_minutes": 120,
+        "sources_searched": [
+          "osm",
+          "google",
+          "dgis"
+        ],
+        "google_previews": 5,
+        "selected_stop_count": 1,
+        "selected_category": "computer_club",
+        "selected_provider": "dgis",
+        "accepted_model_answer": true,
+        "model_attempts": 1,
+        "plan_minutes": {
+          "walk": 18,
+          "visit_proposal": 97,
+          "reserve": 5,
+          "return_included": 9,
+          "total": 120
+        },
+        "map_outcome": "FAIL",
+        "observed_map_minutes": 124,
+        "observed_map_km": 8.9,
+        "finding": "Public origin was replaced with an ambiguous address string; route identity was inconsistent",
+        "observed_quotas_before": {
+          "google": 268,
+          "dgis": 21
+        },
+        "observed_quotas_after": {
+          "google": 278,
+          "dgis": 22
+        }
+      },
+      {
+        "source_commit": "692630b793a4ccc3581fef2bea90d26cf1566f2e",
+        "activity_and_time_outcome": "PASS",
+        "requested_minutes": 120,
+        "sources_searched": [
+          "osm",
+          "google",
+          "dgis"
+        ],
+        "google_previews": 5,
+        "selected_stop_count": 1,
+        "selected_category": "computer_club",
+        "selected_provider": "dgis",
+        "accepted_model_answer": true,
+        "model_attempts": 1,
+        "plan_minutes": {
+          "walk": 18,
+          "visit_proposal": 97,
+          "reserve": 5,
+          "return_included": 9,
+          "total": 120
+        },
+        "map_outcome": "PASS",
+        "observed_map_minutes": 16,
+        "observed_map_km": 1.2,
+        "same_validated_numeric_origin_for_planner_and_map": true,
+        "map_origin_equals_destination": true,
+        "map_travel_mode": "walking",
+        "map_count": 1,
+        "inner_width": 390,
+        "client_width": 375,
+        "scroll_width": 375,
+        "map_width": 306,
+        "map_height": 370,
+        "observed_quotas_before": {
+          "google": 278,
+          "dgis": 22
+        },
+        "observed_quotas_after": {
+          "google": 288,
+          "dgis": 23
+        },
+        "scope": "Manual visible answer/category/unknown-conditions review and actual rendered map; different Google engines do not promise identical duration"
+      }
+    ],
+    "subsequent_changes": "Scirtor strict-category, English-negation and club-claim guards are verified offline separately; these two live cases are not attributed to a later source head",
+    "no_additional_live_calls_for_offline_guards": true,
+    "physical_phone_gps_or_new_installation_tested": false
+  },
+  "limits": [
+    "Desktop browser viewport is not a physical Android or iOS test",
+    "Physical GPS, mobile keyboard and new-version physical PWA installation not verified",
+    "Lexical activity vocabulary remains bounded; not universal natural-language understanding",
+    "Visit duration is a proposal; equipment, availability, pricing and session not verified",
+    "Prior unified-search receipt remains historical and is not rewritten"
+  ],
+  "raw_queries_provider_payloads_or_precise_user_location_stored": false
+}

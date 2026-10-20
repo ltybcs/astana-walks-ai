@@ -17,7 +17,6 @@ from urllib.parse import urlencode
 
 from .google_budget import GoogleError, _path
 from .google_client import valid_place_id
-from .google_grounded import PUBLIC_NAMES
 
 
 class RouteMap:
@@ -76,9 +75,8 @@ class RouteMap:
     def issue(self, origin, stops, *, context=None):
         if not 1 <= len(stops) <= 3:
             raise ValueError("Route requires one to three stops")
+        # Use the exact validated start, never a potentially ambiguous name.
         start = self._point(origin)
-        if isinstance(context, dict) and not context.get("sensitive_origin") and context.get("origin_id") in PUBLIC_NAMES:
-            start = PUBLIC_NAMES[context["origin_id"]]
         points = []
         for stop in stops:
             coordinate = self._point(stop)
