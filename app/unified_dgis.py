@@ -150,7 +150,7 @@ class UnifiedDGIS:
         projected_intent = detect_intent(query, intent_plan=intent_plan)
         category = categories[0] if categories else "unknown"
         child = projected_intent["child"]
-        search_text = intent_plan.search_text if intent_plan is not None else "; ".join(CATEGORY_QUERIES[name] for name in categories)
+        search_text = intent_plan.source_phrase if intent_plan is not None else "; ".join(CATEGORY_QUERIES[name] for name in categories)
         if not isinstance(search_text, str) or not search_text.strip() or len(search_text) > 400:
             raise _invalid()
         if deadline is not None and (type(deadline) not in {int, float} or not math.isfinite(deadline)):

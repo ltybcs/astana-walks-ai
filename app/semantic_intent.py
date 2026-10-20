@@ -444,7 +444,11 @@ class IntentPlan:
 
     @property
     def source_phrase(self):
-        return self.search_text
+        active = self.goals[:1] if self.mode == "single_venue" else self.goals
+        return "; ".join(CATEGORY_CATALOG[goal.category_hint]["dgis_query"]
+                         if goal.category_hint in CATEGORY_CATALOG
+                         and goal.fulfilment in {"venue_visit", "generic_walk"}
+                         else goal.search_text for goal in active)
 
     @property
     def preferences(self):

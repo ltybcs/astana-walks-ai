@@ -127,6 +127,49 @@ class SemanticSourceTests(unittest.TestCase):
             self.assertEqual(len(json.loads((legacy.directory / "usage.json").read_bytes())["attempts"]), 1)
             self.assertFalse(any(p.name.endswith(".json") and p.name != "usage.json" for p in legacy.directory.iterdir()))
 
+    def test_provider_queries_project_known_semantic_venue_but_keep_open_goal(self):
+        from app.activity_intent import parse_search_intent
+        from app.category_catalog import CATEGORY_CATALOG
+        cases = [
+            ("Хочу спеть любимые песни с друзьями", "спеть любимые песни с друзьями",
+             "спеть любимые песни с друзьями", "karaoke", CATEGORY_CATALOG["karaoke"]["dgis_query"], "Караоке"),
+            ("Хочу в ланпати", "ланпати", "ланпати", None, "ланпати", "Ланпати"),
+        ]
+        for query, quote, natural, category, expected_query, rubric in cases:
+            with self.subTest(query=query):
+                self.assertFalse(parse_search_intent(query)["supported"])
+                validated = plan(query, goal=quote, search=natural, category=category)
+                original_goal = deepcopy(validated.sanitized_narration)
+                context = {"origin": ORIGIN.copy(), "origin_id": "baiterek", "minutes": 120}
+                with patch("app.google_grounded.parse_search_intent", side_effect=AssertionError("No lexical veto")):
+                    _, safe, _, _, parameters = prepare({"query": "PRIVATE_RAW_MESSAGE"},
+                        lambda _: {"query": "PRIVATE_RAW_MESSAGE", "resolved_context": context}, intent_plan=validated)
+                self.assertEqual(safe["source_phrase"], expected_query)
+                self.assertTrue(parameters["textQuery"].startswith(expected_query + " в районе "))
+                self.assertNotIn("PRIVATE", parameters["textQuery"])
+                self.assertEqual(safe["semantic_goal"], original_goal)
+                self.assertEqual(validated.search_text, natural)
+                with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"DGIS_API_KEY": "SYNTHETIC_NOT_A_REAL_KEY"}):
+                    root = Path(directory).resolve()
+                    now = 1790000000.0
+                    ledger = dgis_live._LiveClient(root, lambda: now)
+                    ledger.status()
+                    records = [item(id="101", point={"lat": ORIGIN["lat"], "lon": ORIGIN["lon"]}, rubrics=[{"name": rubric}]),
+                               item(id="102", name=expected_query, point={"lat": ORIGIN["lat"], "lon": ORIGIN["lon"]}, rubrics=[{"name": "Кафе"}])]
+                    class Response(io.BytesIO):
+                        headers = {"Content-Type": "application/json"}
+                    opened = Mock(side_effect=lambda *a, **kw: Response(json.dumps({"meta": {"code": 200}, "result": {"items": records}}).encode()))
+                    client = UnifiedDGIS(root, clock=lambda: now, http_open=opened)
+                    with patch("app.unified_dgis.parse_search_intent", side_effect=AssertionError("No lexical veto")):
+                        result = client.search("PRIVATE_RAW_MESSAGE", ORIGIN, 1000, intent_plan=validated)
+                    wire = parse_qs(urlsplit(opened.call_args.args[0].full_url).query)
+                    self.assertEqual(wire["q"], [expected_query])
+                    self.assertEqual(opened.call_count, 1)
+                    self.assertEqual(result["quota"]["used"], 1)
+                    self.assertEqual([place["id"] for place in result["places"]], ["2gis:101"])
+                    self.assertEqual(result["places"][0]["source_rubrics"], [rubric])
+                self.assertEqual(validated.sanitized_narration, original_goal)
+
     def test_generic_nature_plan_keeps_outdoor_candidates_not_cafe(self):
         validated = plan("Хочу на природу", goal="природу", search="прогулка на природе",
                          fulfilment="generic_walk")

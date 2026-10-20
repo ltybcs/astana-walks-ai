@@ -93,7 +93,7 @@ def safe_intent(query, *, intent_plan=None):
         flags = detect_intent(query, intent_plan=intent_plan)
         categories = list(flags["preferred_categories"])
         return {"categories": categories, "preferences": list(intent_plan.preferences),
-                "open_goal": intent_plan.open_goal, "source_phrase": intent_plan.search_text,
+                "open_goal": intent_plan.open_goal, "source_phrase": intent_plan.source_phrase,
                 "semantic_goal": deepcopy(intent_plan.sanitized_narration)}
     search = parse_search_intent(query)
     if not search["supported"]:
@@ -122,7 +122,7 @@ def prepare(payload, resolver, *, intent_plan=None):
     intent = safe_intent(request["query"], intent_plan=intent_plan)
     categories = "; ".join(CATEGORY_WORDS[name][1] for name in intent["categories"] if name != "walk" or len(intent["categories"]) == 1)
     if intent_plan is not None:
-        categories = intent_plan.search_text
+        categories = intent_plan.source_phrase
     preferences = "; ".join(PREF_WORDS[name][1] for name in intent["preferences"])
     text = f"{categories} в районе {SEARCH_AREAS.get(context.get('origin_id'), 'Астана')}."
     if preferences:
