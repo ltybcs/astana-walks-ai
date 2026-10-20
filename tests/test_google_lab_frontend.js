@@ -312,6 +312,36 @@ test("protocol selection remains stable across later submissions and does not pr
   let healthCalls=0;const h=harness({health:(_req,r)=>r({context_preparation:++healthCalls>1}),rawContext:true});await h.submit();await h.submit();assert.equal(healthCalls,1);assert.equal(h.calls("/api/context").length,2);for(const request of h.calls("/api/context"))assert(!("consent" in request.body));for(const request of h.calls("/api/unified/recommend"))assert(!("preparation_token" in request.body));
 });
 
+test("selected description origin is labelled honestly without changing whole answer or sources",async()=>{
+  for(const [description_origin,label] of [["source-template","Идея приложения"],["local-model","Описание ИИ"]]){
+    const description="<b>Предложенная пауза</b> после проверки условий.";const why="Проверенный собственный тип.";
+    const data=result({alternatives:[option(45,{stops:[{...stop(),user_description:description,description_origin,why_text:why}]})]});
+    const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();
+    const content=h.elements["walk-stops"].children[0].children[0],origin=content.children.find(el=>el.className==="stop-description-origin"),text=content.children.find(el=>el.className==="stop-description"),whyDetails=content.children.find(el=>el.className==="stop-why-details");
+    assert.equal(origin.tagName,"SMALL");assert.equal(origin.textContent,label);assert.equal(origin.children.length,0);assert.equal(text.textContent,description);assert.equal(text.children.length,0);assert.notEqual(whyDetails.open,true);
+    assert.equal(h.elements["walk-answer"].textContent,data.answer.text);assert.equal(h.elements["google-original-text"].textContent,data.grounding.summary);assert.equal(h.elements["google-sources"].children.length,data.grounding.sources.length+1);
+  }
+});
+test("legacy or unrecognized description origin never invents a model or template label",async()=>{
+  for(const description_origin of [undefined,null,"",{},"remote-model","<img src=x>","__proto__"]){
+    const description="Описание старого ответа остаётся доступно без выдуманной атрибуции.";
+    const data=result({alternatives:[option(45,{stops:[{...stop(),user_description:description,description_origin}]})]});
+    const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();
+    const content=h.elements["walk-stops"].children[0].children[0];assert(!content.children.some(el=>el.className==="stop-description-origin"));assert(content.children.some(el=>el.className==="stop-description"&&el.textContent===description));
+  }
+});
+test("invalid descriptions cannot leave an orphan origin label",async()=>{
+  for(const user_description of [null," ",{},"x".repeat(601)]){
+    const data=result({alternatives:[option(45,{stops:[{...stop(),user_description,description_origin:"source-template"}]})]});
+    const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();
+    assert(!h.elements["walk-stops"].children[0].children[0].children.some(el=>el.className==="stop-description-origin"));
+  }
+});
+test("ready variant switches description attribution locally and editing clears it",async()=>{
+  const data=result({alternatives:[option(45,{stops:[{...stop(),user_description:"Принятое описание выбранного места.",description_origin:"local-model"}]}),option(60,{stops:[{...stop("dgis"),user_description:"Предложенная идея для другой остановки.",description_origin:"source-template"}]})]});
+  const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();assert(h.elements["walk-stops"].textContent.includes("Описание ИИ"));await h.elements["walk-variants"].children[1].emit("click");await flush();assert(h.elements["walk-stops"].textContent.includes("Идея приложения"));assert(!h.elements["walk-stops"].textContent.includes("Описание ИИ"));assert.equal(h.calls("/api/context").length,1);assert.equal(h.calls("/api/unified/recommend").length,1);await h.edit("Новое сообщение");assert.equal(h.elements["walk-stops"].textContent,"");
+});
+
 (async()=>{
   let passed=0;
   for(const item of cases){try{await item.fn();passed++;}catch(error){console.error("FAIL "+item.name+"\n"+error.stack);process.exitCode=1;}}

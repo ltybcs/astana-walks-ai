@@ -93,6 +93,29 @@ def _stop_reason(stop, option, intent):
     return " ".join(parts)
 
 
+def _source_description(stop):
+    """A proposed activity from this exact source type, never a model answer."""
+    spec = CATEGORY_CATALOG.get(stop.get("category"))
+    if spec:
+        activity = spec["proposed_activity"]
+        if activity.startswith("Предложить "):
+            activity = activity[len("Предложить "):]
+            if not activity.startswith(("проверить ", "уточнить ", "посмотреть ", "зайти ")):
+                activity = "запланировать " + activity
+    else:
+        # An unmapped source rubric establishes no catalogue-specific activity.
+        activity = "запланировать посещение после проверки условий."
+    name = stop.get("name")
+    name = name if isinstance(name, str) and name.strip() else "Выбранное место"
+    # The full original name remains on the card and in its source reference.
+    label = name if len(name) <= 160 else name[:159] + "…"
+    text = label + ". Идея: " + activity
+    if stop.get("opening_hours") == "24/7":
+        provider = {"osm": "OpenStreetMap", "dgis": "2ГИС", "google": "Google Maps"}[stop["provider"]]
+        text += " В источнике " + provider + " указан круглосуточный режим."
+    return text
+
+
 def _stop(place, provider, source_id):
     return {"stop_id": provider + ":" + place["id"], "id": place["id"], "source_id": source_id,
             "provider": provider, **{key: deepcopy(place.get(key)) for key in
@@ -248,15 +271,19 @@ class UnifiedWalks:
             llm_attempts = int(llm_status not in {"local_model_unconfigured", "route_not_budget_verified",
                 "invalid_grounding", "selected_source_missing", "context_exceeds_local_bound",
                 "sensitive_origin_in_model_context", "invalid_narration_context", "no_verified_match"})
-        # Descriptions have already passed whole-answer, per-venue validation.
-        # Each exact stop ID receives only its own text, never another provider's rating.
+        # A rejected whole model answer never leaves a ready card blank. The
+        # fallback is our source-type proposal, with its own provenance label.
+        # Accepted descriptions replace only their exact stop ID, unchanged.
         descriptions = {item["stop_id"]: item["text"] for item in (answer or {}).get("venue_descriptions", [])
                         if isinstance(item, dict) and isinstance(item.get("stop_id"), str)
                         and isinstance(item.get("text"), str) and 1 <= len(item["text"]) <= 600}
         for option in alternatives:
             for stop in option["stops"]:
+                stop["user_description"] = _source_description(stop)
+                stop["description_origin"] = "source-template"
                 if stop["stop_id"] in descriptions:
                     stop["user_description"] = descriptions[stop["stop_id"]]
+                    stop["description_origin"] = "local-model"
         receipt = {}
         for provider in ("osm", "google", "dgis"):
             receipt[provider] = {"status": "searched" if candidates[provider] else "no_data",
