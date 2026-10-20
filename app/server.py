@@ -55,8 +55,8 @@ def validate_request(payload: object) -> dict:
     if not isinstance(query, str) or not query.strip() or len(query) > 2000:
         raise ValueError("query: непустой текст до 2000 символов.")
     minutes = payload.get("minutes")
-    if type(minutes) is not int or not 10 <= minutes <= 240:
-        raise ValueError("minutes: целое число от 10 до 240.")
+    if type(minutes) is not int or not 10 <= minutes <= 480:
+        raise ValueError("minutes: целое число от 10 до 480.")
     origin = payload.get("origin")
     if not isinstance(origin, dict):
         raise ValueError("origin: нужны числовые lat и lon.")

@@ -33,6 +33,18 @@ function updateCoordinateFields() {
   $("coordinates").hidden=!custom;
   for(const id of ["latitude","longitude"])$(id).disabled=!custom;
 }
+function updateDurationFields() {
+  const custom=$("minutes").value==="custom";
+  $("custom-duration").hidden=!custom;
+  $("custom-minutes").disabled=!custom;
+  $("custom-minutes").required=custom;
+}
+function durationValue() {
+  const raw=$("minutes").value==="custom"?$("custom-minutes").value:$("minutes").value;
+  const minutes=Number(raw);
+  if(!raw.trim()||!Number.isInteger(minutes)||minutes<10||minutes>480)throw new Error("Укажите целое число минут от 10 до 480 (8 часов).");
+  return minutes;
+}
 function el(tag, className, content) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -126,9 +138,10 @@ $("use-location").addEventListener("click",()=>{
     $("status").textContent="Не удалось получить локацию. Разрешите доступ в браузере или выберите ориентир вручную.";button.disabled=false;button.textContent="⌖ Использовать мою геолокацию";
   },{enableHighAccuracy:false,timeout:10000,maximumAge:0});
 });
-for(const id of ["query","minutes","time-of-day","latitude","longitude"])$(id).addEventListener("change",invalidateResults);
+$("minutes").addEventListener("change",()=>{updateDurationFields();invalidateResults();});
+for(const id of ["query","custom-minutes","time-of-day","latitude","longitude"])$(id).addEventListener("change",invalidateResults);
 for(const button of document.querySelectorAll("[data-scenario]"))button.addEventListener("click",()=>{
-  const preset=scenarios[button.dataset.scenario];$("query").value=preset.query;$("minutes").value=preset.minutes;$("origin").value=preset.origin;$("time-of-day").value=preset.time||"day";updateCoordinateFields();
+  const preset=scenarios[button.dataset.scenario];$("query").value=preset.query;$("minutes").value=preset.minutes;$("origin").value=preset.origin;$("time-of-day").value=preset.time||"day";updateCoordinateFields();updateDurationFields();
   for(const other of document.querySelectorAll("[data-scenario]"))other.classList.toggle("active",other===button);
   invalidateResults();
 });
@@ -139,7 +152,7 @@ $("planner-form").addEventListener("submit",async(event)=>{
   lastRecommendations=[];$("result-mode").textContent="ПОДБОР МЕСТ";drawMap();
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),125000);activeController=controller;
   try{
-    const response=await fetch("/api/recommend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:$("query").value,minutes:Number($("minutes").value),origin:originValue(),time_of_day:$("time-of-day").value}),signal:controller.signal});
+    const response=await fetch("/api/recommend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:$("query").value,minutes:durationValue(),origin:originValue(),time_of_day:$("time-of-day").value}),signal:controller.signal});
     if(!(response.headers.get("Content-Type")||"").includes("application/json"))throw new Error("Сервис временно недоступен. Попробуйте ещё раз позже.");
     const data=await response.json();if(!response.ok)throw new Error(typeof data.error==="string"?data.error:"Не удалось обработать запрос.");
     if(requestId===requestCounter){renderRecommendations(data);revealResult(requestId);}
@@ -221,7 +234,7 @@ async function checkDataset(){
   finally{checkingDataset=false;}
 }
 async function initialize(){
-  updateCoordinateFields();drawMap();await loadPlaces(true);
+  updateCoordinateFields();updateDurationFields();drawMap();await loadPlaces(true);
   await checkDataset();
   // This checks our backend snapshot, never triggers a remote Overpass request.
   setInterval(checkDataset,300000);
