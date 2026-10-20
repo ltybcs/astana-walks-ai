@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "reviewed_at_utc": "2026-10-20T18:30:08.193294+00:00",
+  "reviewer": "Codex independent final_review",
+  "status": "APPROVED",
+  "media": {
+    "path": "astana-walks-current-demo.mp4",
+    "sha256": "9c4b79c9555c840ab3ad5d258aca283c6f37a6fa937d669f4501f3c24a38c16f",
+    "bytes": 1738468,
+    "duration_seconds": 100,
+    "width": 1920,
+    "height": 1080,
+    "fps": 25,
+    "audio": false
+  },
+  "manifest_sha256": "d319086b85e72907415d487425c63cb0053f2ace1b7aa27768d240f4c69f4c45",
+  "evidence_sha256": "6ff3d8964ff7d8598a2aa49915473093131523757b3f028a0777e4ec7affb6b6",
+  "publishing_notes_sha256": "5b99775761dc1d6e090a29def387bfffcf238f50f210901b4ae6e661212a52a5",
+  "capture_source_commit": "33190241ee951f4939094d4a15ddf9baf7b66ee8",
+  "runtime_merge_commit": "d2be9e00811b12eb188d84d936f7ba7da3019c20",
+  "source_images": [
+    {
+      "path": "video-frames/01-initial.png",
+      "sha256": "a8b4d0a8bbbce2260334f103dd169de62099ad9c2ba914ba2597ff434d1de5fc",
+      "matches": true,
+      "caption_matches": true
+    },
+    {
+      "path": "video-frames/02-request.png",
+      "sha256": "7e007b0205d5682bbdf699c889cf66197ba88341ecb6a553a8010f4d641c5fe9",
+      "matches": true,
+      "caption_matches": true
+    },
+    {
+      "path": "video-frames/03-searching.png",
+      "sha256": "f71c85a209fe6176af90d14ef65cc5f5167fb48a2df17dfcc59520ac7379e1d1",
+      "matches": true,
+      "caption_matches": true
+    },
+    {
+      "path": "video-frames/05-ai-budget.png",
+      "sha256": "b58c7a6e7b8098e6745e15627c1b65a84fe247a57c4f8d98d9513f9014dce442",
+      "matches": true,
+      "caption_matches": true
+    },
+    {
+      "path": "video-frames/04-current-route.png",
+      "sha256": "3ab20962a290551ac9bcc0ec2d57dbf71b747d8faec708cc5e361196337da2f1",
+      "matches": true,
+      "caption_matches": true
+    },
+    {
+      "path": "video-frames/06-unsupported.png",
+      "sha256": "11519fced8b7307017cdf217b7b7fcf10cf67d190cd6148d40ea30c40bb5c219",
+      "matches": true,
+      "caption_matches": true
+    }
+  ],
+  "checks": {
+    "full_ffmpeg_decode": true,
+    "all_six_input_images_visually_reviewed": true,
+    "all_six_image_hashes_match_manifest_and_evidence": true,
+    "all_scene_captions_match_evidence": true,
+    "actual_encoded_samples_reviewed_seconds": [
+      45,
+      70,
+      92
+    ],
+    "changed_caption_visually_rechecked_in_final_encode": true,
+    "other_final_samples_pixel_identical_to_reviewed_samples": true,
+    "sample_captions_readable_without_overlap": true,
+    "google_map_attribution_visible": true,
+    "no_visible_backend_secrets_or_private_gps": true,
+    "no_visible_raw_2gis_record_cards": true,
+    "montage_disclosure_present": true,
+    "publishing_notes_disclose_ai_text_not_shown": true
+  },
+  "resolved_findings": [
+    {
+      "code": "ai_budget_scene_wrong_crop",
+      "resolution": "Caption now describes only visible completed state; full AI text is explicitly not shown. Original technical image filename is retained."
+    }
+  ],
+  "blockers": [],
+  "scope_limits": [
+    "Actual browser screenshot montage; not continuous real-time screen recording.",
+    "Desktop capture; no physical-phone verification.",
+    "AI status was reported as observed separately by the capture owner; this review does not claim that an AI badge or complete generated answer is visible in the video.",
+    "No new provider, model or GPS calls were made for this review.",
+    "YouTube publication was not performed or verified."
+  ]
+}
