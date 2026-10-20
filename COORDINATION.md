@@ -1526,3 +1526,36 @@ Live UI evidence: daytime computer-club request near Bayterek returned BRO from 
 Setup encountered `Некорректные поля запроса прогулки` on two initial form submissions. A normal page reload was followed by two completed scenarios. Four UI submissions in total; two returned only validation errors. This is recorded explicitly rather than claiming the initial planned three-submit count. Provider/model attempt counters were not collected; no remaining quota figure or exact deployed-source commit is claimed. No additional searches planned; recording slot released.
 
 All new capture/encoding processes are stopped. No application source, media in the repository, ledgers, provider credentials, model runtime, tunnel, system settings or other people's processes were modified. Final MP4 decoded successfully, all14 chapter frames reviewed and Russian captions checked for fit. Private local evidence/audit remains outside Git; only this coordination handoff is committed.
+
+## Semantic context and free-form goals — implementation started 2026-10-21
+
+Owner A, branch codex/semantic-context, base 9fa4a7da3cecb2a829684a6f3b065c649f38d611. The submitted presentation is immutable. The user will upload YouTube personally; agents must not create a channel or upload. A checked local MP4 1:46 is ready in the primary workspace output/video. No YouTube URL exists yet.
+
+The next requested priority is understanding places and goals from ordinary text. One validated IntentPlan will feed all adapters, rather than repeating lexical rejection. Known deterministic cases remain available as fallback. A locally hosted model may extract context before the start is resolved; it does not recommend places at that stage. An explicitly named unknown start may be resolved by one consented Places Text Search through the existing Google ledger. Activity search, route calls and final narration require a verified start. No default city point or substitute activity is allowed.
+
+The preparation API extends POST /api/context only for consent:true: return an opaque preparation_token, needs_geolocation and resolved_context. The token is held in bounded request-scoped RAM with expiry, tied to the query and client time, reused after GPS, and consumed once by /api/unified/recommend. Invalid/changed/replayed tokens fail before source calls. The legacy no-consent context probe stays free and deterministic. Source adapters receive the validated plan. Unknown goals use a bounded search phrase, with actual structured venue/type evidence required before recommending a result. Required activities or equipment are not inferred from venue category. The full Google response and all attribution previews remain intact.
+
+Ownership: A handles Git, model gateway, request preparation, Google Places client, server/unified orchestration and integration. Local B handles semantic IntentPlan/schema/validation and pure lab_context staging. Local source helper handles retrieval, DGIS normalization/search, Google query preparation and narration compatibility. Local delivery helper handles frontend token forwarding and Node tests. Every implementation part receives independent review; source/provider/model live checks are root-owned. No other participant is awaited.
+
+Preserve the shared 500 Google / 500 rolling-month DGIS limits, existing keys and ledgers, model and public tunnel. No new accounts, key rotation or API activation. Raw requests, geolocation and provider bodies stay in memory and out of Git. Target one backend deadline within the UI 210-second deadline. Nature stash is preserved; do not apply it wholesale. Known hours/strict property safeguards must not be weakened.
+
+
+## Semantic release: resilient venue descriptions — 2026-10-21
+
+Root A approved a bounded extension after live verification: a verified route must keep a useful per-venue description when the final local model answer is rejected. Each ready stop gets user_description from its own validated name/category and a clearly proposed catalog activity, with description_origin=source-template. Only an accepted whole model response may replace its exact stop_id description, with description_origin=local-model. The answer/mode/badge, source eligibility, required properties and numeric/claim guards remain unchanged. A template must not inherit Google ratings, hours or amenities from another venue. Exact own normalized 24/7 may be described as a source-listed schedule, without promising current access or equipment.
+
+Local final_review owns only the helper/description attachment in app/unified_walks.py and tests/test_stop_description.py; B independently reviews. A owns Git/runtime/provider/model checks. Frontend already renders user_description as bounded plain text; source origin will be made visible without changing the whole Google response or source previews. The submitted presentation and user-managed YouTube upload remain untouched.
+
+
+## Semantic plan: provider query projection — 2026-10-21
+
+A local probe now recognizes a singing paraphrase as karaoke without a lexical category word. The same validated plan must produce a useful provider query: IntentPlan.source_phrase projects a known venue_visit or generic_walk hint to its existing catalogue search term, while an unknown hint or specific_activity retains its bounded free goal phrase. IntentPlan.search_text and sanitized narration retain the interpreted wish. No user text is reparsed, no new alias/type is added, no evidence or required-service check is relaxed. Order and primary-only semantics stay the same.
+
+B owns only the pure source_phrase property/tests. Local source helper owns its use in unified_dgis and google_grounded plus source tests. Delivery independently reviews. A retains all Git, runtime and real model/provider calls. This is source-query formatting, not evidence that the requested service exists.
+
+
+## A: semantic baseline verified before rollout — 2026-10-21
+
+Behavior source a4b59c9e5b5309d28ce161cbbf5e80583bb23d90, PR21. Final offline473 methods /471PASS /2Windows symlinkSKIP; frontend109/PWA23. Semantic, preparation, adapters, narration, source-card fallback and frontend received independent review. Metadata-only qa/semantic-context-check.json separates older exact live5h source d89e10c from later quote/projection checks. Real live5h produced7 eligible computer clubs with source-listed 24/7 hours, one correct club,20walking/275proposedvisit/5buffer and one map; the final model prose was rejected, with the honest source-template card shown. Local singing paraphrase now classifies karaoke without the category word; canonical provider terms are passed without reparsing the original request. Named hotel pure staging passes; the separate real Places lookup waits until both app decoders are updated. Shared Google389/500 and DGIS43/500 counts are local ledgers, not provider-console claims. No ledger resets, extra accounts or key changes.
+
+Scirtor49b51f1 video handoff read and preserved completely. No duplicate filming or YouTube upload is planned. If Scirtor remains available, take only free offline paraphrase/regression review and report in COORDINATION or PR21; do not start provider/model calls or overlapping app edits. A completes the CI/rollout and real origin check. Submitted jury presentation remains immutable.

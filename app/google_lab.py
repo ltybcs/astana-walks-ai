@@ -30,7 +30,9 @@ from .route_map import RouteMap
 from .generation import recommend as core_recommend
 from .llm import LLMConfig
 from .retrieval import Retriever, detect_intent
-from .lab_context import PUBLIC_ORIGINS, ContextError, resolve_request
+from .lab_context import PUBLIC_ORIGINS, ContextError, resolve_request, stage_request
+from .model_gateway import ModelGateway
+from .request_preparation import RequestPreparation
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_SOURCE_BYTES = 25_000_000
@@ -297,8 +299,14 @@ class LabServer(ThreadingHTTPServer):
         self.route_map = route_map or RouteMap()
         if isinstance(self.google, GoogleGrounded) and self.route_map._key and self.route_map._key == self.google.client._key:
             raise ValueError("Maps Embed must use a separate restricted browser key")
-        self.unified = UnifiedWalks(self.resolve, self.retriever, self.google.client if isinstance(self.google, GoogleGrounded) else None,
-                                    dgis, llm_config=self.llm_config, route_map=self.route_map)
+        client = self.google.client if isinstance(self.google, GoogleGrounded) else None
+        budget_path = getattr(getattr(client, "budget", None), "path", None)
+        lock_path = budget_path.with_name("local-model") if isinstance(budget_path, Path) else None
+        self.model_gateway = ModelGateway(self.llm_config, lock_path=lock_path)
+        self.preparation = RequestPreparation(self.resolve, self.stage_context, client, self.model_gateway)
+        self.unified = UnifiedWalks(self.resolve, self.retriever, client,
+                                    dgis, llm_config=self.llm_config, route_map=self.route_map,
+                                    preparation=self.preparation, gateway=self.model_gateway)
         self._stats_lock = Lock()
         self._provider_attempts = 0
         self._validated_answers = 0
@@ -329,7 +337,7 @@ class LabServer(ThreadingHTTPServer):
         google_status = self.google.status() if self.google else disabled_status()
         google_attempts = google_status["quota"]["used"]
         return _json_bytes({
-            "status": "ok", "service": "google-maps-lab", "lab": True,
+            "status": "ok", "service": "google-maps-lab", "lab": True, "context_preparation": True,
             "free": self.google is None, "mode": "rag-assistant", "provider_calls": attempts,
             "provider_call_count_scope": "Core-reported local LLM attempts in this lab process only",
             "backend_outbound_calls": attempts > 0 or type(google_attempts) is int and google_attempts > 0,
@@ -345,8 +353,11 @@ class LabServer(ThreadingHTTPServer):
             "google": google_status, "unified": self.unified.status(),
         })
 
-    def resolve(self, payload: object, *, probe=False) -> dict:
-        return resolve_request(payload, catalog=self.catalog, probe=probe)
+    def resolve(self, payload: object, *, probe=False, **internal) -> dict:
+        return resolve_request(payload, catalog=self.catalog, probe=probe, **internal)
+
+    def stage_context(self, payload: object, **internal) -> dict:
+        return stage_request(payload, catalog=self.catalog, probe=True, **internal)
 
     def recommend(self, payload: object) -> dict:
         resolved = self.resolve(payload)
@@ -582,8 +593,11 @@ class LabHandler(BaseHTTPRequestHandler):
             return
         try:
             if self.path == "/api/context":
-                resolved = self.server.resolve(payload, probe=True)
-                response = {"needs_geolocation": resolved["needs_geolocation"], "resolved_context": resolved["resolved_context"]}
+                if isinstance(payload, dict) and payload.get("consent") is True:
+                    response = self.server.preparation.prepare(payload)
+                else:
+                    resolved = self.server.resolve(payload, probe=True)
+                    response = {"needs_geolocation": resolved["needs_geolocation"], "resolved_context": resolved["resolved_context"]}
             elif self.path == "/api/unified/recommend":
                 response = self.server.unified.recommend(payload)
                 with self.server._stats_lock:

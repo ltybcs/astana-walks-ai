@@ -88,12 +88,14 @@ def opening_hours(item):
             intervals.append(f"{start}–{end}")
         values.append((day, intervals))
     # Special/holiday schedules cannot establish an unconditional 24/7 claim.
-    if all(hours == ["00:00–24:00"] for _, hours in values) and not item.get("schedule_special"):
+    conditional = any(schedule.get(key) for key in ("date_from", "date_to", "comment", "description"))
+    if (all(hours == ["00:00–24:00"] for _, hours in values) and not item.get("schedule_special")
+            and not conditional and schedule.get("is_24x7") is not False):
         return "24/7"
     return "; ".join(f"{day} {', '.join(hours)}" for day, hours in values) + ("; есть особое расписание — проверьте карточку" if item.get("schedule_special") else "")
 
 
-def normalize_items(items, collected_at, bbox=DEFAULT_BBOX):
+def normalize_items(items, collected_at, bbox=DEFAULT_BBOX, *, allow_unmapped=False):
     places = {}
     for item in items:
         if not isinstance(item, dict) or item.get("is_deleted"):
@@ -122,7 +124,13 @@ def normalize_items(items, collected_at, bbox=DEFAULT_BBOX):
         if category is None and item.get("type") == "attraction":
             category = "attraction"
             categories = ["attraction"]  # Explicit legacy source type, no venue inference.
-        if category is None or item.get("type") not in {"branch", "attraction", "adm_div.place"}:
+        if item.get("type") not in {"branch", "attraction", "adm_div.place"}:
+            continue
+        if category is None:
+            if not allow_unmapped or not rubrics:
+                continue
+            category = "unknown"
+        if allow_unmapped and (len(rubrics) > 32 or any(not r.strip() or len(r) > 200 for r in rubrics)):
             continue
         attributes = []
         groups = item.get("attribute_groups", [])
@@ -153,6 +161,7 @@ def normalize_items(items, collected_at, bbox=DEFAULT_BBOX):
             "opening_hours": opening_hours(item),
             "source_url": f"https://2gis.kz/astana/{'firm' if item['type'] == 'branch' else 'geo'}/{identifier}",
             "source_provider": "2gis", "source_rubrics": rubrics, "source_categories": categories,
+            **({"source_type": item["type"]} if allow_unmapped else {}),
             "collected_at": collected_at, "verification": "source_reported_not_field_verified",
         })
     return sorted(places.values(), key=lambda p: p["id"])

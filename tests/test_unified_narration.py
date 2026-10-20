@@ -125,6 +125,40 @@ class UnifiedNarrationTests(unittest.TestCase):
             self.assertNotIn(forbidden, wire)
         self.assertEqual((self.grounding, self.stops, self.alternatives, self.context, self.intent), original)
 
+    def test_narration_plan_projection_omits_arithmetic_but_keeps_guard_and_sources(self):
+        # These are valid planning values, not permission for a prose timing claim.
+        self.alternatives[1].update(id="budget-300", budget_minutes=300)
+        self.alternatives[1]["plan"].update(budget_minutes=300, total_minutes=300,
+            walk_minutes=20, visit_minutes=275, buffer_minutes=5, return_walk_minutes=10)
+        original = deepcopy((self.alternatives, self.grounding))
+        answer, status = self.run_narrator()
+        self.assertEqual(answer, self.answer)
+        self.assertEqual(status, "validated_structure_sources_and_known_claims")
+        sent = strict_json(self.calls[0][0]["messages"][1]["content"])
+        for item, option in zip(sent["alternatives"], self.alternatives):
+            self.assertEqual(set(item), {"budget_status", "stop_ids", "verified", "returns_to_origin"})
+            self.assertEqual(item["budget_status"], option["budget_status"])
+            self.assertEqual(item["stop_ids"], [stop["stop_id"] for stop in option["stops"]])
+            self.assertIs(item["verified"], True)
+            self.assertIs(item["returns_to_origin"], True)
+            self.assertNotIn("275", json.dumps(item))
+            self.assertNotIn("300", json.dumps(item))
+        self.assertEqual(sent["grounding_lite_summary"], self.grounding["summary"])
+        self.assertEqual(sent["all_google_source_previews"], [
+            {key: source[key] for key in ("id", "source_id", "title", "url", "attribution")}
+            for source in self.grounding["sources"]])
+        self.assertEqual((self.alternatives, self.grounding), original)
+        value = {**self.answer, "venue_descriptions": [
+            {"stop_id": stop["stop_id"], "text": "Предлагаю короткую прогулку после проверки условий посещения."}
+            for stop in self.stops]}
+        value["venue_descriptions"][0]["text"] = "Предлагаю остановиться на 275 минут. Условия посещения неизвестны."
+        self.calls.clear()
+        answer, status = self.run_narrator(http_open=self.model(value))
+        self.assertIsNone(answer)
+        self.assertEqual(status, "venue_description_unsupported_number")
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual((self.alternatives, self.grounding), original)
+
     def test_surrounding_whitespace_keeps_the_whole_answer_verbatim(self):
         for prefix, suffix in ((" ", " "), ("\n", " "), ("", " ")):
             with self.subTest(prefix=prefix, suffix=suffix):
@@ -443,6 +477,105 @@ class UnifiedNarrationTests(unittest.TestCase):
                 self.assertIsNone(answer)
                 self.assertEqual(status, "unsupported_computer_club_" + expected)
                 self.assertEqual(len(self.calls), 1)
+
+
+    def test_per_venue_descriptions_are_whole_accepted_scoped_and_not_rewritten(self):
+        value = deepcopy(self.answer)
+        value["venue_descriptions"] = [
+            {"stop_id": stop["stop_id"], "text": "  " + stop["name"] + ": запланируйте короткую прогулку и паузу после проверки условий. Условия посещения неизвестны.  "}
+            for stop in self.stops]
+        answer, status = self.run_narrator(http_open=self.model(value))
+        self.assertEqual(answer, value)
+        self.assertEqual(status, "validated_structure_sources_and_known_claims")
+        payload = self.calls[-1][0]
+        schema = payload["response_format"]["json_schema"]["schema"]
+        self.assertIn("venue_descriptions", schema["required"])
+        self.assertLessEqual(payload[self.config.token_parameter], 950)
+        context = strict_json(payload["messages"][1]["content"])
+        self.assertEqual(context["grounding_lite_summary"], self.grounding["summary"])
+        self.assertEqual(len(context["all_google_source_previews"]), 5)
+
+    def test_per_venue_invalid_ids_cross_venue_claim_and_foreign_google_reject_whole(self):
+        self.stops[1]["name"] = "Синтетический сквер"
+        self.grounding["sources"][0]["title"] = "Чужой клуб - Google Maps"
+        valid = [{"stop_id": stop["stop_id"], "text": "Здесь можно запланировать короткую прогулку и паузу после проверки условий посещения."}
+                 for stop in self.stops]
+        for change, expected in (("duplicate", "invalid_venue_descriptions"),
+                                 ("foreign_selected", "cross_venue_description"),
+                                 ("unselected_google", "venue_description_unselected_google_venue"),
+                                 ("rating", "venue_description_unsupported_number")):
+            self.calls.clear()
+            entries = deepcopy(valid)
+            if change == "duplicate": entries[1]["stop_id"] = entries[0]["stop_id"]
+            if change == "foreign_selected": entries[0]["text"] += " Выбрано место " + self.stops[1]["name"] + "."
+            if change == "unselected_google": entries[0]["text"] += " Предлагаю место Чужой клуб."
+            if change == "rating": entries[0]["text"] += " Рейтинг 4.9."
+            answer, status = self.run_narrator(http_open=self.model({**self.answer, "venue_descriptions": entries}))
+            self.assertIsNone(answer)
+            self.assertEqual(status, expected)
+            self.assertEqual(len(self.calls), 1)
+
+    def test_per_venue_equipment_and_quality_do_not_leak_from_other_google_context(self):
+        self.stops = [{**self.stops[1], "name": "BRO", "category": "computer_club"}]
+        for option in self.alternatives: option["stops"] = self.stops
+        self.intent = {"categories": ["computer_club"], "preferences": []}
+        base = {"text": "Предлагаю игровую паузу в компьютерном клубе после проверки условий. Условия посещения неизвестны.",
+                "stop_ids": [self.stops[0]["stop_id"]], "source_ids": ["d0"]}
+        for text in ("В BRO есть мощные игровые компьютеры. Предлагаю игровую паузу. Условия посещения неизвестны.",
+                     "BRO отличается отличной репутацией. Предлагаю игровую паузу после проверки условий."):
+            answer, status = self.run_narrator(http_open=self.model({**base, "venue_descriptions": [{"stop_id": self.stops[0]["stop_id"], "text": text}]}))
+            self.assertIsNone(answer)
+            self.assertTrue(status.startswith("venue_description_"))
+        good = {**base, "venue_descriptions": [{"stop_id": self.stops[0]["stop_id"],
+                    "text": "BRO: запланируйте игровую паузу после проверки условий посещения. Условия посещения неизвестны."}]}
+        answer, _ = self.run_narrator(http_open=self.model(good))
+        self.assertEqual(answer, good)
+
+
+    def test_mixed_venue_descriptions_use_only_their_own_confirmed_type(self):
+        self.stops = [self.stops[0], {**self.stops[1], "name": "Нейтральная кофейня",
+                      "category": "cafe", "source_categories": ["cafe"]}]
+        for option in self.alternatives: option["stops"] = self.stops
+        self.intent = {"categories": ["park", "cafe"], "preferences": []}
+        value = {"text": "Предлагаю прогулку с паузой на кофе у выбранных мест. Условия посещения неизвестны.",
+                 "stop_ids": [stop["stop_id"] for stop in self.stops], "source_ids": ["o0", "d0"],
+                 "venue_descriptions": [
+                     {"stop_id": self.stops[0]["stop_id"], "text": "Это парк: запланируйте короткую прогулку после проверки условий посещения."},
+                     {"stop_id": self.stops[1]["stop_id"], "text": "Это кафе: запланируйте паузу на кофе после проверки условий посещения."}]}
+        answer, status = self.run_narrator(http_open=self.model(value))
+        self.assertEqual(answer, value)
+        self.assertEqual(status, "validated_structure_sources_and_known_claims")
+        for index, text in ((0, "Это кафе: запланируйте паузу на кофе после проверки условий посещения."),
+                            (0, "Это компьютерный клуб. Предлагаю игровую паузу после проверки условий."),
+                            (1, "Это парк: запланируйте короткую прогулку после проверки условий посещения.")):
+            with self.subTest(index=index, text=text):
+                self.calls.clear()
+                invalid = deepcopy(value)
+                invalid["venue_descriptions"][index]["text"] = text
+                answer, status = self.run_narrator(http_open=self.model(invalid))
+                self.assertIsNone(answer)
+                self.assertEqual(status, "venue_description_type_mismatch")
+                self.assertEqual(len(self.calls), 1)
+                context = strict_json(self.calls[0][0]["messages"][1]["content"])
+                self.assertEqual(context["grounding_lite_summary"], self.grounding["summary"])
+                self.assertEqual(len(context["all_google_source_previews"]), 5)
+
+
+    def test_validated_plan_context_reaches_one_model_without_start_or_raw_quotes(self):
+        from app.semantic_intent import validate_intent
+        query = "Хочу прогулку возле PRIVATE_HOME"
+        plan = validate_intent({"start_quote": "PRIVATE_HOME", "goals": [{"quote": "прогулку",
+            "search_text": "короткая прогулка", "category_hint": "walk", "fulfilment": "generic_walk"}],
+            "excluded": [], "goal_policy": "primary", "requirements": [], "context": []}, query)
+        result, status = self.run_narrator(intent_plan=plan)
+        self.assertEqual(result, self.answer)
+        self.assertEqual(len(self.calls), 1)
+        value = strict_json(self.calls[0][0]["messages"][1]["content"])
+        self.assertEqual(value["intent"]["semantic_goal"], plan.sanitized_narration)
+        self.assertEqual(value["grounding_lite_summary"], self.grounding["summary"])
+        self.assertEqual(len(value["all_google_source_previews"]), 5)
+        self.assertNotIn("PRIVATE_HOME", json.dumps(value))
+        self.assertNotIn(query, json.dumps(value))
 
 
 if __name__ == "__main__":

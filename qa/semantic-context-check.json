@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-20T20:30:34+00:00",
+  "scope": "shared semantic plan, verified named origins, source-specific venue descriptions",
+  "behavior_commit": "a4b59c9e5b5309d28ce161cbbf5e80583bb23d90",
+  "source_sha256": {
+    "app/google_budget.py": "c719f179fb5bb9f624e17bdb0f684049c12dcc8404f2359a3398975d261e3a6e",
+    "app/google_client.py": "02c3564b035ba8feb6bf3e09a5dc58e1d1814c6c116439bea76ab9cbbf4dc959",
+    "app/google_grounded.py": "60ad74ace7371aa15a9a9d5a932ed5af3201cef7468040c13ea30de10ddceeb0",
+    "app/google_lab.py": "5a63d8be33d914ef2cbf9fb3b48d30b6f3f2dc21229b5c0ce396041f63d5a88d",
+    "app/lab_context.py": "dc63aeab90664abb689992403e28a2748f9b80f74468fbc1eb4344e197f58151",
+    "app/model_gateway.py": "96b8658c3d01010929bc6c351e2907227819cc7295e4340b80fc05767b53778d",
+    "app/request_preparation.py": "eba9cc4839d00b690497ae424101ac2e5ea7622e3435b7f7a91d4edc8690019b",
+    "app/retrieval.py": "efaefb605541d6d5b33801790e9429b52fde6572769a1117378a25c12ca3630f",
+    "app/semantic_intent.py": "5d0e53eca114871c6c420984099b29529127021d952af3bc69eb424d92a52bf9",
+    "app/unified_dgis.py": "91a0474cec7762fdc95192edc749f43102b8f8f3c49e1c8413841b0ce62fdc56",
+    "app/unified_narration.py": "0dd34f434e69d549ad3ffb00b7047b45d9291acf4479dc31f80c5829f1c7e4bd",
+    "app/unified_walks.py": "075a1f2799530922ab26b68a9efcbf4c085058ae188ae8b8ec1b8b77e2ee47db",
+    "scripts/collect_2gis.py": "141e95c73c782b8dc2ac5892feb38683b9ef0cc266eb635f857f58481253c927",
+    "tests/test_google_lab_frontend.js": "9dcc83ca0a198ebfb9e4a3c3adef005581ad2302e6d7b51e3582ef22b705ebac",
+    "tests/test_google_lab_pwa.js": "0beb94354cc673b0f2db4b546fb63ee442761e2df6ea77010b6f5ad6dd14edab",
+    "tests/test_preparation.py": "cd6c8eac664758f1d6e7df1bd14443fa00114a95c71a5b3dde360fd97fc507ac",
+    "tests/test_preparation_review.py": "d487e524b0a1054b06848f9340d72f207adae1da8ebee873be7581bc31f0c375",
+    "tests/test_prepared_workflow.py": "1c5945c011dc90d80813f73b554789fd4ca970b0219b019d158c279c1912c8ca",
+    "tests/test_semantic_context.py": "21803a67518ae94b8dc193db886331f4608ebda84fb073be06eca996559fbed7",
+    "tests/test_semantic_intent.py": "3d792b15976eafd601655ae8b85d3d99c23e93bff291e6870c4d1f5bc383ab2a",
+    "tests/test_semantic_sources.py": "4f82635fe7721fd1f6f283f5d45f52570a24a4702897c7e31686c85c2bd1bd35",
+    "tests/test_stop_description.py": "e450730a0daf90d7fae3e86e0ee6e08cf4afc889b061519d74dce6381f287524",
+    "tests/test_unified_dgis.py": "85408fae65929bf09604bcf2d0a15eadf798299d66d1f3a32081dede600a450a",
+    "tests/test_unified_narration.py": "c93c1db3d029f012c67f54d613a1a48c0f2e80a0ffd7b62f10c7b1e0ad9bfe78",
+    "tests/test_unified_public.py": "fdf71ca6d4bc33dc8baa7c983454763a217b0737d50e681c41846d064a13fc80",
+    "web/google-lab/index.html": "f0b6dbb82b207d1c8204d0e0c180a297d4ea681fbdb075cad7a6adab229de81f",
+    "web/google-lab/lab.js": "a1efe0a94d29174400553a55cf6f171dd00e5331629a66dd4f87492fdacf10d4",
+    "web/google-lab/sw.js": "8dd0fbc1c522d781c75e7532a3a2196f704253234a5cb6ddb3061d3387cfa82e"
+  },
+  "hash_normalization": "CRLF to LF only",
+  "offline": {
+    "python_methods_run": 473,
+    "passed": 471,
+    "skipped": 2,
+    "seconds": 23.482,
+    "skip_reason": "Windows symlink privileges",
+    "frontend_cases_passed": 109,
+    "pwa_cases_passed": 23,
+    "provider_http_calls": 0,
+    "model_http_calls": 0
+  },
+  "live": {
+    "preview_five_hour_club": {
+      "observed_behavior_commit": "d89e10c01b9d2614cfce017dc735286e9799819c",
+      "later_delta": "subsequent origin-quote handling, canonical provider-query projection and block label changes are covered separately",
+      "browser_verified": true,
+      "budget_minutes": 300,
+      "walk_minutes": 20,
+      "visit_minutes_proposed": 275,
+      "buffer_minutes": 5,
+      "return_walk_included_minutes": 10,
+      "selected_source": "dgis",
+      "own_schedule": "24/7",
+      "card_description_origin": "source-template",
+      "technical_why_collapsed": true,
+      "one_map_displayed": true,
+      "complete_workflow_metadata": {
+        "completed_at": "2026-10-20T20:11:50+00:00",
+        "mode": "grounding-only",
+        "llm_status": "venue_description_unsupported_number",
+        "llm_attempts": 1,
+        "source_receipt": {
+          "osm": {
+            "status": "no_data",
+            "candidate_count": 0,
+            "selected_count": 0
+          },
+          "google": {
+            "status": "no_data",
+            "candidate_count": 0,
+            "selected_count": 0
+          },
+          "dgis": {
+            "status": "searched",
+            "candidate_count": 7,
+            "selected_count": 1
+          }
+        },
+        "route_statuses": [
+          {
+            "budget_status": "fits",
+            "route_built": true,
+            "route_checks": [
+              {
+                "candidate_index": 0,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 1,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              },
+              {
+                "candidate_index": 2,
+                "outgoing_verified": true,
+                "return_verified": true,
+                "verified_legs": true,
+                "fits_largest_budget": true,
+                "error_code": null
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "shared_local_counters_at_receipt": {
+      "google": {
+        "used": 389,
+        "limit": 500,
+        "remaining": 111,
+        "state": "ready"
+      },
+      "dgis": {
+        "limit": 500,
+        "used": 43,
+        "remaining": 457,
+        "window_seconds": 2592000,
+        "retry_after_seconds": 0
+      }
+    },
+    "counter_scope": "application ledgers; not provider console measurements",
+    "named_place_text_search_verified": false,
+    "new_physical_phone_or_gps_verified": false,
+    "public_semantic_deployment_verified_at_this_predeploy_receipt": false
+  },
+  "local_model_checks": {
+    "five_hour_club_extract": {
+      "status": "semantic",
+      "seconds": 24.5,
+      "category": "computer_club",
+      "fulfilment": "venue_visit",
+      "invented_context_or_requirements": false
+    },
+    "synthetic_description_without_google_context": {
+      "accepted": true,
+      "seconds": 27.6
+    },
+    "full_google_context_description": {
+      "accepted": false,
+      "reason": "protected hours/access claims"
+    },
+    "scope": "local model checks are not live place/source or universal language coverage tests",
+    "singing_paraphrase_without_category_word": {
+      "accepted": true,
+      "category": "karaoke",
+      "fulfilment": "venue_visit",
+      "seconds": 29.2,
+      "invented_context_or_requirements": false,
+      "source_commit": "06f70dd",
+      "live_venue_search_performed": false
+    },
+    "named_hotel_extract": {
+      "accepted": false,
+      "seconds": 29.1,
+      "known_category_fallback_available": true,
+      "pure_staging_and_transliteration_verified": true,
+      "real_place_lookup_pending": true
+    }
+  },
+  "limits": {
+    "google_attempt_limit_unchanged": 500,
+    "dgis_rolling_month_limit_unchanged": 500,
+    "unknown_required_services_not_inferred": true,
+    "provider_and_model_bodies_not_stored": true,
+    "universal_request_understanding_claimed": false
+  },
+  "submitted_presentation_changed": false,
+  "youtube_upload_performed": false
+}

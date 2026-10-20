@@ -7,6 +7,7 @@ distance and duration estimates are derived locally, never stated as live facts.
 from __future__ import annotations
 
 from collections import Counter
+from copy import deepcopy
 import hashlib
 import json
 import math
@@ -95,7 +96,9 @@ def _wanted(query: str, pattern: str) -> bool:
     return False
 
 
-def detect_intent(query: str, time_of_day: str = "day") -> dict[str, Any]:
+def detect_intent(query: str, time_of_day: str = "day", *, intent_plan=None) -> dict[str, Any]:
+    if intent_plan is not None:
+        return _planned_intent(intent_plan, time_of_day)
     query = query.lower().replace("ё", "е")
     search = parse_search_intent(query)
     positives = list(search["categories"])
@@ -125,6 +128,108 @@ def detect_intent(query: str, time_of_day: str = "day") -> dict[str, Any]:
         "time_of_day": time_of_day,
         "general_suggestion": bool(re.search(r"куда|где|посовету\w*|рядом|near\w*|where|suggest\w*", query)),
     }
+
+
+def _planned_intent(plan, time_of_day="day"):
+    """Project one already validated plan; never reparse the original message."""
+    # Lazy import keeps deterministic plan construction independent of adapters.
+    from .semantic_intent import IntentPlan
+    if not isinstance(plan, IntentPlan):
+        raise ValueError("Expected one validated IntentPlan")
+    intent = plan.retrieval_intent(time_of_day)
+    intent.update({"open_goal": plan.open_goal, "source_phrase": plan.search_text,
+                   "required_keys": list(plan.required_keys),
+                   "semantic_goal": deepcopy(plan.sanitized_narration)})
+    return intent
+
+
+def _source_label(value):
+    """Literal type-label identity with small grammatical inflections only.
+
+    This is not a semantic similarity score. Whole token sequences must agree;
+    a venue name, description, provider query or Google prose is never evidence.
+    """
+    if not isinstance(value, str) or not 1 <= len(value) <= 200:
+        return ()
+    return tuple(re.findall(r"[^\W_]+", value.casefold().replace("ё", "е")))
+
+
+def _labels_match(left, right):
+    if not left or len(left) != len(right):
+        return False
+    # Small grammatical endings preserve label identity. This does not match
+    # abbreviations, translations, different token counts or semantic neighbours.
+    endings = {"", "ы", "и", "а", "я", "у", "ю", "е", "ий", "ии", "ый", "ая", "яя", "ое", "ее", "ые", "ие", "ой", "ей", "ов", "ев", "ах", "ях", "ом", "ем", "ам", "ям", "ами", "ями", "ыми", "ими", "ого", "ему", "ому", "иями"}
+    for first, second in zip(left, right):
+        if first == second:
+            continue
+        if first.isascii() and second.isascii():
+            if min(len(first), len(second)) >= 5 and (first.endswith("s") and first[:-1] == second or second.endswith("s") and second[:-1] == first):
+                continue
+            return False
+        if not any(first[:cut] == second[:cut] and first[cut:] in endings and second[cut:] in endings
+                   for cut in range(3, min(len(first), len(second)) + 1)):
+            return False
+    return True
+
+
+def source_goal_evidence(place, plan_or_intent):
+    """Return bool: structured source evidence satisfies the plan's venue goal.
+
+    Use before route/model calls. Unknown mandatory activity, equipment, stock
+    or price is not established by a venue category, even when that type fits.
+    No raw provider body is retained and no source field is rewritten here.
+    """
+    if not isinstance(place, dict):
+        return False
+    intent = plan_or_intent if isinstance(plan_or_intent, dict) else _planned_intent(plan_or_intent)
+    required = set(intent.get("required_keys", ()))
+    if required & {"activity", "equipment", "inventory", "price"}:
+        return False  # No affirmative structured proof for these is imported.
+    for key, source_key in (("socket", "socket"), ("quiet", "quiet"), ("accessible", "wheelchair")):
+        hard = key in required or key == "socket" and intent.get("socket") or key == "accessible" and intent.get("accessible") or key == "quiet" and intent.get("strict_quiet")
+        if hard and feature(place, source_key) != "yes":
+            return False
+    semantic = intent.get("semantic_goal")
+    if not isinstance(semantic, dict):
+        return True  # Legacy eligibility remains owned by its existing filters.
+    goals = semantic.get("goals", [])
+    if not isinstance(goals, list) or not goals:
+        return False
+    if intent.get("activity_mode") == "single_venue":
+        goals = goals[:1]
+    actual = {place.get("category")}
+    for field in ("source_categories", "source_types"):
+        values = place.get(field, [])
+        if isinstance(values, (list, tuple)):
+            actual.update(value for value in values if isinstance(value, str))
+    labels = set()
+    for field in ("source_rubrics", "source_types"):
+        values = place.get(field, [])
+        if isinstance(values, (list, tuple)):
+            labels.update(_source_label(value) for value in values if isinstance(value, str))
+    labels.update(_source_label(value) for value in actual if isinstance(value, str) and value not in {"unknown", "branch", "adm_div.place"})
+    source_type = place.get("source_type")
+    if isinstance(source_type, str) and source_type not in {"branch", "adm_div.place", "unknown"}:
+        labels.add(_source_label(source_type))
+    tags = place.get("source_tags", {})
+    if isinstance(tags, dict):
+        labels.update(_source_label(tags.get(key)) for key in ("amenity", "leisure", "tourism", "shop", "sport"))
+    labels.discard(())
+    for goal in goals:
+        if not isinstance(goal, dict):
+            continue
+        category = goal.get("category_hint")
+        if goal.get("fulfilment") == "generic_walk" and category in {None, "walk"}:
+            return True
+        if category in CATEGORY_CATALOG:
+            if actual.intersection(CATEGORY_CATALOG[category]["source_categories"]):
+                return True
+        elif goal.get("fulfilment") == "generic_walk":
+            return True  # Existing geography/access/night/context filters follow.
+        elif any(_labels_match(_source_label(goal.get("text")), label) for label in labels):
+            return True
+    return False
 
 
 def _source_categories(identifiers):
@@ -274,11 +379,11 @@ class Retriever:
             score += idf * frequency * 2.5 / normalizer
         return score
 
-    def retrieve(self, query: str, origin: dict, minutes: int, time_of_day: str = "day") -> dict:
-        intent = detect_intent(query, time_of_day)
+    def retrieve(self, query: str, origin: dict, minutes: int, time_of_day: str = "day", *, intent_plan=None) -> dict:
+        intent = detect_intent(query, time_of_day, intent_plan=intent_plan)
         candidates = []
         filtered = Counter()
-        terms = tokens(query)
+        terms = tokens(intent.get("source_phrase", query))
         preferred = _source_categories(intent["preferred_categories"])
         explicit_sources = _source_categories([identifier for identifier in intent["preferred_categories"]
                                                if identifier not in {"walk", "architecture"}])
@@ -292,6 +397,9 @@ class Retriever:
             category = poi["category"]
             if intent["unsupported_activity"]:
                 filtered["unsupported_activity"] += 1
+                continue
+            if intent_plan is not None and not source_goal_evidence(poi, intent):
+                filtered["no_verified_match"] += 1
                 continue
             if poi["id"] in self.duplicate_of:
                 filtered["duplicate_source"] += 1

@@ -76,7 +76,7 @@ class UnifiedPublicTests(unittest.TestCase):
         client, dgis = Google(), Mock()
         google = GoogleGrounded(client, lambda _: None)
         with running_server(self.root, public_origin=PUBLIC, google=google, dgis=dgis) as (server, _):
-            for query in ("Хочу кофе", "Хочу гулять возле неизвестной гостиницы"):
+            for query in ("Хочу кофе", "Хочу гулять"):
                 form = {"query": query, "location_status": "denied", "consent": True}
                 status, headers, raw = request(server, "/api/unified/recommend", "POST", json.dumps(form),
                                                {"Host": PUBLIC_HOST, "Origin": PUBLIC, "Content-Type": "application/json"})
@@ -92,6 +92,35 @@ class UnifiedPublicTests(unittest.TestCase):
             self.assertEqual(client.search_count, 0)
             dgis.status.assert_not_called()
             dgis.search.assert_not_called()
+            self.assertEqual(server._provider_attempts, 0)
+
+    def test_public_unknown_named_start_resolves_once_without_activity_search_or_model(self):
+        # A typed unlisted start may use exactly one explicit Places resolution;
+        # this exception never authorizes activity search from an unresolved point.
+        client, dgis = Google(), Mock()
+        client.resolve_place = Mock(return_value=[])
+        google = GoogleGrounded(client, lambda _: None)
+        with running_server(self.root, public_origin=PUBLIC, google=google, dgis=dgis) as (server, _):
+            server.retriever.retrieve = Mock()
+            server.unified.narrator = Mock()
+            server.model_gateway.http_open = Mock()
+            form = {"query": "Хочу кофе возле гостиницы Синтетическая", "consent": True}
+            status, headers, raw = request(server, "/api/unified/recommend", "POST", json.dumps(form),
+                {"Host": PUBLIC_HOST, "Origin": PUBLIC, "Content-Type": "application/json"})
+            self.assertEqual(status, 422)
+            self.assertEqual(json.loads(raw)["code"], "location_unresolved")
+            self.assertEqual(headers["Cache-Control"], "no-store")
+            client.resolve_place.assert_called_once()
+            self.assertEqual(client.search_count, 0)
+            self.assertEqual(client.legs, [])
+            client.budget.status.assert_not_called()
+            dgis.status.assert_not_called()
+            dgis.search.assert_not_called()
+            server.retriever.retrieve.assert_not_called()
+            server.unified.narrator.assert_not_called()
+            # The model is unconfigured: deterministic preparation performs no I/O.
+            self.assertIsNone(server.model_gateway.config)
+            server.model_gateway.http_open.assert_not_called()
             self.assertEqual(server._provider_attempts, 0)
 
     def test_public_mode_disables_all_legacy_apis_even_with_local_host(self):

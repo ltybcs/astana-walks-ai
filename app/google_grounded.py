@@ -88,7 +88,13 @@ class TokenSigner:
                               "Предпросмотр устарел или уже использован; сформируйте его заново." if scope == "preview" else "Выбор Google устарел; получите новый результат.", 400) from None
 
 
-def safe_intent(query):
+def safe_intent(query, *, intent_plan=None):
+    if intent_plan is not None:
+        flags = detect_intent(query, intent_plan=intent_plan)
+        categories = list(flags["preferred_categories"])
+        return {"categories": categories, "preferences": list(intent_plan.preferences),
+                "open_goal": intent_plan.open_goal, "source_phrase": intent_plan.source_phrase,
+                "semantic_goal": deepcopy(intent_plan.sanitized_narration)}
     search = parse_search_intent(query)
     if not search["supported"]:
         raise GoogleError("unsupported_activity", "Этот тип места пока не поддерживается; другие места вместо него не подбирались.", 422)
@@ -108,13 +114,15 @@ def safe_intent(query):
     return {"categories": categories, "preferences": preferences}
 
 
-def prepare(payload, resolver):
+def prepare(payload, resolver, *, intent_plan=None):
     if not isinstance(payload, dict) or set(payload) - REQUEST_KEYS:
         raise GoogleError("invalid_request", "Ожидается обычный запрос прогулки и поля контекста.", 400)
     request = resolver(payload)
     context = request["resolved_context"]
-    intent = safe_intent(request["query"])
+    intent = safe_intent(request["query"], intent_plan=intent_plan)
     categories = "; ".join(CATEGORY_WORDS[name][1] for name in intent["categories"] if name != "walk" or len(intent["categories"]) == 1)
+    if intent_plan is not None:
+        categories = intent_plan.source_phrase
     preferences = "; ".join(PREF_WORDS[name][1] for name in intent["preferences"])
     text = f"{categories} в районе {SEARCH_AREAS.get(context.get('origin_id'), 'Астана')}."
     if preferences:
@@ -334,6 +342,8 @@ def intent_action_instruction(intent):
     if known:
         return ("Предложенное действие: " + " ".join(spec["proposed_activity"] for spec in known[:3])
                 + " Не утверждай наличие оборудования, свободных мест, конкретного события, сеанса, услуги или возможности входа. ")
+    if isinstance(intent.get("semantic_goal"), dict):
+        return "Предложенное действие должно соответствовать semantic_goal и подтверждённому типу выбранного места; не добавляй другой цели или неподтверждённой услуги. "
     return "Предложенное действие должно прямо соответствовать переданным intent.categories, без добавления других интересов. "
 
 

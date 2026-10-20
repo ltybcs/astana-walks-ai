@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 import math
 import re
 import unicodedata
+from urllib.parse import urlsplit
 
 PUBLIC_ORIGINS = {
     "presidential_park": {"lat": 51.1248323, "lon": 71.4579236, "label": "Президентский парк — ориентировочная публичная точка"},
@@ -227,7 +228,58 @@ def _clock(payload, now):
     return instant, {"instant": client["instant"], "utc_offset_minutes": offset}, "client_current_time"
 
 
-def resolve_request(payload, *, catalog=None, now=None, probe=False):
+UNSET = object()
+
+
+def _verified_start(value):
+    if not isinstance(value, dict) or set(value) != {"origin", "origin_source", "origin_reference", "origin_id"}:
+        raise ContextError("Некорректное внутреннее подтверждение старта.", fields=("origin",))
+    if value["origin_source"] != "google_places_text_search" or value["origin_id"] is not None:
+        raise ContextError("Некорректное происхождение подтверждённого старта.", fields=("origin",))
+    origin = _point(value["origin"], legacy=True)
+    if not _in_city(origin):
+        raise ContextError("Подтверждённый старт вне области Астаны.", code="known_start_required", status=422, fields=("origin",))
+    reference = value["origin_reference"]
+    if reference is not None:
+        if not isinstance(reference, str) or not 1 <= len(reference) <= 4096:
+            raise ContextError("Некорректная ссылка происхождения старта.", fields=("origin",))
+        try:
+            parsed = urlsplit(reference)
+            valid = (parsed.scheme == "https" and parsed.hostname in {"www.google.com", "maps.google.com", "maps.app.goo.gl"}
+                     and not parsed.username and not parsed.password and parsed.port in {None, 443})
+        except ValueError:
+            valid = False
+        if not valid:
+            raise ContextError("Некорректная ссылка происхождения старта.", fields=("origin",))
+    return origin, reference
+
+
+def _selected_start(query, start_quote, catalog):
+    # Import lazily to keep the original pure resolver independent at startup.
+    from .semantic_intent import _start, IntentError
+    try:
+        quote = _start(start_quote, query)
+    except IntentError:
+        raise ContextError("Выбранный фрагмент не подтверждает текущий старт.", fields=("origin",)) from None
+    if quote is None:
+        return None, False, None
+    match = _text_origin("старт: " + _normalize(quote), catalog)
+    return match, match is None, quote
+
+
+def resolve_request(payload, *, catalog=None, now=None, probe=False, verified_start=None, start_quote=UNSET):
+    """Resolve strictly; internal overrides are never accepted from JSON input."""
+    return _resolve_request(payload, catalog=catalog, now=now, probe=probe,
+                            verified_start=verified_start, start_quote=start_quote)
+
+
+def stage_request(payload, *, catalog=None, now=None, probe=True, verified_start=None, start_quote=UNSET):
+    """Validate/time-resolve without replacing an unresolved named origin by GPS."""
+    return _resolve_request(payload, catalog=catalog, now=now, probe=probe,
+                            verified_start=verified_start, start_quote=start_quote, staging=True)
+
+
+def _resolve_request(payload, *, catalog=None, now=None, probe=False, verified_start=None, start_quote=UNSET, staging=False):
     allowed = {"query", "minutes", "origin_id", "origin", "time_of_day", "geolocation", "location_status", "client_context"}
     if not isinstance(payload, dict) or set(payload) - allowed:
         raise ContextError("Некорректные поля запроса прогулки.", fields=("query",))
@@ -252,17 +304,32 @@ def resolve_request(payload, *, catalog=None, now=None, probe=False):
         raise ContextError("time_of_day: day, evening или night.", fields=("time_of_day",))
     instant, clock_context, clock_source = _clock(payload, now)
     options, budget_source, requested_range, assumptions = _time_options(normalized, explicit)
-    match = _text_origin(normalized, catalog)
-    unresolved = match is None and _has_unresolved_address(normalized)
-    sensitive, reference, needs_geo = False, None, False
-    if match:
+    if start_quote is UNSET:
+        match = _text_origin(normalized, catalog)
+        unresolved = match is None and _has_unresolved_address(normalized)
+        unresolved_quote = None
+    else:
+        match, unresolved, unresolved_quote = _selected_start(query, start_quote, catalog)
+    confirmed = None
+    if verified_start is not None:
+        if start_quote is UNSET or start_quote is None:
+            raise ContextError("Подтверждение старта требует выбранного фрагмента сообщения.", fields=("origin",))
+        confirmed = _verified_start(verified_start)
+    sensitive, reference, needs_geo, needs_place = False, None, False, False
+    if confirmed is not None:
+        origin, reference = confirmed
+        origin_id, origin_source, sensitive = None, "google_places_text_search", True
+    elif match:
         origin, origin_id, origin_source, sensitive, reference, notices = match
         assumptions.extend(notices)
         if legacy is not None or identifier and identifier != origin_id:
             assumptions.append("Место из текста имеет приоритет над прежним полем старта.")
     elif unresolved:
-        raise ContextError("Старт из сообщения не найден в локальном справочнике; поиск не выполнялся.",
-                           code="known_start_required", status=422, fields=("origin",))
+        if not staging:
+            raise ContextError("Старт из сообщения не найден в локальном справочнике; поиск не выполнялся.",
+                               code="known_start_required", status=422, fields=("origin",))
+        origin = origin_id = None
+        origin_source, sensitive, needs_place = "pending_place_resolution", True, True
     elif legacy is not None or identifier:
         origin = legacy if legacy is not None else deepcopy(PUBLIC_ORIGINS[identifier])
         origin_id, origin_source, sensitive = (None, "explicit_coordinates", True) if legacy is not None else (identifier, "explicit_landmark", False)
@@ -303,5 +370,9 @@ def resolve_request(payload, *, catalog=None, now=None, probe=False):
                "minutes_source": budget_source, "budget_source": budget_source, "requested_range": requested_range,
                "time_of_day": period, "time_of_day_source": day_source, "client_context": clock_context,
                "assumptions": assumptions, "sensitive_origin": sensitive, "is_city_sample": False}
-    return {"query": query, "minutes": options[0], "origin": origin, "time_of_day": period,
-            "resolved_context": context, "needs_geolocation": needs_geo}
+    result = {"query": query, "minutes": options[0], "origin": origin, "time_of_day": period,
+              "resolved_context": context, "needs_geolocation": needs_geo}
+    if staging:
+        result["needs_place_resolution"] = needs_place
+        result["unresolved_start_quote"] = unresolved_quote if needs_place else None
+    return result

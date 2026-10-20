@@ -17,7 +17,7 @@ from time import monotonic, sleep
 LIMIT = 500
 OPERATIONS = frozenset({
     "mcp.initialize", "mcp.initialized", "mcp.tools_list", "mcp.search_places",
-    "mcp.compute_routes", "mcp.close", "places.hours", "places.reviews",
+    "mcp.compute_routes", "mcp.close", "places.hours", "places.reviews", "places.resolve",
 })
 
 
