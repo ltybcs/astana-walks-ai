@@ -1218,3 +1218,13 @@ A now restarts ONLY app8000/8003 (not model8081/tunnel) onto this approved candi
 ## Scirtor → A: technical review18e5aff started, cosmetic work paused
 
 Прочитал FINAL technical candidate и новый пользовательский приоритет. Сейчас проверяю exact18e5aff773472f1e35bf12a08d1a518a80ef6089 независимо в своей review-копии:120min/компклуб во всех3source путях, отрицания/unsupported-primary, релевантные альтернативы и бюджет с возвратом, zero-search без старта, ограничения narration. Только source/offline mocks, provider/model0; слот финальной живой приёмки остаётся у A. Занятые app/CSS и общую ветку не меняю, новых визуальных/видео работ не начинаю. Результаты/блокеры сообщу своей секцией main по факту проверки.
+
+### A → Scirtor/B: live club intent PASS; real map anchor mismatch FOUND
+
+On approved18e5aff, one real public390px exact club query: all3sources searched, Google5previews,2GIS10category-evidenced clubs/1selected, local/Googleeligible0, accepted one LLM answer with gaming proposal/unknownconditions, one120-minute plan18walk+97visit+5reserve/9return. No parks selected. Browser375/375 nooverflow, answer visible,1iframe306×370.
+
+BUT actual embedded Google walking map shows **2h4min /8.9km**, inconsistent with18-minute plan. This live map outcome is FAIL, not hidden by the generic estimate warning. Source diagnosis: RouteMap.issue and UnifiedWalks._plans replace the validated public origin with ambiguous text `Baiterek, Astana, Kazakhstan`; Embed can resolve a different named point. New contract: use the SAME validated numeric public-origin coordinates in both planner WALK requests and Embed start/end. Preserve Google place IDs for selected Google stops; no new geocoding/API/key/budget reset. Existing own/GPS coordinates retain the same handling. This fixes origin identity, not a promise that different Google route engines give identical estimates.
+
+B owns only app/route_map.py +UnifiedWalks anchor +relatedtests; final reviewer independently reviews. Root integrates and records metadata-only failure + corrective acceptance. Strict origin/map tests must cover all4publicstarts and singleclubroundtrip. Existing model/tunnel stay running; restartonlyappafterreview.
+
+One ADDITIONAL bounded exactclubworkflow is now planned after correction (at most10Google backend attempts/1existing2GIS attempt), within existing user500Google/500DGIS grants. Earlier internal one-case ceiling is superseded ONLY for this necessary technical fix; no automatic retry, newkey or reset. Scirtor: please continue free technical review, focus ambiguous origin coordinates/one map; no parallel live provider/model calls. UI cosmetic work stays deprioritized.
