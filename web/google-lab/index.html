@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="theme-color" content="#f5f3ed">
 <title>Astana Walks · одна прогулка, три источника</title>
-<link rel="stylesheet" href="/lab.css"><script defer src="/lab.js"></script>
+<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"><link rel="stylesheet" href="/lab.css"><script defer src="/lab.js"></script><script defer src="/pwa.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#walk-form">К подбору прогулки</a>
-<header class="site-header"><a class="brand" href="/"><strong>Astana Walks</strong><span>Экспериментальный помощник</span></a><a href="https://entire-burn-cricket-ashley.trycloudflare.com/" target="_blank" rel="noopener noreferrer">Основное демо ↗</a></header>
+<header class="site-header"><a class="brand" href="/"><strong>Astana Walks</strong><span>Прогулки по Астане</span></a><button id="install-app" class="install-button" type="button" hidden>Установить</button></header>
 <main>
 <section class="intro" aria-labelledby="page-title"><p class="eyebrow">OSM · Google · 2ГИС</p><h1 id="page-title">Ваша прогулка начинается с сообщения</h1><p>Напишите, где вы и что хочется сделать. Помощник найдёт до трёх остановок и рассчитает пеший путь с возвращением.</p></section>
 <section class="planner-panel" aria-label="Подбор прогулки">
@@ -19,6 +19,7 @@
 <button id="walk-submit" class="primary-button" type="submit">Найти прогулку <span aria-hidden="true">→</span></button>
 </form>
 <p id="walk-status" class="walk-status" role="status" aria-live="polite">Карта появится после построения маршрута.</p>
+<details class="install-help"><summary>Как установить приложение</summary><p>Android Chrome: меню браузера → «Установить приложение». Firefox: меню → установка или добавление на домашний экран. iPhone Safari: «Поделиться» → «На экран Домой».</p><p id="pwa-status" role="status">Можно добавить сайт на главный экран. Для подбора прогулки нужно подключение к сервису.</p></details>
 <div id="walk-error" class="error-box" role="alert" hidden></div>
 </section>
 <article id="walk-result" class="walk-result" aria-labelledby="walk-result-title" hidden>
@@ -33,5 +34,5 @@
 <details class="source-evidence"><summary>Места из OSM и 2ГИС</summary><div id="other-sources"></div></details>
 </article>
 <footer><p>Сведения источников могут быть неполными. Часы, доступ и условия на месте требуют проверки.</p><p><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors · ODbL</a> · <span class="google-brand" translate="no">Google Maps</span> · <a href="http://dev.2gis.ru" target="_blank" rel="noopener noreferrer">2ГИС</a></p></footer>
-<noscript><p class="error-box">Для подбора прогулки нужен JavaScript. Основное демо доступно по ссылке вверху.</p></noscript>
+<noscript><p class="error-box">Для подбора прогулки нужен JavaScript.</p></noscript>
 </main></body></html>

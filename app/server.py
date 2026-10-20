@@ -8,6 +8,8 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
 import os
+import re
+from time import monotonic
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -110,6 +112,42 @@ class Handler(SimpleHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
 
+    def _discard_small_rejected_body(self):
+        """Discard one unambiguous small body within a single 200ms deadline."""
+        lengths = self.headers.get_all("Content-Length", [])
+        if self.headers.get_all("Transfer-Encoding") or len(lengths) != 1 or re.fullmatch(r"[0-9]{1,6}", lengths[0]) is None:
+            return 0
+        length = int(lengths[0])
+        if not 0 < length <= MAX_REQUEST_BYTES + 1:
+            return 0
+        timeout = self.connection.gettimeout()
+        deadline, discarded = monotonic() + 0.2, 0
+        try:
+            while discarded < length:
+                remaining = deadline - monotonic()
+                if remaining <= 0:
+                    break
+                self.connection.settimeout(remaining)
+                chunk = self.rfile.read1(min(4096, length - discarded))
+                if not chunk:
+                    break
+                discarded += len(chunk)
+        except (OSError, TimeoutError):
+            pass
+        finally:
+            try:
+                self.connection.settimeout(timeout)
+            except OSError:
+                pass
+        return discarded
+
+    def _reject_json(self, value, status):
+        # Closing with an ordinary unread body can hide the error behind a TCP
+        # reset on Windows. Do not drain huge or ambiguous request framing.
+        self.close_connection = True
+        self._discard_small_rejected_body()
+        self._json(value, status)
+
     def _same_origin(self) -> bool:
         origin = self.headers.get("Origin")
         if not origin:
@@ -157,24 +195,24 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         path = self.path.split("?", 1)[0]
         if path not in {"/api/recommend", "/api/2gis/search"}:
-            self._json({"error": "Маршрут API не найден."}, 404)
+            self._reject_json({"error": "Маршрут API не найден."}, 404)
             return
         if not self._same_origin():
-            self._json({"error": "Запрос из другого источника отклонён."}, 403)
+            self._reject_json({"error": "Запрос из другого источника отклонён."}, 403)
             return
         if self.headers.get_content_type() != "application/json":
-            self._json({"error": "Нужен Content-Type: application/json."}, 415)
+            self._reject_json({"error": "Нужен Content-Type: application/json."}, 415)
             return
-        if self.headers.get("Transfer-Encoding") or len(self.headers.get_all("Content-Length", [])) != 1:
-            self._json({"error": "Нужен один Content-Length; Transfer-Encoding не поддерживается."}, 400)
+        if self.headers.get_all("Transfer-Encoding") or len(self.headers.get_all("Content-Length", [])) != 1:
+            self._reject_json({"error": "Нужен один Content-Length; Transfer-Encoding не поддерживается."}, 400)
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
-            self._json({"error": "Некорректный Content-Length."}, 400)
+            self._reject_json({"error": "Некорректный Content-Length."}, 400)
             return
         if not 0 < length <= MAX_REQUEST_BYTES:
-            self._json({"error": "Пустой или слишком большой запрос."}, 413)
+            self._reject_json({"error": "Пустой или слишком большой запрос."}, 413)
             return
         try:
             raw = self.rfile.read(length)

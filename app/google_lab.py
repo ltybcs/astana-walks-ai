@@ -1,9 +1,9 @@
-"""Isolated AI walks lab: shipped OSM plus an explicitly enabled Google pilot.
+"""Unified walks HTTP interface with OSM and opt-in Google/2GIS live search.
 
-Run python -m app.google_lab and open http://127.0.0.1:8003.
-The existing RAG core is reused; inference is opt-in on an existing local model.
-Google pilot is separately opt-in; main HTTP server and OSM core stay unchanged.
-Google frames and optional map tiles are browser-only frontend choices.
+Run python -m app.google_lab on loopback; --public-origin permits one exact
+HTTPS tunnel origin without changing the loopback bind. Unified routes retain
+provider identity and reuse one explicitly configured local model. Legacy OSM
+and Google-only APIs remain available only outside the public deployment mode.
 """
 from __future__ import annotations
 
@@ -47,6 +47,14 @@ STATIC_FILES = {
     "/": ("web/google-lab/index.html", "text/html; charset=utf-8"),
     "/lab.js": ("web/google-lab/lab.js", "application/javascript; charset=utf-8"),
     "/lab.css": ("web/google-lab/lab.css", "text/css; charset=utf-8"),
+    "/pwa.js": ("web/google-lab/pwa.js", "application/javascript; charset=utf-8"),
+    "/sw.js": ("web/google-lab/sw.js", "application/javascript; charset=utf-8"),
+    "/manifest.webmanifest": ("web/manifest.webmanifest", "application/manifest+json"),
+    "/favicon.svg": ("web/favicon.svg", "image/svg+xml"),
+    "/icons/icon-192.png": ("web/icons/icon-192.png", "image/png"),
+    "/icons/icon-512.png": ("web/icons/icon-512.png", "image/png"),
+    "/icons/maskable-512.png": ("web/icons/maskable-512.png", "image/png"),
+    "/icons/apple-touch-icon.png": ("web/icons/apple-touch-icon.png", "image/png"),
     "/embeds.json": ("web/google-lab/embeds.json", "application/json; charset=utf-8"),
     "/vendor/leaflet/1.9.4/leaflet.js": ("web/vendor/leaflet/1.9.4/leaflet.js", "application/javascript; charset=utf-8"),
     "/vendor/leaflet/1.9.4/leaflet.css": ("web/vendor/leaflet/1.9.4/leaflet.css", "text/css; charset=utf-8"),
@@ -233,11 +241,42 @@ def _local_llm_config() -> LLMConfig | None:
     return config
 
 
+def _public_origin(value):
+    """Validate one exact operator-configured HTTPS origin, without DNS/network."""
+    if value is None:
+        return None
+    invalid = "Public origin must be one canonical HTTPS DNS origin"
+    if not isinstance(value, str) or not 1 <= len(value) <= 512 or not value.startswith("https://") or any(
+            not 33 <= ord(character) <= 126 for character in value):
+        raise ValueError(invalid)
+    try:
+        parsed = urlparse(value)
+        hostname, port = parsed.hostname, parsed.port
+    except ValueError:
+        raise ValueError(invalid) from None
+    if (not hostname or parsed.scheme != "https" or parsed.username is not None or parsed.password is not None
+            or parsed.path or parsed.params or parsed.query or parsed.fragment
+            or port is not None and not 1 <= port <= 65535):
+        raise ValueError(invalid)
+    labels = hostname.split(".")
+    if (len(hostname) > 253 or len(labels) < 2
+            or any(re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label) is None for label in labels)
+            or not re.search(r"[a-z]", labels[-1])
+            or hostname.endswith((".localhost", ".local", ".localdomain", ".lan", ".home", ".internal"))):
+        raise ValueError(invalid)
+    authority = hostname + (":" + str(port) if port is not None and port != 443 else "")
+    if value != "https://" + authority:
+        raise ValueError(invalid)
+    return value
+
+
 class LabServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, address: tuple[str, int], root: Path, *, llm_enabled: bool = False, recommender=None, google=None, dgis=None, route_map=None):
+    def __init__(self, address: tuple[str, int], root: Path, *, llm_enabled: bool = False, recommender=None, google=None, dgis=None, route_map=None, public_origin=None):
+        self.public_origin = _public_origin(public_origin)
+        self.public_host = urlparse(self.public_origin).netloc if self.public_origin else None
         self.root = Path(root).resolve()
         self.catalog = load_catalog(self.root)
         self.catalog_json = _json_bytes(self.catalog)
@@ -454,14 +493,25 @@ class LabHandler(BaseHTTPRequestHandler):
         values = self.headers.get_all("Host", [])
         port = self.server.server_port
         allowed = {f"127.0.0.1:{port}", f"localhost:{port}", f"{self.server.server_address[0]}:{port}"}
-        if len(values) != 1 or values[0].lower() not in allowed:
+        if len(values) != 1:
             return False
+        host = values[0].lower()
+        if host in allowed:
+            expected_origin = "http://" + host
+        elif self.server.public_host is not None and host == self.server.public_host:
+            expected_origin = self.server.public_origin
+        else:
+            return False
+        # Do not trust Forwarded or X-Forwarded-* to authorize another origin.
         origins = self.headers.get_all("Origin", [])
-        return not origins or len(origins) == 1 and origins[0] in {"http://" + value for value in allowed}
+        return not origins or len(origins) == 1 and origins[0] == expected_origin
 
     def _get(self, *, head: bool = False):
         if not self._local_host():
-            self._reject(403, _json_bytes({"error": "Local lab requests only", "code": "forbidden"}), head=head)
+            self._reject(403, _json_bytes({"error": "Lab host/origin not permitted", "code": "forbidden"}), head=head)
+            return
+        if self.server.public_origin and self.path in {"/api/catalog", "/api/google/status", "/embeds.json"}:
+            self._send(404, _json_bytes({"error": "Lab route not found", "code": "not_found"}), head=head)
             return
         if self.path == "/api/catalog":
             self._send(200, self.server.catalog_json, head=head)
@@ -492,7 +542,10 @@ class LabHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if not self._local_host():
-            self._reject(403, _json_bytes({"error": "Local lab requests only", "code": "forbidden"}))
+            self._reject(403, _json_bytes({"error": "Lab host/origin not permitted", "code": "forbidden"}))
+            return
+        if self.server.public_origin and self.path not in {"/api/context", "/api/unified/recommend", "/api/unified/map"}:
+            self._reject(404, _json_bytes({"error": "Lab route not found", "code": "not_found"}))
             return
         if self.path not in {"/api/context", "/api/recommend", "/api/google/preview", "/api/google/recommend", "/api/google/details", "/api/unified/recommend", "/api/unified/map"}:
             self._reject(404, _json_bytes({"error": "Lab route not found", "code": "not_found"}))
@@ -564,7 +617,7 @@ class LabHandler(BaseHTTPRequestHandler):
     do_OPTIONS = _method_not_allowed
 
 
-def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROOT, llm_enabled: bool = False, recommender=None, google=None, google_config=None, dgis=None, dgis_root=None, route_map=None, map_config=None) -> LabServer:
+def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROOT, llm_enabled: bool = False, recommender=None, google=None, google_config=None, dgis=None, dgis_root=None, route_map=None, map_config=None, public_origin=None) -> LabServer:
     """Create one context-managed lab server; startup never calls inference."""
     if host == "localhost":
         host = "127.0.0.1"
@@ -574,6 +627,7 @@ def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROO
         raise ValueError("Lab binds only to IPv4 loopback") from error
     if address.version != 4 or not address.is_loopback or type(port) is not int or not 0 <= port <= 65535:
         raise ValueError("Lab binds only to IPv4 loopback and a valid port")
+    public_origin = _public_origin(public_origin)
     if google is not None and google_config is not None:
         raise ValueError("Choose injected Google service or explicit runtime config")
     if google_config is not None:
@@ -594,7 +648,7 @@ def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROO
     if map_config is not None:
         route_map = RouteMap.from_runtime(map_config)
     return LabServer((host, port), Path(root), llm_enabled=llm_enabled, recommender=recommender, google=google,
-                     dgis=dgis, route_map=route_map)
+                     dgis=dgis, route_map=route_map, public_origin=public_origin)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -606,12 +660,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--google-config", help="Absolute ignored JSON with key_file, shared ledger_file and optional cache_dir; never printed")
     parser.add_argument("--dgis-root", help="Absolute primary workspace with the existing shared 2GIS key and usage ledger")
     parser.add_argument("--map-config", help="Absolute ignored JSON with dedicated public embed_key_file")
+    parser.add_argument("--public-origin", help="Exact HTTPS DNS origin allowed through a tunnel; bind remains loopback")
     args = parser.parse_args(argv)
     if bool(args.google) != bool(args.google_config):
         parser.error("--google and --google-config must be supplied together")
     try:
         with create_server(args.host, args.port, llm_enabled=args.llm, google_config=args.google_config if args.google else None,
-                           dgis_root=args.dgis_root, map_config=args.map_config) as server:
+                           dgis_root=args.dgis_root, map_config=args.map_config, public_origin=args.public_origin) as server:
             print(f"AI walks lab: http://127.0.0.1:{server.server_port} — {server.catalog['summary']['visible_count']} OSM places", flush=True)
             try:
                 server.serve_forever(poll_interval=0.2)

@@ -2,11 +2,14 @@
 
 import http.client
 import json
+import socket
+import time
+from email.message import Message
 from threading import Thread
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
-from app.server import create_server
+from app.server import create_server, Handler, MAX_REQUEST_BYTES
 from tests.test_retrieval import ORIGIN, index, poi
 
 
@@ -86,6 +89,64 @@ class HTTPTests(unittest.TestCase):
     def test_oversized_input_is_413(self):
         self.assertEqual(self.post(b"x" * 16_385)[0], 413)
 
+    def test_delayed_one_byte_oversized_body_still_returns_http_413(self):
+        with socket.create_connection(("127.0.0.1", self.port), timeout=5) as sock:
+            header = (f"POST /api/recommend HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\n"
+                      f"Content-Length: {MAX_REQUEST_BYTES + 1}\r\nContent-Type: application/json\r\n\r\n")
+            sock.sendall(header.encode("ascii"))
+            time.sleep(.03)
+            sock.sendall(b"x" * (MAX_REQUEST_BYTES + 1))
+            response = http.client.HTTPResponse(sock)
+            response.begin()
+            self.assertEqual(response.status, 413)
+            self.assertIn("слишком большой", json.loads(response.read())["error"])
+            response.close()
+
+    def test_maximum_accepted_json_size_remains_exact(self):
+        body = json.dumps({"query": "парк", "minutes": 60, "origin": ORIGIN}).encode()
+        body += b" " * (MAX_REQUEST_BYTES - len(body))
+        with patch.dict("os.environ", {}, clear=True):
+            self.assertEqual(self.post(body)[0], 200)
+        self.assertEqual(self.post(body + b" ")[0], 413)
+
+    def test_early_reject_never_drains_ambiguous_large_or_malformed_framing(self):
+        for pairs in (
+            [("Content-Length", "2"), ("Transfer-Encoding", "chunked")],
+            [("Content-Length", "2"), ("Transfer-Encoding", "")],
+            [("Content-Length", "2"), ("Content-Length", "2")],
+            [("Content-Length", str(MAX_REQUEST_BYTES + 2))],
+            [("Content-Length", "999999999999999999")],
+            [("Content-Length", "+2")], [("Content-Length", "-2")], [],
+        ):
+            handler = object.__new__(Handler)
+            handler.headers = Message()
+            for key, value in pairs:
+                handler.headers[key] = value
+            handler.connection = Mock()
+            handler.rfile = Mock()
+            with self.subTest(headers=pairs):
+                self.assertEqual(handler._discard_small_rejected_body(), 0)
+                handler.rfile.read1.assert_not_called()
+                handler.connection.gettimeout.assert_not_called()
+
+    def test_early_reject_cleanup_uses_one_wall_deadline_not_per_chunk(self):
+        elapsed = [0.0]
+        handler = object.__new__(Handler)
+        handler.headers = Message()
+        handler.headers["Content-Length"] = "100"
+        handler.connection = Mock()
+        handler.connection.gettimeout.return_value = 15
+        handler.rfile = Mock()
+        def trickle(length):
+            elapsed[0] += .11
+            return b"x" * min(10, length)
+        handler.rfile.read1.side_effect = trickle
+        with patch("app.server.monotonic", side_effect=lambda: elapsed[0]):
+            self.assertEqual(handler._discard_small_rejected_body(), 20)
+        self.assertEqual(handler.rfile.read1.call_count, 2)
+        self.assertEqual(handler.connection.settimeout.call_args.args[0], 15)
+        self.assertAlmostEqual(elapsed[0], .22)
+
     def test_wrong_mime_type_is_415(self):
         self.assertEqual(self.post(b"{}", {"Content-Type": "text/plain"})[0], 415)
 
@@ -94,7 +155,9 @@ class HTTPTests(unittest.TestCase):
             self.assertEqual(self.post(b"{}", {"Content-Type": "application/json", "Origin": origin})[0], 403)
 
     def test_transfer_encoding_is_rejected(self):
-        self.assertEqual(self.post(b"{}", {"Content-Type": "application/json", "Transfer-Encoding": "chunked"})[0], 400)
+        for value in ("chunked", ""):
+            with self.subTest(value=value):
+                self.assertEqual(self.post(b"{}", {"Content-Type": "application/json", "Transfer-Encoding": value})[0], 400)
 
     def test_static_paths_cannot_expose_repo_or_traverse(self):
         for path in ("/.env", "/../app/server.py", "/%2e%2e/.env", "/data/poi.sample.json", "/unknown"):
