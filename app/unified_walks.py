@@ -40,7 +40,10 @@ def _eligible(place, intent):
     explicit_sources = _source_classes([value for value in intent["preferred_categories"] if value not in {"walk", "architecture"}])
     primary = intent.get("primary_category") or next(iter(intent["preferred_categories"]), None)
     excluded = _source_classes(intent["excluded_categories"])
-    if category in excluded:
+    raw_types = place.get("source_categories", [])
+    actual_types = {value for value in raw_types if isinstance(value, str)} if isinstance(raw_types, (list, tuple)) else set()
+    actual_types.add(category)
+    if actual_types & excluded:
         return False
     # A primary venue type is a hard condition, even with secondary interests.
     if (intent.get("activity_mode") == "single_venue"
@@ -55,7 +58,7 @@ def _eligible(place, intent):
             return False
     if intent["night"] and place.get("opening_hours") != "24/7":
         return False
-    if intent["child"] and category in {"bar", "nightclub"}:
+    if intent["child"] and actual_types & {"bar", "nightclub"}:
         return False
     if intent["architecture"] and category not in explicit_sources and not architecture_evidence(place):
         return False

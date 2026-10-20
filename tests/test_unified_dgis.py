@@ -330,6 +330,18 @@ class UnifiedDGISTests(unittest.TestCase):
         self.assertEqual(result["places"][0]["source_rubrics"], ["Кафе", "Боулинг"])
         self.assertEqual(self.transport.call_count, 1)
 
+    def test_child_policy_keeps_all_actual_adult_rubrics_before_projection(self):
+        items = [card(id="1", type="branch", rubrics=[{"name": "Кафе"}, {"name": "Ночные клубы"}]),
+                 card(id="2", type="branch", rubrics=[{"name": "Кафе"}, {"name": "Бары"}]),
+                 card(id="3", type="branch", rubrics=[{"name": "Кафе"}])]
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(envelope(items)).encode())
+        child = self.client.search("Хочу кофе с ребёнком возле Mega", ORIGIN, 1000)
+        self.assertEqual([p["id"] for p in child["places"]], ["2gis:3"])
+        ordinary = self.client.search("Хочу кофе возле Mega", ORIGIN, 1000)
+        self.assertEqual([p["id"] for p in ordinary["places"]], ["2gis:1", "2gis:2", "2gis:3"])
+        self.assertEqual(ordinary["places"][0]["source_categories"], ["cafe", "nightclub"])
+        self.assertEqual(self.transport.call_count, 2)
+
     def test_or_categories_share_one_request_and_reject_an_unrequested_park(self):
         items = [card(id="1", type="branch", rubrics=[{"name": "Детские площадки"}]),
                  card(id="2", type="branch", rubrics=[{"name": "Музеи"}]), card(id="3")]

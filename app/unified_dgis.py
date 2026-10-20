@@ -145,6 +145,7 @@ class UnifiedDGIS:
     def search(self, query, origin, radius):
         categories, excluded = _selection(query)
         category = categories[0]
+        child = detect_intent(query)["child"]
         bbox = _nearby_box(origin, radius)
         self._existing_state()
         key = self._client._key()
@@ -175,7 +176,8 @@ class UnifiedDGIS:
                 places = []
                 for place in normalized:
                     actual = set(place["source_categories"])
-                    if distance_m(origin, place) > radius or actual & excluded:
+                    if (distance_m(origin, place) > radius or actual & excluded
+                            or child and actual & {"bar", "nightclub"}):
                         continue
                     # The query chooses among explicit rubric-backed types; it
                     # never establishes a type from a brand or search relevance.

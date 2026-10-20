@@ -150,6 +150,16 @@ class CategoryUnifiedTests(unittest.TestCase):
                     self.assertEqual(narrator.call_count, int(confirmed))
                     self.assertEqual(len(google.legs), 2 if confirmed else 0)
 
+    def test_projected_cafe_cannot_hide_adult_source_types_in_a_family_request(self):
+        origin = PUBLIC_ORIGINS["baiterek"]
+        adult = fixture(origin, "cafe", source_categories=["cafe", "nightclub"])
+        service, google, _, narrator = make_service(origin, [adult])
+        result = service.recommend({"query":"Хочу кафе с ребёнком возле Байтерека на час",
+                                    "client_context":CLIENT, "consent":True})
+        self.assertEqual(result["source_receipt"]["dgis"]["candidate_count"],0)
+        self.assertEqual(google.legs,[])
+        narrator.assert_not_called()
+
     def test_six_user_examples_pass_the_actual_context_and_source_flow(self):
         cases = (
             ("Я сейчас возле Mega Silk Way, хочу прогуляться 30–60 минут — что посоветуете?", "mega", "park"),
