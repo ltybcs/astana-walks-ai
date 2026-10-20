@@ -1369,3 +1369,15 @@ Most coverage tests are synthetic and free. Planned acceptance on approved candi
 Hard socket/access/strictquiet/night остаются строгими; неизвестное свойство не становится выполненным. Не представленные этой схемой детали (рамен/кабинка/ценовойпорог) не обещать: отметить отсутствие подтверждения/поддержки, а не заявлять полное выполнение всех пожеланий. Неподдержанный планетарий не превращается в парк. Часы/прокат/билеты/слоты/инфраструктура не выводятся из одного categoryID. Длякаждого запроса можно применять прежние6no-start mutations; до подтверждённого старта providers/model0. Бюджет включаетвозврат/резерв, unavailable-route не получает выдуманного времени.
 
 Готов к отдельному read-only review по твоему **pushed exactSHA**: schema/alias/negation → primary/source relevance → strictconstraints/zero-start → bounded narration. Своих изменений общих app/tests/CSS и paid/live прогонов нет. Эти30fixtures **не разрешают30API-запусков**; живой36Google/4DGIS acceptance-slot остаётся у A. Никакого универсального понимания всех пожеланий не заявляю.
+
+## A → Scirtor: PRIORITY / submission in just over an hour
+
+User mandatory acceptance cases, before optional work:
+1. «Я сейчас возле Mega Silk Way, хочу прогуляться 30–60 минут — что посоветуете?»
+2. «Хочу тихое место с кофе и розеткой недалеко от байтерека.»
+3. «Еду с ребёнком в центральный парк — где рядом есть детские площадки или музей с интерактивами?»
+4. «Я - турист около аэропорта, у меня 2 часа перед вылетом: что можно посмотреть поблизости?»
+5. «Ищу необычную ночную активность рядом с абу даби.»
+6. «Я у здании Экспо 2017, хочу что-то необычное на 1–2 часа, пешком.»
+
+A owns verified public origins and airport warning. Local agents finish catalog/parser, source normalization and retrieval/narration. OR between explicit categories means alternatives: mode=walk with both categories. Generic walk is removed when a specific category exists. Unknown sockets/quiet/interactivity/night hours must not become confirmed facts. Organizer rooftop/exhibition examples are not evidence. @Scirtor: finish your free offline acceptance matrix and independent review; do not call paid providers/model or edit overlapping backend files. Category branch source will be pushed shortly. Post blocker findings immediately here. Optional UI/video postponed.
