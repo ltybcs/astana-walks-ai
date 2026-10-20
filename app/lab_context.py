@@ -8,13 +8,25 @@ import re
 import unicodedata
 
 PUBLIC_ORIGINS = {
+    "airport": {"lat": 51.027825, "lon": 71.463770, "label": "Аэропорт Астаны — ориентировочная точка терминала T1"},
+    "central_park": {"lat": 51.1548152, "lon": 71.4195693, "label": "Центральный парк (Парк Астана) — ориентировочная публичная точка"},
+    "abu_dhabi": {"lat": 51.1219718, "lon": 71.4279322, "label": "Abu Dhabi Plaza — публичная точка"},
     "mega": {"lat": 51.0892, "lon": 71.4074, "label": "MEGA Silk Way — публичная точка"},
     "baiterek": {"lat": 51.1283, "lon": 71.4305, "label": "Байтерек — публичная точка"},
     "river": {"lat": 51.1546, "lon": 71.4252, "label": "Набережная Есиля — публичная точка"},
     "expo": {"lat": 51.09125, "lon": 71.412806, "label": "EXPO — ориентировочная публичная точка района"},
 }
 EXPO_REFERENCE = "https://www.wikidata.org/w/index.php?title=Q1074528&oldid=2425505851#P625"
+ORIGIN_REFERENCES = {
+    "expo": EXPO_REFERENCE,
+    "airport": "https://www.openstreetmap.org/way/166500591",
+    "central_park": "https://www.openstreetmap.org/relation/15957444",
+    "abu_dhabi": "https://www.openstreetmap.org/way/762780007",
+}
 ORIGIN_PATTERNS = {
+    "airport": r"(?<!\w)(?:аэропорт\w*|airport|nqz)(?!\w)",
+    "central_park": r"(?<!\w)(?:центральн\w*\s+парк\w*|central\s+park|парк\s+астана)(?!\w)",
+    "abu_dhabi": r"(?<!\w)(?:абу[\s-]+даби(?:[\s-]+плаза)?|abu[\s-]+dhabi(?:[\s-]+plaza)?)(?!\w)",
     "mega": r"(?<!\w)(?:mega(?:\s*silk\s*way)?|мег[аи](?:\s*силк\s*(?:уэй|вэй|вей))?)(?!\w)",
     "baiterek": r"(?<!\w)(?:байтерек\w*|бәйтерек\w*|baiterek|bayterek)(?!\w)",
     "river": r"(?<!\w)(?:набережн\w*(?:\s+(?:реки\s+)?(?:есил\w*|есіл\w*))?|есиль|есиля|есіл\w*)(?!\w)",
@@ -137,7 +149,9 @@ def _text_origin(query, catalog):
         landmarks.sort()
         identifier = landmarks[0][2]
         notices = ["В тексте несколько ориентиров; старт выбран по первому явному указанию места."] if len({item[2] for item in landmarks}) > 1 else []
-        return deepcopy(PUBLIC_ORIGINS[identifier]), identifier, "query_landmark", False, EXPO_REFERENCE if identifier == "expo" else None, notices
+        if identifier == "airport":
+            notices.append("Терминал не указан: использован ориентир T1, не точное местоположение устройства. Доступ из зоны вылета наружу не подтверждён.")
+        return deepcopy(PUBLIC_ORIGINS[identifier]), identifier, "query_landmark", False, ORIGIN_REFERENCES.get(identifier), notices
     matches = []
     generic = {"кафе", "парк", "ресторан", "театр", "музей", "детская площадка", "сквер"}
     places = catalog.get("places", []) if isinstance(catalog, dict) else catalog or []
@@ -248,7 +262,7 @@ def resolve_request(payload, *, catalog=None, now=None, probe=False):
     elif legacy is not None or identifier:
         origin = legacy if legacy is not None else deepcopy(PUBLIC_ORIGINS[identifier])
         origin_id, origin_source, sensitive = (None, "explicit_coordinates", True) if legacy is not None else (identifier, "explicit_landmark", False)
-        reference = EXPO_REFERENCE if origin_id == "expo" else None
+        reference = ORIGIN_REFERENCES.get(origin_id)
     elif geo is not None:
         origin, origin_id, origin_source, sensitive = geo, None, "browser_geolocation", True
     elif probe and payload.get("location_status", "not_requested") in {"not_requested", "pending"}:
@@ -263,6 +277,9 @@ def resolve_request(payload, *, catalog=None, now=None, probe=False):
     day_matches = []
     for period, pattern in (("night", r"\b(?:ноч\w*|полноч\w*|night|түн\w*)\b"), ("evening", r"\b(?:вечер\w*|evening)\b"), ("day", r"\b(?:днем|дневн\w*|утр\w*|day)\b")):
         for found in re.finditer(pattern, normalized):
+            # A venue type is not a requested time of day.
+            if period == "night" and re.match(r"\s+(?:клуб\w*|clubs?)\b", normalized[found.end():]):
+                continue
             if not re.search(r"\b(?:не|без)(?:\s+\w+){0,2}\s*$", normalized[max(0, found.start()-25):found.start()]):
                 day_matches.append((found.start(), period))
     if day_matches:

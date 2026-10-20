@@ -15,12 +15,14 @@ from urllib.parse import urlencode
 from urllib.request import ProxyHandler, Request, build_opener
 
 from .dgis_live import (_LiveClient, _NoRedirect, DGISLiveError, ASTANA_BBOX,
-                        ATTRIBUTION, CATEGORIES, ENDPOINT, FIELDS, PAGE_SIZE, MAX_BYTES,
+                        ATTRIBUTION, ENDPOINT, FIELDS, PAGE_SIZE, MAX_BYTES,
                         _state_error)
 from .retrieval import detect_intent, distance_m
+from .activity_intent import parse_search_intent
+from .category_catalog import CATEGORY_CATALOG
 from scripts.collect_2gis import CollectionError, normalize_items, response_items
 
-CATEGORY_QUERIES = {**CATEGORIES, "restaurant": "Рестораны", "bar": "Бары", "computer_club": "Компьютерные клубы"}
+CATEGORY_QUERIES = {name: spec["dgis_query"] for name, spec in CATEGORY_CATALOG.items()}
 
 
 def _invalid():
@@ -42,19 +44,23 @@ def _strict_json(raw):
     return value
 
 
-def _category(query):
+def _selection(query):
     if not isinstance(query, str) or not query.strip() or len(query) > 2000:
         raise _invalid()
-    intent = detect_intent(query)
-    if intent.get("unsupported_activity"):
+    intent = parse_search_intent(query)
+    if not intent["supported"]:
         raise DGISLiveError("Запрошенная активность не поддерживается; поиск 2ГИС не выполнялся.",
                             code="unsupported_activity", http_status=422)
-    requested = [name for name in intent["preferred_categories"] if name in CATEGORY_QUERIES]
-    if requested:
-        return requested[0]
-    if intent["child"]:
-        return "playground"
-    return "attraction"
+    requested = list(intent["categories"])
+    if not requested:
+        requested = ["playground"] if detect_intent(query)["child"] else ["walk"]
+    if intent["mode"] == "single_venue":
+        requested = requested[:1]
+    return requested, set(intent["excluded_categories"])
+
+
+def _category(query):
+    return _selection(query)[0][0]
 
 
 def _nearby_box(origin, radius):
@@ -137,7 +143,8 @@ class UnifiedDGIS:
             chunks.append(chunk)
 
     def search(self, query, origin, radius):
-        category = _category(query)
+        categories, excluded = _selection(query)
+        category = categories[0]
         bbox = _nearby_box(origin, radius)
         self._existing_state()
         key = self._client._key()
@@ -154,7 +161,7 @@ class UnifiedDGIS:
             self._client._write_attempts(attempts)
             quota = self._client._quota(attempts, now)
             south, west, north, east = bbox
-            params = {"key": key, "q": CATEGORY_QUERIES[category], "point1": f"{west},{north}", "point2": f"{east},{south}",
+            params = {"key": key, "q": "; ".join(CATEGORY_QUERIES[name] for name in categories), "point1": f"{west},{north}", "point2": f"{east},{south}",
                       "page": 1, "page_size": PAGE_SIZE, "fields": FIELDS}
             request = Request(ENDPOINT + "?" + urlencode(params), headers={"Accept": "application/json", "User-Agent": "AstanaWalks/1.0 (unified live search)"})
             deadline = self.monotonic() + self.timeout
@@ -165,8 +172,18 @@ class UnifiedDGIS:
                 items = response_items(payload)
                 stamp = datetime.fromtimestamp(self.clock(), timezone.utc).isoformat(timespec="seconds")
                 normalized = normalize_items(items[:PAGE_SIZE], stamp, bbox)
-                places = [place for place in normalized if distance_m(origin, place) <= radius
-                          and (category != "computer_club" or place["category"] == "computer_club")]
+                places = []
+                for place in normalized:
+                    actual = set(place["source_categories"])
+                    if distance_m(origin, place) > radius or actual & excluded:
+                        continue
+                    # The query chooses among explicit rubric-backed types; it
+                    # never establishes a type from a brand or search relevance.
+                    projected = next((source for requested in categories
+                                      for source in CATEGORY_CATALOG[requested]["source_categories"]
+                                      if source in actual), None)
+                    if projected is not None:
+                        places.append({**place, "category": projected})
             except DGISLiveError as error:
                 error.quota = quota
                 raise
@@ -181,7 +198,7 @@ class UnifiedDGIS:
                                     code="provider_timeout" if timed_out else "provider_unavailable", http_status=504 if timed_out else 502, quota=quota) from None
             except (CollectionError, ValueError, UnicodeError, TypeError, OverflowError, RecursionError, AttributeError):
                 raise DGISLiveError("2ГИС не подтвердил корректный ответ поиска.", code="provider_invalid_response", http_status=502, quota=quota) from None
-            return {"places": places, "attribution": dict(ATTRIBUTION), "quota": quota, "category": category, "fetched_at": stamp,
+            return {"places": places, "attribution": dict(ATTRIBUTION), "quota": quota, "category": category, "categories": categories, "fetched_at": stamp,
                     "search_scope": {"radius_meters": radius, "returned_count": len(items[:PAGE_SIZE]), "filtered_count": len(items[:PAGE_SIZE]) - len(places)},
                     "warnings": ["Живой поиск 2ГИС: одна страница до 10 объектов в ограниченной области, не полный каталог.",
                                  "Сведения не проверены на месте; неизвестные часы и свойства не являются подтверждением."]}

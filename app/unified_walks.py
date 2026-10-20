@@ -14,6 +14,8 @@ from .google_budget import GoogleError
 from .google_grounded import prepare, route_minutes, validate_grounding, WALK_WARNING
 from .retrieval import architecture_evidence, detect_intent, distance_m, feature
 from .unified_narration import narrate
+from .category_catalog import CATEGORY_CATALOG
+from .activity_intent import parse_search_intent
 
 
 def _point(place):
@@ -22,13 +24,27 @@ def _point(place):
     return {"latLng": {"latitude": place["lat"], "longitude": place["lon"]}}
 
 
+def _source_classes(categories):
+    result = set()
+    for category in categories:
+        if category == "walk":
+            continue  # A broad walk is not a hard venue-type requirement.
+        spec = CATEGORY_CATALOG.get(category)
+        result.update(spec["source_categories"] if spec else (category,))
+    return result
+
+
 def _eligible(place, intent):
     category = place.get("category")
-    preferred = intent["preferred_categories"]
-    if category in intent["excluded_categories"]:
+    preferred = _source_classes(intent["preferred_categories"])
+    explicit_sources = _source_classes([value for value in intent["preferred_categories"] if value not in {"walk", "architecture"}])
+    primary = intent.get("primary_category") or next(iter(intent["preferred_categories"]), None)
+    excluded = _source_classes(intent["excluded_categories"])
+    if category in excluded:
         return False
-    # Secondary interests cannot substitute another kind of venue.
-    if intent.get("activity_mode") == "single_venue" and category not in preferred:
+    # A primary venue type is a hard condition, even with secondary interests.
+    if (intent.get("activity_mode") == "single_venue"
+            and category not in (explicit_sources or preferred)):
         return False
     if preferred and category not in preferred and not (intent["architecture"] and architecture_evidence(place)):
         return False
@@ -39,9 +55,9 @@ def _eligible(place, intent):
             return False
     if intent["night"] and place.get("opening_hours") != "24/7":
         return False
-    if intent["child"] and category == "bar":
+    if intent["child"] and category in {"bar", "nightclub"}:
         return False
-    if intent["architecture"] and category not in preferred and not architecture_evidence(place):
+    if intent["architecture"] and category not in explicit_sources and not architecture_evidence(place):
         return False
     if not preferred and intent["outdoor"] and not intent["tourist"] and category not in {"park", "playground", "promenade", "monument", "attraction", "viewpoint", "theatre"}:
         return False
@@ -115,6 +131,8 @@ class UnifiedWalks:
         radius = parameters["locationBias"]["circle"]["radiusMeters"]
         intent = detect_intent(query, resolved["time_of_day"])
         context["activity_mode"] = intent["activity_mode"]
+        structured_intent = intent.get("search_intent") or parse_search_intent(query)
+        context["search_intent"] = deepcopy(structured_intent)
         executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="unified-source")
         local_future = executor.submit(self.osm.retrieve, query, origin, max(budgets), resolved["time_of_day"])
         dgis_future = executor.submit(self.dgis.search, query, origin, radius)
@@ -137,10 +155,13 @@ class UnifiedWalks:
                 # Google summary remains whole. Only structured source metadata
                 # may identify candidate places; never mine its prose for facts.
                 hard_unknown = intent["socket"] or intent["accessible"] or intent["strict_quiet"] or intent["night"]
-                # A targeted search is not category evidence. Grounding source
-                # metadata currently has no verified computer-club taxonomy.
-                # Keep its entire summary/previews, but do not route to unknowns.
-                if not hard_unknown and intent["activity_mode"] != "single_venue":
+                # Query text is not venue-type evidence. Only a broad walk or
+                # architectural overview can use untyped Google stops; explicit
+                # venue types, exclusions and family constraints stay unverified.
+                broad_google = (not structured_intent["categories"] or
+                                set(structured_intent["categories"]) <= {"walk", "architecture"})
+                if (not hard_unknown and broad_google and not intent["child"]
+                        and not intent["excluded_categories"]):
                     for source in grounding["sources"]:
                         location = source.get("location")
                         if not location:
@@ -180,12 +201,20 @@ class UnifiedWalks:
                                  "candidate_count": len(candidates[provider]),
                                  "selected_count": sum(stop["provider"] == provider for stop in selected_union)}
         warnings = list(context["assumptions"]) + list(live.get("warnings", []))
+        if any(word in query.casefold() for word in ("вылет", "аэропорт", "рейс", "flight", "airport")):
+            warnings.append("Дорога в аэропорт, регистрация, контроль и посадка не входят в бюджет прогулки. Два часа до вылета не означают два свободных часа; возможность выхода и запас до посадки проверьте самостоятельно.")
+        if "интерактив" in query.casefold():
+            warnings.append("Категория музея не подтверждает интерактивы, текущую выставку или возрастной допуск; эти условия требуют отдельной проверки.")
         warnings += [WALK_WARNING, "Время остановок предложено приложением; часы работы, доступ и свойства мест могут быть неизвестны.",
                      "Карта рассчитывает путь отдельно: её оценка может отличаться от суммы проверенных переходов."]
         if intent["activity_mode"] == "single_venue":
             warnings.append("Подбирается одно заведение запрошенного типа. Бюджет включает путь туда и обратно; оставшееся время посещения предложено приложением, возможность сеанса не подтверждена.")
             if not selected_union:
                 warnings.append("Подтверждённых подходящих заведений в полученных данных не найдено; другие категории вместо них не подбирались.")
+        secondary = structured_intent["categories"][1:]
+        if intent["activity_mode"] == "single_venue" and secondary:
+            labels = ", ".join(CATEGORY_CATALOG[value]["ru_label"] for value in secondary)
+            warnings.append("План подбирается под основную цель. Дополнительные типы мест отдельно не проверены: " + labels + ".")
         if answer is None:
             warnings.append("Единый текст ИИ не подтверждён. Показаны план и полный исходный ответ Google с источниками.")
         return {"mode": "llm-grounded-unified" if answer else "grounding-only", "resolved_context": context,

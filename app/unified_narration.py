@@ -11,6 +11,7 @@ import unicodedata
 from urllib.request import Request
 
 from .google_client import json_bytes, strict_json
+from .category_catalog import CATEGORY_IDS
 from .google_grounded import (
     _contains_private_origin, _local_config, _model_source_previews,
     intent_action_instruction, intent_action_rejection, open_local_model,
@@ -18,8 +19,7 @@ from .google_grounded import (
 )
 
 _PROVIDERS = {"osm", "dgis", "google"}
-_CATEGORIES = {"computer_club", "walk", "park", "playground", "cafe", "restaurant", "museum",
-               "theatre", "architecture", "mall"}
+_CATEGORIES = CATEGORY_IDS
 _PREFERENCES = {"quiet", "socket", "accessible"}
 _PLAN_FIELDS = ("budget_minutes", "total_minutes", "walk_minutes", "visit_minutes",
                 "buffer_minutes", "return_walk_minutes", "verified", "returns_to_origin")
@@ -327,7 +327,7 @@ def narrate(grounding, stops, alternatives, context, intent, config, *, http_ope
         if reason is None:
             reason = _unselected_venue_rejection(answer["text"], previews, facts)
         if reason is None:
-            reason = intent_action_rejection(answer, safe_intent)
+            reason = intent_action_rejection({**answer, "text": _prose(answer["text"], facts)}, safe_intent)
         if reason is None and context.get("sensitive_origin") and _contains_private_origin(answer["text"], context):
             reason = "sensitive_origin_in_model_output"
         return (None, reason) if reason else (answer, "validated_structure_sources_and_known_claims")

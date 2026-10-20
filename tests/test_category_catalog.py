@@ -127,6 +127,10 @@ class CategoryCatalogTests(unittest.TestCase):
         self.assertIn("playground", CATEGORY_CATALOG["walk"]["source_categories"])
         self.assertEqual(parse_search_intent("Хочу сыграть в бильярд рядом с Байтереком")["categories"], ["billiards"])
         self.assertEqual(parse_search_intent("Хочу только тихий боулинг")["categories"], ["bowling"])
+        self.assertEqual(parse_search_intent("45 минут возле Mega хочу прогулку днём")["categories"], ["walk"])
+        bare = parse_search_intent("Кофе и парк")
+        self.assertEqual(bare["categories"], ["cafe", "park"])
+        self.assertEqual(bare["mode"], "walk")
         self.assertEqual(parse_search_intent("Хочу в музей рядом с кафе")["categories"], ["museum"])
         self.assertEqual(parse_search_intent("Я в кафе, хочу в боулинг")["categories"], ["bowling"])
 

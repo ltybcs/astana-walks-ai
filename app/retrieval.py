@@ -16,7 +16,8 @@ from typing import Any
 from itertools import permutations
 from urllib.parse import urlparse
 
-from .activity_intent import activity_intent, COMPUTER_CLUB_PATTERN
+from .activity_intent import parse_search_intent
+from .category_catalog import CATEGORY_CATALOG
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +39,12 @@ CATEGORY_TEXT = {
     "promenade": "набережная бульвар прогулка гулять воздух архитектура",
     "bar": "бар напитки ночь ночная активность",
 }
+# Keep the existing corpus wording stable; only new source types need labels.
+for _category_id, _category_spec in CATEGORY_CATALOG.items():
+    for _source_category in _category_spec["source_categories"]:
+        CATEGORY_TEXT.setdefault(_source_category, _category_spec["ru_label"] + " " + _category_spec["google_query"])
+
+
 DEFAULT_VISIT = {
     "park": 20, "playground": 20, "cafe": 25, "restaurant": 35,
     "museum": 45, "attraction": 20, "monument": 15, "viewpoint": 15,
@@ -90,26 +97,13 @@ def _wanted(query: str, pattern: str) -> bool:
 
 def detect_intent(query: str, time_of_day: str = "day") -> dict[str, Any]:
     query = query.lower().replace("ё", "е")
-    category_patterns = {
-        "cafe": r"коф\w*|кафе|coffee|caf[eé]|кофе",
-        "park": r"парк\w*|\bсад\w*|park|garden|саябақ",
-        "playground": r"детск\w*\s+площад\w*|playground|ойын\s+алаң",
-        "museum": r"музе\w*|museum|мұражай",
-        "restaurant": r"ресторан\w*|поесть|обед\w*|ужин\w*|restaurant|food",
-        "promenade": r"набереж\w*|бульвар\w*|promenade|riverside",
-        "theatre": r"театр\w*|балет\w*|theatre|theater",
-        "bar": r"\bбар\w*|\bпаб\w*|\bpub\b|\bbar\b",
-        "mall": r"шопинг|покуп\w*|shopping",
-    }
-    category_patterns["computer_club"] = COMPUTER_CLUB_PATTERN
-    requested = [category for category, pattern in category_patterns.items()
-                 if category != "computer_club" and _wanted(query, pattern)]
-    activity = activity_intent(query, requested)
-    if activity["categories"]:
-        requested = activity["categories"]
-    excluded = [category for category, pattern in category_patterns.items() if re.search(pattern, query) and not _wanted(query, pattern)]
-    if not activity["categories"] and re.search(r"(?<!\w)(?:" + COMPUTER_CLUB_PATTERN + r")(?!\w)", query) and "computer_club" not in excluded:
-        excluded.append("computer_club")
+    search = parse_search_intent(query)
+    positives = list(search["categories"])
+    requested = positives[:1] if search["mode"] == "single_venue" else positives
+    excluded = list(search["excluded_categories"])
+    night_query = query
+    for pattern in CATEGORY_CATALOG["nightclub"]["aliases"]:
+        night_query = re.sub(r"(?<!\w)(?:" + pattern + r")(?!\w)", " ", night_query)
     return {
         "coffee": "cafe" in requested,
         "socket": _wanted(query, r"розет\w*|заряд\w*|socket|power outlet"),
@@ -118,16 +112,24 @@ def detect_intent(query: str, time_of_day: str = "day") -> dict[str, Any]:
         "child": _wanted(query, r"ребен\w*|деть\w*|дети|детск\w*|семь[яеюи]\w*|семейн\w*|family|child\w*|kids|бала\w*|отбасы"),
         "tourist": _wanted(query, r"турист\w*|достопримеч\w*|архитект\w*|tourist|sightsee\w*"),
         "architecture": _wanted(query, r"архитект\w*|architecture|сәулет\w*"),
-        "night": time_of_day == "night" or _wanted(query, r"ноч\w*|night|түн\w*"),
+        "night": time_of_day == "night" or _wanted(night_query, r"ноч\w*|night|түн\w*"),
         "accessible": _wanted(query, r"коляс\w*|безбарьер\w*|wheelchair|accessible|арбамен"),
         "outdoor": _wanted(query, r"прогул\w*|погуля\w*|гуля\w*|walk\w*|серуен\w*|воздух"),
         "preferred_categories": requested,
-        "activity_mode": activity["mode"],
-        "unsupported_activity": activity["unsupported"],
+        "activity_mode": search["mode"],
+        "unsupported_activity": not search["supported"],
+        "primary_category": positives[0] if positives else None,
+        "requested_categories": positives,
+        "search_intent": search,
         "excluded_categories": excluded,
         "time_of_day": time_of_day,
         "general_suggestion": bool(re.search(r"куда|где|посовету\w*|рядом|near\w*|where|suggest\w*", query)),
     }
+
+
+def _source_categories(identifiers):
+    return {source for identifier in identifiers
+            for source in CATEGORY_CATALOG[identifier]["source_categories"]}
 
 
 def feature(poi: dict[str, Any], name: str) -> str:
@@ -277,10 +279,13 @@ class Retriever:
         candidates = []
         filtered = Counter()
         terms = tokens(query)
-        preferred = set(intent["preferred_categories"])
-        allowed_requested = (preferred | {"monument", "theatre", "museum", "attraction"}
-                             if preferred and intent["architecture"] and intent["activity_mode"] != "single_venue"
-                             else preferred)
+        preferred = _source_categories(intent["preferred_categories"])
+        explicit_sources = _source_categories([identifier for identifier in intent["preferred_categories"]
+                                               if identifier not in {"walk", "architecture"}])
+        excluded = _source_categories(intent["excluded_categories"])
+        allowed_requested = (explicit_sources or preferred) if intent["activity_mode"] == "single_venue" else (
+            preferred | {"monument", "theatre", "museum", "attraction"}
+            if preferred and intent["architecture"] else preferred)
         outdoor_categories = {"park", "playground", "promenade", "monument", "attraction", "viewpoint", "theatre"}
         tourist_categories = (outdoor_categories - {"playground"}) | {"museum"}
         for index, poi in enumerate(self.places):
@@ -291,7 +296,7 @@ class Retriever:
             if poi["id"] in self.duplicate_of:
                 filtered["duplicate_source"] += 1
                 continue
-            if category in intent["excluded_categories"]:
+            if category in excluded:
                 filtered["excluded_category"] += 1
                 continue
             if allowed_requested and category not in allowed_requested:
@@ -312,14 +317,14 @@ class Retriever:
             if intent["strict_quiet"] and feature(poi, "quiet") != "yes":
                 filtered["quiet"] += 1
                 continue
-            if intent["child"] and category == "bar":
+            if intent["child"] and category in {"bar", "nightclub"}:
                 continue
             if intent["night"] and poi.get("opening_hours") != "24/7":
                 filtered["night"] += 1
                 continue
             if intent["tourist"] and not preferred and category not in tourist_categories:
                 continue
-            if intent["architecture"] and category not in preferred and not architecture_evidence(poi):
+            if intent["architecture"] and category not in explicit_sources and not architecture_evidence(poi):
                 filtered["architecture_evidence"] += 1
                 continue
             visit = int(poi.get("visit_minutes") or DEFAULT_VISIT.get(category, 20))

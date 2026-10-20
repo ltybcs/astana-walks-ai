@@ -79,6 +79,9 @@ def _negated(query, start, end):
 
 def _location_mention(query, start):
     prefix = _clause_prefix(query, start)
+    goal_markers = list(_TARGET.finditer(prefix))
+    if goal_markers:
+        prefix = prefix[goal_markers[-1].end():]
     # A venue named as a landmark is context, not a second requested activity.
     return bool(re.search(
         r"(?:\bрядом\s+(?:с|со)|\bвозле|\bоколо|\bнеподалеку\s+от|\bу|"
@@ -174,6 +177,10 @@ def parse_search_intent(query: str) -> SearchIntent:
     if len(positives) > 1 and "walk" in positives:
         positives.remove("walk")
     mode = CATEGORY_CATALOG[positives[0]]["mode"] if positives else "walk"
+    if len(positives) > 1 and _TARGET.search(text) is None:
+        # A bare list retains the existing multi-interest walk behavior. An
+        # explicit "want bowling and coffee" still has one primary venue.
+        mode = "walk"
     positive_spans = [(start, end, identifier) for start, end, identifier in matches
                       if identifier in positives and not _negated(text, start, end)
                       and not _location_mention(text, start)]
