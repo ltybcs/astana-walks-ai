@@ -296,6 +296,21 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertEqual(result["grounding"]["summary"], self.provider.search["summary"])
         self.assertEqual(result["diagnostics"]["llm_status"], "private_origin_in_provider_context")
 
+    def test_cafe_instruction_and_whole_output_guard_follow_actual_intent(self):
+        from app.google_grounded import intent_action_instruction, intent_action_rejection
+        instruction = intent_action_instruction({"categories": ["cafe"]})
+        self.assertIn("пауза", instruction.replace("паузу", "пауза"))
+        self.assertNotIn("Предложи внешний осмотр", instruction)
+        wrong = {"text": "Кафе предлагает кофе для короткого перерыва. Осмотрите фасад здания."}
+        self.assertEqual(intent_action_rejection(wrong, {"categories": ["cafe"]}), "action_does_not_match_cafe_intent")
+        self.assertIsNone(intent_action_rejection({"text": "Сделайте короткую паузу на кофе. Условия посещения неизвестны."}, {"categories": ["cafe"]}))
+        self.assertIsNone(intent_action_rejection(wrong, {"categories": ["architecture"]}))
+        self.service.narrator = lambda *args: ({**good_answer(), **wrong}, "mocked")
+        result = self.service.recommend(self.consent({"query": "Хочу кафе с кофе у Mega на 60 минут"}))
+        self.assertIsNone(result["answer"])
+        self.assertEqual(result["diagnostics"]["llm_status"], "action_does_not_match_cafe_intent")
+        self.assertEqual(result["grounding"]["summary"], self.provider.search["summary"])
+
     def test_private_address_echo_with_comma_is_rejected_unchanged(self):
         context = {"sensitive_origin": True, "origin_source": "query_catalog",
                    "origin": {"lat": 51.080123, "lon": 71.400123, "label": "Тестовая улица, 12"}}

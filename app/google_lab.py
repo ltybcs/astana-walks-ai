@@ -307,19 +307,38 @@ class LabServer(ThreadingHTTPServer):
             variant_context["minutes"] = minutes
             request = {"query": resolved["query"], "minutes": minutes, "origin": resolved["origin"],
                        "time_of_day": resolved["time_of_day"]}
-            alternatives.append(self._recommend_one(request, variant_context, use_llm=available and index == 0))
+            proposed = max(10, min(60, minutes // 4)) if len(context["budget_options"]) > 1 else None
+            alternatives.append(self._recommend_one(request, variant_context, use_llm=available and index == 0,
+                                                    proposed_visit_minutes=proposed))
         response = deepcopy(alternatives[0])
         response["alternatives"] = alternatives
         return response
 
-    def _recommend_one(self, request: dict, context: dict, *, use_llm: bool) -> dict:
+    def _recommend_one(self, request: dict, context: dict, *, use_llm: bool, proposed_visit_minutes: int | None = None) -> dict:
         retrieval_request = dict(request)
         intent = detect_intent(request["query"], request["time_of_day"])
         generic = bool(re.search(r"необычн\w*|пешком", request["query"].casefold())) and not any(
             intent[key] for key in ("coffee", "socket", "quiet", "child", "tourist", "accessible", "outdoor", "preferred_categories", "excluded_categories"))
         if generic:
             retrieval_request["query"] += " Прогулка."
-        response = self.recommender(self.retriever, **retrieval_request, use_llm=use_llm)
+        retriever, index_sha = self.retriever, self.index_sha256
+        allocation = {"policy": "base_visit_profile", "proposed_visit_minutes_per_stop": None,
+                      "is_source_fact": False}
+        if proposed_visit_minutes is not None:
+            if type(proposed_visit_minutes) is not int or not 10 <= proposed_visit_minutes <= 60:
+                raise ValueError("Invalid app visit proposal")
+            document = rag_document(self.catalog)
+            for place in document["places"]:
+                place["visit_minutes"] = proposed_visit_minutes
+            index_sha = hashlib.sha256(_json_bytes(document)).hexdigest()
+            retriever = Retriever(data=document)
+            allocation = {"policy": "app_budget_proposal", "proposed_visit_minutes_per_stop": proposed_visit_minutes,
+                          "is_source_fact": False}
+        response = self.recommender(retriever, **retrieval_request, use_llm=use_llm)
+        context = {**context, "time_allocation": deepcopy(allocation)}
+        response["diagnostics"]["time_allocation"] = deepcopy(allocation)
+        if proposed_visit_minutes is not None:
+            response["warnings"].append(f"До {proposed_visit_minutes} минут на остановку предложено приложением для этого бюджета; OSM не подтверждает длительность посещения.")
         response.pop("clarification", None)
         if not response["recommendations"]:
             response["empty_message"] = "В этой базе нет мест, соответствующих всем условиям и бюджету с возвращением. Неизвестные свойства не считаются подтверждёнными."
@@ -338,7 +357,8 @@ class LabServer(ThreadingHTTPServer):
         response["warnings"].extend(context["assumptions"])
         response["budget_minutes"] = request["minutes"]
         response["resolved_context"] = context
-        response["diagnostics"]["lab_index_sha256"] = self.index_sha256
+        response["diagnostics"]["lab_index_sha256"] = index_sha
+        response["diagnostics"]["lab_base_index_sha256"] = self.index_sha256
         attempts = response["diagnostics"].get("llm_attempts", 0)
         with self._stats_lock:
             if type(attempts) is int and 0 <= attempts <= 2:

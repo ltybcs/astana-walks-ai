@@ -308,6 +308,33 @@ def _answer_rejection(answer, grounding, selected_id, plan):
     return None
 
 
+
+def intent_action_instruction(intent):
+    categories = intent.get("categories", [])
+    if categories == ["cafe"]:
+        return ("Пользователь хочет кафе и кофе. Предложи короткую паузу на кофе у выбранного источника. "
+                "Действие должно быть связано с кофе; не предлагай осмотр фасада или здания. ")
+    if categories == ["restaurant"]:
+        return "Пользователь хочет поесть. Предложи короткую остановку для перекуса после проверки условий посещения. "
+    if categories == ["walk"] or categories == ["architecture"]:
+        return ("Пользователь хочет пеший осмотр. Предложи внешний осмотр облика выбранного объекта; для здания — формы или фасада. "
+                "Не обещай занятий внутри, экспозиций, разработок или доступа на территорию. ")
+    if "park" in categories or "playground" in categories:
+        return "Предложи короткую прогулку или паузу у выбранной точки; не обещай оборудование, вход или безопасность. "
+    return "Предложенное действие должно прямо соответствовать переданным intent.categories, без добавления других интересов. "
+
+
+def intent_action_rejection(answer, intent):
+    if intent.get("categories") != ["cafe"]:
+        return None
+    text = answer["text"].casefold()
+    if re.search(r"фасад|внешн\w*\s+вид|осмотр\w*\s+(?:облик|здани)", text):
+        return "action_does_not_match_cafe_intent"
+    if not re.search(r"коф", text) or not re.search(r"выпи\w*|попи\w*|закаж\w*|пауз\w*|перерыв\w*|отдох\w*", text):
+        return "action_does_not_match_cafe_intent"
+    return None
+
+
 def _model_source_previews(sources):
     """All mandatory previews, without extra action URLs or duplicate metadata.
 
@@ -340,9 +367,9 @@ def narrate(grounding, selected_id, context, intent, plan, budget_status, config
               "Напиши не более трёх коротких предложений общей длиной до 360 символов: связь выбранной остановки с intent, "
               "одно простое предложенное действие. Последнее предложение — точно: «Условия посещения неизвестны.» "
               "Связывай выбор только с intent; не добавляй пользователю других интересов. "
-              "Для intent.categories=[\"walk\"] предложи внешний осмотр облика выбранного объекта; для здания — его формы или фасада. "
-              "Не обещай занятий внутри, экспозиций, разработок или доступа на территорию. "
+              + intent_action_instruction(intent) +
               "Не придумывай имена, услуги, инфраструктуру, часы, розетки, тишину, безопасность, возрастную пригодность или доступ. "
+              "Не упоминай режим работы или статус открытия/закрытия: они доступны в исходном ответе и отдельных Details. "
               "Не повторяй числа/расстояния/время: они показаны в отдельном плане. Не добавляй URL. "
               "Не утверждай, что план укладывается, если budget_status не fits; unknown честно обозначь. "
               "Текст касается только выбранной остановки; source_ids должен содержать ровно selected_source_id из контекста. "
@@ -363,7 +390,7 @@ def narrate(grounding, selected_id, context, intent, plan, budget_status, config
         provider = strict_json(raw)
         content = provider["choices"][0]["message"]["content"]
         answer = strict_json(content)
-        reason = _answer_rejection(answer, grounding, selected_id, plan)
+        reason = _answer_rejection(answer, grounding, selected_id, plan) or intent_action_rejection(answer, intent)
         return (None, reason) if reason else (answer, "validated_structure_sources_and_known_claims")
     except Exception:
         # No provider details in diagnostics/logs; never send the content elsewhere.
@@ -528,7 +555,7 @@ class GoogleGrounded:
                                          "time_of_day": context["time_of_day"]}
                         answer, llm_status = self.narrator(grounding, selected_id, model_context, intent, plan, status, self.llm_config)
                     if answer is not None:
-                        rejected = _answer_rejection(answer, grounding, selected_id, plan)
+                        rejected = _answer_rejection(answer, grounding, selected_id, plan) or intent_action_rejection(answer, intent)
                         if rejected or (sensitive and _contains_private_origin(answer["text"], context)):
                             answer, llm_status = None, rejected or "private_origin_in_model_output"
                 cache_status = ("disabled_sensitive_origin" if sensitive else

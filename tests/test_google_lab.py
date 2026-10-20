@@ -564,6 +564,55 @@ class GoogleLabAITests(unittest.TestCase):
                 self.assertTrue(item["recommendations"])
             self.assertIsNot(response, variants[0])
 
+    def test_budget_profiles_replan_three_nearby_places_without_mutating_source_or_exact_budget(self):
+        template = deepcopy(self.base_places[3])
+        self.base_places, self.elements = [], []
+        for index, latitude in enumerate((51.1009, 51.1018, 51.1027), 1):
+            place = deepcopy(template)
+            name = "Синтетический парк " + str(index)
+            place.update(id=f"osm:node/{index}", name=name, source_name=name, name_generated=False,
+                         lat=latitude, lon=71.4, source_url=f"https://www.openstreetmap.org/node/{index}")
+            self.base_places.append(place)
+            self.elements.append({"type": "node", "id": index, "tags": {"name": name, "leisure": "park"}})
+        self.write_fixture()
+        calls = []
+        def recommender(index, **kwargs):
+            calls.append((index, deepcopy(kwargs)))
+            return lab.core_recommend(index, **kwargs)
+        with lab.create_server(port=0, root=self.root, recommender=recommender) as server, patch("app.llm.open_url", side_effect=AssertionError("No actual model")) as provider:
+            before_catalog = deepcopy(server.catalog)
+            before_places = deepcopy(server.retriever.places)
+            base_index = server.retriever
+            form = {"query": "Хочу парк", "geolocation": {"lat": 51.1, "lon": 71.4}, "time_of_day": "day"}
+            result = server.recommend(form)
+            variants = result["alternatives"]
+            self.assertEqual([item["budget_minutes"] for item in variants], [60, 120, 240])
+            self.assertEqual([item["plan"]["visit_minutes"] for item in variants], [45, 90, 180])
+            self.assertEqual(len({item["plan"]["total_minutes"] for item in variants}), 3)
+            self.assertEqual(len({id(index) for index, _ in calls}), 3)
+            self.assertTrue(all(index is not base_index for index, _ in calls))
+            for item, proposal in zip(variants, (15, 30, 60)):
+                self.assertEqual(len(item["recommendations"]), 3)
+                self.assertEqual([place["visit_minutes"] for place in item["recommendations"]], [proposal] * 3)
+                self.assertTrue(all(str(proposal) in place["action"] for place in item["recommendations"]))
+                self.assertTrue(item["plan"]["returns_to_origin"])
+                self.assertLessEqual(item["plan"]["total_minutes"], item["budget_minutes"])
+                self.assertEqual(item["diagnostics"]["time_allocation"], item["resolved_context"]["time_allocation"])
+                self.assertEqual(item["diagnostics"]["time_allocation"]["proposed_visit_minutes_per_stop"], proposal)
+                self.assertIs(item["diagnostics"]["time_allocation"]["is_source_fact"], False)
+                self.assertEqual(item["diagnostics"]["lab_base_index_sha256"], server.index_sha256)
+                self.assertNotEqual(item["diagnostics"]["lab_index_sha256"], server.index_sha256)
+                self.assertTrue(any("предложено приложением" in warning and "OSM не подтверждает" in warning for warning in item["warnings"]))
+            exact = server.recommend({**form, "minutes": 120})
+            self.assertIs(calls[-1][0], base_index)
+            self.assertEqual([place["visit_minutes"] for place in exact["recommendations"]], [20] * 3)
+            self.assertEqual(exact["diagnostics"]["lab_index_sha256"], server.index_sha256)
+            self.assertEqual(exact["resolved_context"]["time_allocation"]["policy"], "base_visit_profile")
+            self.assertEqual(server.catalog, before_catalog)
+            self.assertEqual(server.retriever.places, before_places)
+            self.assertIs(server.retriever, base_index)
+            provider.assert_not_called()
+
     def test_generic_walk_and_empty_results_never_ask_manual_context(self):
         with lab.create_server(port=0, root=self.root) as server:
             response = server.recommend({"query": "Хочу что-то необычное, пешком", "minutes": 60,
