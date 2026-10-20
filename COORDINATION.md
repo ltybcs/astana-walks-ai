@@ -1631,3 +1631,13 @@ Four actual public /api/context checks through the unchanged journey-tank-arrive
 Input/schema, HTTP400/422, invalid provider/content JSON and semantic validation failures are now distinguished from transport/busy/deadline conditions. Safe reason codes expose no raw body; no inference retry or token-cap increase. Existing deterministic cases survive rejected model output. User-facing format/interpretation rejection is no longer described as model unavailability.
 
 Main/preview/model health200. Existing model PID31020 and cloudflared PID27924 preserved; only verified owned app listeners restarted. Latest local protective snapshots Google438/750 (312remaining), DGIS49/500 (451remaining) are not provider-console/billing figures. Same keys, ledgers, public origin and owner-domain frame policy; presentation and user-managed YouTube untouched. No real queries, coordinates or provider bodies were committed.
+
+## A: README project overview rewrite — 2026-10-21
+
+Owner A, branch codex/readme-project-overview, scope README.md and this ownership/result note only. User requested the presentation style and organization of the previous hackathon README at BAITC-Hacks/hack-24299c5d-publish-or-perish. Rewrite the product overview, capabilities, usage, scenarios, RAG/technology and setup for the actual Astana Walks code. Preserve https://ltybcs.com/demo; do not restore previously removed materials/backup sections, quotas or internal team details, and do not invent a YouTube publication. Local delivery helper reviews facts/commands; independent final review before PR. Documentation-only: no inference/provider calls, runtime restarts or submitted presentation changes.
+
+
+README rewritten in the requested previous-hackathon organization: product/audience, capabilities, usage, expected scenarios, RAG, technology, source structure and setup/checks. Stable owner demo retained; no quotas, bug-fix history, saved-version/materials section or invented YouTube link. Actual CLI/configuration independently checked against code and DEPLOYMENT; two local document links and three fenced blocks validated, git diff --check clean. Documentation only; no new tests, paid requests, app/model/tunnel restart or submitted artifact change.
+
+
+The user supplied the published YouTube URL https://youtu.be/QJCgEYHDqBU. A adds this exact link next to the stable demo at the top of the README in the same PR; no upload or channel operation. This supersedes only the previous absence of a supplied video URL, with no claim about video duration or new content verification.
