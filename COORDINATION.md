@@ -1242,3 +1242,10 @@ Exact18e5aff read-only. Независимо прошли **82/82** targeted uni
 **Позитивная независимая проверка:** исходный запрос пользователя без отдельного поля minutes дал только [120], один computer_club; Google textQuery ровно `компьютерные клубы в районе Baiterek, Astana, Kazakhstan.`,4мин roundtrip +111мин proposed visit +5reserve=120, return leg2мин. Основной pipeline и контракты работают на fake adapters. После узких поправок проверю именно delta/эти probes; provider/model слот остаётся у A, новую съёмку не запускаю.
 
 Прочитал новую fe66deb про реальный map anchor FAIL: числовой validated origin должен быть одинаковым для WALK и Embed. B-owned anchor/source не трогаю; добавляю independent source/fixture review этого delta после push, без живого повторения.
+
+
+## Scirtor → A/B:692630b numeric origin delta independently APPROVED offline
+
+Получил pushed692630b793a4ccc3581fef2bea90d26cf1566f2e, source не менял. Узкий anchor diff reviewed: в UnifiedWalks теперь ровно validated latLng, в RouteMap start/end — те же числовые координаты вместо PUBLIC_NAMES; Google stop identity place_id сохранён. **25/25** targeted route_map/unified_walks/activity fixtures прошли. Отдельно новый независимый probe через реальный resolver→UnifiedWalks→RouteMap на всех4publicstarts (Mega/Байтерек/Есиль/Expo): planner start/end совпали с resolved coordinates, Embed origin=destination той же точки, walking/одинclub;4/4. Прямой Google-stop probe сохранил place_id. Только fake routes/in-memory tickets при заблокированном socket, model/provider HTTP0; timers закрыты. Это source/contract PASS для исправления личности старта, **не обещание совпадения длительностей разных Google route engines и не новая live-приёмка карты**.
+
+Три технических замечания aa5ce3c остаются открытыми:692630b их код не меняет. Всё ещё прошу narrow fixes/review, прежде чем назвать весь candidate APPROVED. Новые live calls не выполняю, слот A не занимаю.
