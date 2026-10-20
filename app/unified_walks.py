@@ -9,10 +9,11 @@ from contextlib import nullcontext
 from copy import deepcopy
 from datetime import datetime, timezone
 from threading import BoundedSemaphore
+from time import monotonic
 
 from .google_budget import GoogleError
 from .google_grounded import prepare, route_minutes, validate_grounding, WALK_WARNING
-from .retrieval import architecture_evidence, detect_intent, distance_m, feature
+from .retrieval import architecture_evidence, detect_intent, distance_m, feature, source_goal_evidence
 from .unified_narration import narrate
 from .category_catalog import CATEGORY_CATALOG
 from .activity_intent import parse_search_intent
@@ -34,7 +35,9 @@ def _source_classes(categories):
     return result
 
 
-def _eligible(place, intent):
+def _eligible(place, intent, intent_plan=None):
+    if intent_plan is not None and not source_goal_evidence(place, intent_plan):
+        return False
     category = place.get("category")
     preferred = _source_classes(intent["preferred_categories"])
     explicit_sources = _source_classes([value for value in intent["preferred_categories"] if value not in {"walk", "architecture"}])
@@ -47,7 +50,7 @@ def _eligible(place, intent):
         return False
     # A primary venue type is a hard condition, even with secondary interests.
     if (intent.get("activity_mode") == "single_venue"
-            and category not in (explicit_sources or preferred)):
+            and (explicit_sources or preferred) and category not in (explicit_sources or preferred)):
         return False
     if preferred and category not in preferred and not (intent["architecture"] and architecture_evidence(place)):
         return False
@@ -93,7 +96,8 @@ def _stop_reason(stop, option, intent):
 def _stop(place, provider, source_id):
     return {"stop_id": provider + ":" + place["id"], "id": place["id"], "source_id": source_id,
             "provider": provider, **{key: deepcopy(place.get(key)) for key in
-            ("name", "category", "description", "features", "opening_hours", "source_url", "lat", "lon")}}
+            ("name", "category", "description", "features", "opening_hours", "source_url", "lat", "lon",
+             "source_categories", "source_rubrics", "source_types", "source_type")}}
 
 
 def _evidence(stop):
@@ -101,9 +105,11 @@ def _evidence(stop):
 
 
 class UnifiedWalks:
-    def __init__(self, resolver, osm_retriever, google_client, dgis, *, llm_config=None, narrator=None, route_map=None):
+    def __init__(self, resolver, osm_retriever, google_client, dgis, *, llm_config=None, narrator=None, route_map=None, preparation=None, gateway=None):
         self.resolver, self.osm, self.google, self.dgis = resolver, osm_retriever, google_client, dgis
         self.llm_config, self.narrator, self.route_map = llm_config, narrator or narrate, route_map
+        self.preparation, self.gateway = preparation, gateway
+        self._custom_narrator = narrator is not None
         self._slots = BoundedSemaphore(1)
         self._last_workflow = None
 
@@ -127,15 +133,16 @@ class UnifiedWalks:
 
     def recommend(self, payload):
         # Strict gate precedes status, retrieval, executors, all HTTP and LLM.
-        form = {key: value for key, value in payload.items() if key != "consent"} if isinstance(payload, dict) else payload
-        resolved = self.resolver(form)
+        prepared = self.preparation.consume(payload) if self.preparation else None
+        form = prepared.form if prepared else ({key: value for key, value in payload.items() if key != "consent"} if isinstance(payload, dict) else payload)
+        resolved = prepared.resolved if prepared else self.resolver(form)
         if not isinstance(payload, dict) or payload.get("consent") is not True:
             raise GoogleError("consent_required", "Нужно согласие на общий поиск в Google и 2ГИС.", 400)
         self._preflight()
         if not self._slots.acquire(blocking=False):
             raise GoogleError("unified_busy", "Предыдущий общий поиск ещё выполняется.", 429)
         try:
-            response = self._recommend(form, resolved)
+            response = self._recommend(form, resolved, prepared=prepared)
             self._last_workflow = {
                 "completed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 "mode": response["mode"], "llm_status": response["diagnostics"]["llm_status"],
@@ -148,22 +155,28 @@ class UnifiedWalks:
         finally:
             self._slots.release()
 
-    def _recommend(self, form, resolved):
+    def _recommend(self, form, resolved, *, prepared=None):
         # prepare reuses this exact already validated context, not a second clock.
-        context, safe_intent, _, _, parameters = prepare(form, lambda _: resolved)
+        intent_plan = prepared.intent_plan if prepared else None
+        context, safe_intent, _, _, parameters = prepare(form, lambda _: resolved, **({"intent_plan": intent_plan} if intent_plan else {}))
         context = deepcopy(context)
         origin, query = resolved["origin"], resolved["query"]
         budgets = context["budget_options"]
         radius = parameters["locationBias"]["circle"]["radiusMeters"]
-        intent = detect_intent(query, resolved["time_of_day"])
+        intent = detect_intent(query, resolved["time_of_day"], **({"intent_plan": intent_plan} if intent_plan else {}))
         context["activity_mode"] = intent["activity_mode"]
         structured_intent = intent.get("search_intent") or parse_search_intent(query)
         context["search_intent"] = deepcopy(structured_intent)
+        google_seconds = min(60, prepared.deadline - monotonic() - 3) if prepared else 60
+        if google_seconds <= 0:
+            raise GoogleError("context_timeout", "Истекло время подготовки маршрута.", 504)
         executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="unified-source")
-        local_future = executor.submit(self.osm.retrieve, query, origin, max(budgets), resolved["time_of_day"])
-        dgis_future = executor.submit(self.dgis.search, query, origin, radius)
+        adapter_options = {"intent_plan": intent_plan} if intent_plan else {}
+        local_future = executor.submit(self.osm.retrieve, query, origin, max(budgets), resolved["time_of_day"], **adapter_options)
+        live_options = {**adapter_options, "deadline": prepared.deadline} if prepared else {}
+        dgis_future = executor.submit(self.dgis.search, query, origin, radius, **live_options)
         try:
-            with self.google.workflow(60) if hasattr(self.google, "workflow") else nullcontext():
+            with self.google.workflow(google_seconds) if hasattr(self.google, "workflow") else nullcontext():
                 grounding = validate_grounding(self.google.search_places(parameters))
                 try:
                     local = local_future.result(timeout=30)
@@ -173,10 +186,10 @@ class UnifiedWalks:
                 candidates = {"osm": [], "google": [], "dgis": []}
                 for index, item in enumerate(local["selected"]):
                     poi = item["poi"]
-                    if distance_m(origin, poi) <= radius and _eligible(poi, intent):
+                    if distance_m(origin, poi) <= radius and _eligible(poi, intent, intent_plan):
                         candidates["osm"].append(_stop(poi, "osm", "o" + str(index)))
                 for index, poi in enumerate(live["places"]):
-                    if distance_m(origin, poi) <= radius and _eligible(poi, intent):
+                    if distance_m(origin, poi) <= radius and _eligible(poi, intent, intent_plan):
                         candidates["dgis"].append(_stop(poi, "dgis", "d" + str(index)))
                 # Google summary remains whole. Only structured source metadata
                 # may identify candidate places; never mine its prose for facts.
@@ -186,7 +199,9 @@ class UnifiedWalks:
                 # venue types, exclusions and family constraints stay unverified.
                 broad_google = (not structured_intent["categories"] or
                                 set(structured_intent["categories"]) <= {"walk", "architecture"})
-                if (not hard_unknown and broad_google and not intent["child"]
+                semantic_broad = intent_plan is None or (not intent_plan.open_goal and
+                    all(goal.fulfilment == "generic_walk" for goal in intent_plan.goals))
+                if (not hard_unknown and broad_google and semantic_broad and not intent["child"]
                         and not intent["excluded_categories"]):
                     for source in grounding["sources"]:
                         location = source.get("location")
@@ -220,10 +235,28 @@ class UnifiedWalks:
                     seen.add(stop["stop_id"])
         answer, llm_status, llm_attempts = None, "no_verified_plan", 0
         if selected_union:
-            answer, llm_status = self.narrator(grounding, selected_union, alternatives, context, safe_intent, self.llm_config)
+            if self.gateway and not self._custom_narrator:
+                try:
+                    deadline = prepared.deadline if prepared else monotonic() + 120
+                    with self.gateway.session(deadline - 2, seconds=120):
+                        answer, llm_status = self.narrator(grounding, selected_union, alternatives, context, safe_intent,
+                            self.llm_config, intent_plan=intent_plan, http_open=self.gateway.open)
+                except Exception:
+                    answer, llm_status = None, "local_model_unavailable_or_invalid"
+            else:
+                answer, llm_status = self.narrator(grounding, selected_union, alternatives, context, safe_intent, self.llm_config)
             llm_attempts = int(llm_status not in {"local_model_unconfigured", "route_not_budget_verified",
                 "invalid_grounding", "selected_source_missing", "context_exceeds_local_bound",
-                "sensitive_origin_in_model_context", "invalid_narration_context"})
+                "sensitive_origin_in_model_context", "invalid_narration_context", "no_verified_match"})
+        # Descriptions have already passed whole-answer, per-venue validation.
+        # Each exact stop ID receives only its own text, never another provider's rating.
+        descriptions = {item["stop_id"]: item["text"] for item in (answer or {}).get("venue_descriptions", [])
+                        if isinstance(item, dict) and isinstance(item.get("stop_id"), str)
+                        and isinstance(item.get("text"), str) and 1 <= len(item["text"]) <= 600}
+        for option in alternatives:
+            for stop in option["stops"]:
+                if stop["stop_id"] in descriptions:
+                    stop["user_description"] = descriptions[stop["stop_id"]]
         receipt = {}
         for provider in ("osm", "google", "dgis"):
             receipt[provider] = {"status": "searched" if candidates[provider] else "no_data",
@@ -250,7 +283,10 @@ class UnifiedWalks:
                 "source_receipt": receipt, "alternatives": alternatives,
                 "default_option_id": next((option["id"] for option in alternatives if option["budget_status"] == "fits"), alternatives[0]["id"]),
                 "warnings": warnings, "diagnostics": {"llm_attempts": llm_attempts, "llm_status": llm_status,
-                "response_storage": "request-memory-only", "searches": {"osm": 1, "google": 1, "dgis": 1}}}
+                "response_storage": "request-memory-only", "searches": {"osm": 1, "google": 1, "dgis": 1},
+                "intent_llm_attempts": prepared.intent_attempts if prepared else 0,
+                "intent_status": prepared.intent_status if prepared else "deterministic",
+                "place_resolution_attempts": prepared.place_attempts if prepared else 0}}
 
     @staticmethod
     def _select(candidates, origin, intent=None):

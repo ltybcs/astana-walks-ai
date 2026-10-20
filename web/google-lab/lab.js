@@ -5,9 +5,11 @@ const state = {
   requestId: 0, controller: null, signature: "", result: null, optionId: null,
   mapId: 0, mapController: null, mapTimer: null, mapLoadTimer: null, geoCancel: null
 };
+let contextPreparationCapability = null;
 const PROVIDERS = {osm: "OpenStreetMap", google: "Google Maps", dgis: "2ГИС"};
 const ORIGIN_SOURCES = {
   query_landmark: "из сообщения", query_catalog: "из сообщения",
+  google_places_text_search: "найдено в Google Maps",
   browser_geolocation: "геопозиция браузера", explicit_landmark: "из сообщения",
   explicit_coordinates: "из сообщения"
 };
@@ -31,6 +33,7 @@ function safeUrl(value, provider) {
     if (url.username || url.password || url.port) return null;
     if (provider === "dgis-attribution" && url.protocol === "http:" && url.hostname === "dev.2gis.ru" && url.pathname === "/") return url.href;
     if (url.protocol !== "https:") return null;
+    if (provider === "origin-attribution") return url.href;
     const hosts = {
       google: ["www.google.com", "maps.google.com", "maps.app.goo.gl"],
       osm: ["www.openstreetmap.org", "openstreetmap.org"],
@@ -99,7 +102,7 @@ function onInputChange() {
 function errorMessage(error) {
   if (error && error.code === "known_start_required") {
     const reason = typeof error.message === "string" && error.message.trim() ? error.message : "Старт не определён.";
-    return reason + " Поиск по источникам и обращение к модели не выполнены.";
+    return reason + " Подбор мест и расчёт маршрута не выполнены.";
   }
   if (error && error.code === "timeout") return "Ожидание завершено. Удалённый запрос мог выполниться и учесться в лимите. Автоматического повтора нет.";
   if (error && error.name === "AbortError") return "Подбор отменён. Удалённый запрос мог выполниться и учесться в лимите.";
@@ -123,11 +126,37 @@ async function post(path, body, signal) {
   }
   return data;
 }
+async function contextPreparationEnabled(signal) {
+  if (contextPreparationCapability !== null) return contextPreparationCapability;
+  const response = await fetch("/api/health", {
+    method: "GET", credentials: "same-origin", cache: "no-store", redirect: "error", signal
+  });
+  let health;
+  try { health = await response.json(); } catch (_) {
+    throw new Error("Не удалось проверить версию сервиса. Подбор не запущен.");
+  }
+  if (!response.ok || !health || typeof health !== "object" || Array.isArray(health)) {
+    throw new Error("Не удалось проверить версию сервиса. Подбор не запущен.");
+  }
+  if (signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+  // Select once from a successful capability response, never from a token error.
+  contextPreparationCapability = health.context_preparation === true;
+  return contextPreparationCapability;
+}
 function startKnown(context) {
   return Boolean(context && context.origin && coordinate(context.origin.lat, context.origin.lon)
+    && context.origin.lat >= 51.00 && context.origin.lat <= 51.32
+    && context.origin.lon >= 71.20 && context.origin.lon <= 71.70
     && typeof context.origin.label === "string" && context.origin.label.trim()
+    && Object.prototype.hasOwnProperty.call(ORIGIN_SOURCES, context.origin_source)
     && !context.is_city_sample && context.origin_source !== "city_sample"
     && context.origin_source !== "pending_geolocation");
+}
+function preparationToken(probe) {
+  if (!probe || typeof probe.preparation_token !== "string" || !probe.preparation_token.trim()) {
+    throw new Error("Подготовка запроса не подтверждена. Поиск не запущен.");
+  }
+  return probe.preparation_token; // Opaque: never parse, normalize, display or persist.
 }
 function startError(reason) {
   const messages = {
@@ -252,6 +281,15 @@ function renderResult(data) {
   state.result = data;
   $("walk-mode").textContent = data.mode === "llm-grounded-unified" ? "ИИ · три источника проверены" : "Без ответа модели";
   $("walk-context").textContent = contextText(data.resolved_context);
+  if (data.resolved_context.origin_source === "google_places_text_search"
+      && safeUrl(data.resolved_context.origin_reference, "google")) {
+    $("walk-context").append(node("span", " · "), link("Источник старта ↗", data.resolved_context.origin_reference, "google"));
+  }
+  const attributions = data.resolved_context.origin_attributions;
+  if (Array.isArray(attributions)) attributions.slice(0, 8).forEach(value => {
+    if (!value || typeof value.provider !== "string" || !value.provider.trim() || value.provider.length > 300) return;
+    $("walk-context").append(node("span", " · "), link(value.provider, value.providerUri, "origin-attribution"));
+  });
   renderReceipts(data.source_receipt);
   $("answer-label").textContent = data.answer ? "Ответ помощника" : "Полный ответ Google · без генерации модели";
   $("walk-answer").textContent = data.answer ? data.answer.text : data.grounding.summary;
@@ -385,7 +423,14 @@ function selectOption(id) {
     const item = node("li");
     const content = node("div", null, "stop-content");
     content.append(node("strong", stop.name));
-    if (typeof stop.why_text === "string" && stop.why_text.trim()) content.append(node("p", "Почему: " + stop.why_text, "stop-why"));
+    if (typeof stop.user_description === "string" && stop.user_description.trim() && stop.user_description.length <= 600) {
+      content.append(node("p", stop.user_description, "stop-description"));
+    }
+    if (typeof stop.why_text === "string" && stop.why_text.trim()) {
+      const why = node("details", null, "stop-why-details");
+      why.append(node("summary", "Почему выбрано"), node("p", stop.why_text, "stop-why"));
+      content.append(why);
+    }
     content.append(node("p", PROVIDERS[stop.provider] + (finite(stop.visit_minutes) ? " · посещение " + stop.visit_minutes + " мин" : "")));
     content.append(link("Источник места ↗", stop.source_url, stop.provider));
     item.append(content);
@@ -410,25 +455,32 @@ async function submitWalk(event) {
   const clock = new Date();
   const payload = {query, client_context: {instant: clock.toISOString(), utc_offset_minutes: -clock.getTimezoneOffset()}};
   let timedOut = false;
+  let probe = null;
   const deadline = setTimeout(() => { timedOut = true; controller.abort(); if (state.geoCancel) state.geoCancel(); }, 210000);
   $("walk-submit").disabled = true;
   $("walk-submit").textContent = "Подбираем прогулку…";
   $("walk-status").textContent = "Определяем старт и время из сообщения…";
   try {
-    let probe = await post("/api/context", payload, controller.signal);
+    const preparationEnabled = await contextPreparationEnabled(controller.signal);
     if (!current(id, sig)) return;
     if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+    if (preparationEnabled) payload.consent = true;
+    probe = await post("/api/context", payload, controller.signal);
+    if (!current(id, sig)) return;
+    if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+    if (preparationEnabled) payload.preparation_token = preparationToken(probe);
     if (probe.needs_geolocation === true) {
       $("walk-status").textContent = "Ожидаем разрешённую геолокацию, не более 8 секунд…";
       const location = await requestLocation(id, sig);
       if (!current(id, sig)) return;
-    if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+      if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
       if (location.status !== "granted") throw startError(location.status);
       payload.location_status = "granted";
       payload.geolocation = location.geolocation;
       probe = await post("/api/context", payload, controller.signal);
       if (!current(id, sig)) return;
-    if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+      if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
+      if (preparationEnabled) payload.preparation_token = preparationToken(probe);
     }
     if (probe.needs_geolocation || !startKnown(probe.resolved_context)) throw startError();
     $("walk-status").textContent = "Проверяем OSM, Google и 2ГИС. Затем рассчитаем возвращение и подготовим один ответ…";
@@ -447,6 +499,10 @@ async function submitWalk(event) {
     show("walk-error", true);
     $("walk-status").textContent = "Подбор не выполнен.";
   } finally {
+    delete payload.preparation_token;
+    delete payload.query;
+    delete payload.client_context;
+    probe = null;
     delete payload.geolocation;
     delete payload.location_status;
     clearTimeout(deadline);

@@ -17,12 +17,15 @@ from urllib.request import ProxyHandler, Request, build_opener
 from .dgis_live import (_LiveClient, _NoRedirect, DGISLiveError, ASTANA_BBOX,
                         ATTRIBUTION, ENDPOINT, FIELDS, PAGE_SIZE, MAX_BYTES,
                         _state_error)
-from .retrieval import detect_intent, distance_m
+from .retrieval import detect_intent, distance_m, source_goal_evidence
 from .activity_intent import parse_search_intent
 from .category_catalog import CATEGORY_CATALOG
 from scripts.collect_2gis import CollectionError, normalize_items, response_items
 
 CATEGORY_QUERIES = {name: spec["dgis_query"] for name, spec in CATEGORY_CATALOG.items()}
+# Official Places fields; no extra request, all returned data remains in RAM.
+# https://docs.2gis.com/api/search/places/reference/3.0/items
+SEARCH_FIELDS = FIELDS + ",items.schedule,items.schedule_special"
 
 
 def _invalid():
@@ -44,15 +47,15 @@ def _strict_json(raw):
     return value
 
 
-def _selection(query):
+def _selection(query, *, intent_plan=None):
     if not isinstance(query, str) or not query.strip() or len(query) > 2000:
         raise _invalid()
-    intent = parse_search_intent(query)
+    intent = intent_plan.search_intent if intent_plan is not None else parse_search_intent(query)
     if not intent["supported"]:
         raise DGISLiveError("Запрошенная активность не поддерживается; поиск 2ГИС не выполнялся.",
                             code="unsupported_activity", http_status=422)
     requested = list(intent["categories"])
-    if not requested:
+    if not requested and intent_plan is None:
         requested = ["playground"] if detect_intent(query)["child"] else ["walk"]
     if intent["mode"] == "single_venue":
         requested = requested[:1]
@@ -142,10 +145,18 @@ class UnifiedDGIS:
                 return b"".join(chunks)
             chunks.append(chunk)
 
-    def search(self, query, origin, radius):
-        categories, excluded = _selection(query)
-        category = categories[0]
-        child = detect_intent(query)["child"]
+    def search(self, query, origin, radius, *, intent_plan=None, deadline=None):
+        categories, excluded = _selection(query, intent_plan=intent_plan)
+        projected_intent = detect_intent(query, intent_plan=intent_plan)
+        category = categories[0] if categories else "unknown"
+        child = projected_intent["child"]
+        search_text = intent_plan.search_text if intent_plan is not None else "; ".join(CATEGORY_QUERIES[name] for name in categories)
+        if not isinstance(search_text, str) or not search_text.strip() or len(search_text) > 400:
+            raise _invalid()
+        if deadline is not None and (type(deadline) not in {int, float} or not math.isfinite(deadline)):
+            raise _invalid()
+        if deadline is not None:
+            self._remaining(deadline)
         bbox = _nearby_box(origin, radius)
         self._existing_state()
         key = self._client._key()
@@ -153,6 +164,8 @@ class UnifiedDGIS:
             raise DGISLiveError("Живой поиск 2ГИС не настроен на сервере.", code="not_configured", http_status=503)
         with self._client._locked():
             self._existing_state()
+            if deadline is not None:
+                self._remaining(deadline)
             now = self.clock()
             attempts = self._client._attempts(now)
             quota = self._client._quota(attempts, now)
@@ -162,17 +175,17 @@ class UnifiedDGIS:
             self._client._write_attempts(attempts)
             quota = self._client._quota(attempts, now)
             south, west, north, east = bbox
-            params = {"key": key, "q": "; ".join(CATEGORY_QUERIES[name] for name in categories), "point1": f"{west},{north}", "point2": f"{east},{south}",
-                      "page": 1, "page_size": PAGE_SIZE, "fields": FIELDS}
+            params = {"key": key, "q": search_text, "point1": f"{west},{north}", "point2": f"{east},{south}",
+                      "page": 1, "page_size": PAGE_SIZE, "fields": SEARCH_FIELDS}
             request = Request(ENDPOINT + "?" + urlencode(params), headers={"Accept": "application/json", "User-Agent": "AstanaWalks/1.0 (unified live search)"})
-            deadline = self.monotonic() + self.timeout
+            deadline = min(deadline, self.monotonic() + self.timeout) if deadline is not None else self.monotonic() + self.timeout
             try:
                 opener = self._http_open or build_opener(ProxyHandler({}), _NoRedirect()).open
                 with opener(request, timeout=self._remaining(deadline)) as response:
                     payload = _strict_json(self._read(response, deadline))
                 items = response_items(payload)
                 stamp = datetime.fromtimestamp(self.clock(), timezone.utc).isoformat(timespec="seconds")
-                normalized = normalize_items(items[:PAGE_SIZE], stamp, bbox)
+                normalized = normalize_items(items[:PAGE_SIZE], stamp, bbox, allow_unmapped=intent_plan is not None)
                 places = []
                 for place in normalized:
                     actual = set(place["source_categories"])
@@ -181,11 +194,13 @@ class UnifiedDGIS:
                         continue
                     # The query chooses among explicit rubric-backed types; it
                     # never establishes a type from a brand or search relevance.
+                    if intent_plan is not None and not source_goal_evidence(place, intent_plan):
+                        continue
                     projected = next((source for requested in categories
                                       for source in CATEGORY_CATALOG[requested]["source_categories"]
                                       if source in actual), None)
-                    if projected is not None:
-                        places.append({**place, "category": projected})
+                    if projected is not None or intent_plan is not None:
+                        places.append({**place, "category": projected or place["category"]})
             except DGISLiveError as error:
                 error.quota = quota
                 raise

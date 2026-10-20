@@ -153,6 +153,8 @@ class GoogleClient:
         request = Request(url, data=json_bytes(payload) if payload is not None else None, headers=headers, method=method)
         timeout = self._remaining()
         self.budget.reserve(operation)  # Durable before any opening/DNS attempt.
+        # The ledger lock may have waited; do not reuse the old socket allowance.
+        timeout = self._remaining()
         try:
             return self.http_open(request, timeout=timeout)
         except HTTPError as error:
@@ -366,6 +368,82 @@ class GoogleClient:
             arguments = self._arguments("compute_routes", [("origin",), ("destination",), ("travelMode", "travel_mode")],
                 [waypoint("origin", origin), waypoint("destination", destination), "WALK"])
             return self._tool("compute_routes", arguments)
+
+    def resolve_place(self, name: str, *, deadline=None):
+        """One fixed-mask Places Text Search, through the existing pilot budget.
+
+        The caller chooses an unambiguous name/address match. This method never
+        treats provider rank as proof of the user's intended starting point.
+        https://developers.google.com/maps/documentation/places/web-service/text-search
+        """
+        if (not isinstance(name, str) or not 1 <= len(name.strip()) <= 200
+                or any(ord(c) < 32 for c in name) or re.search(r"https?://|[<>]", name)):
+            raise GoogleError("invalid_request", "Некорректное название места старта.", 400)
+        seconds = min(15, deadline - monotonic()) if deadline is not None else 15
+        if seconds <= 0:
+            raise GoogleError("context_timeout", "Истекло время определения места старта.", 504)
+        mask = ("places.id,places.displayName,places.formattedAddress,places.location,"
+                "places.types,places.googleMapsUri,places.attributions")
+        payload = {"textQuery": name.strip() + ", Астана, Казахстан", "languageCode": "ru",
+                   "regionCode": "KZ", "pageSize": 3,
+                   "locationRestriction": {"rectangle": {
+                       "low": {"latitude": 51.00, "longitude": 71.20},
+                       "high": {"latitude": 51.32, "longitude": 71.70}}}}
+        try:
+            with self.workflow(seconds):
+                with self._http("POST", "https://places.googleapis.com/v1/places:searchText",
+                                "places.resolve", payload,
+                                {"X-Goog-FieldMask": mask, "Accept": "application/json"}) as response:
+                    if response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json":
+                        raise ValueError("Invalid Places content type")
+                    data = self._bounded_json(response)
+            if not isinstance(data, dict) or set(data) - {"places"}:
+                raise ValueError("Unexpected Places response fields")
+            values = data.get("places", [])
+            if not isinstance(values, list) or len(values) > 3:
+                raise ValueError("Invalid Places result bound")
+            candidates = []
+            for place in values:
+                allowed = {"id", "displayName", "formattedAddress", "location", "types", "googleMapsUri", "attributions"}
+                if not isinstance(place, dict) or set(place) - allowed or not valid_place_id(place.get("id")):
+                    raise ValueError("Invalid Places identity")
+                display, point = place.get("displayName"), place.get("location")
+                if (not isinstance(display, dict) or set(display) - {"text", "languageCode"}
+                        or not isinstance(display.get("text"), str) or not 1 <= len(display["text"]) <= 200):
+                    raise ValueError("Invalid Places display name")
+                if (not isinstance(point, dict) or set(point) != {"latitude", "longitude"}
+                        or any(type(point[k]) not in {int, float} or not math.isfinite(point[k])
+                               for k in ("latitude", "longitude"))):
+                    raise ValueError("Invalid Places coordinates")
+                if not 51.00 <= point["latitude"] <= 51.32 or not 71.20 <= point["longitude"] <= 71.70:
+                    continue  # Enforce the application's scope even if a provider ignores its rectangle.
+                address, types = place.get("formattedAddress", ""), place.get("types", [])
+                url, attributions = place.get("googleMapsUri"), place.get("attributions", [])
+                if (not isinstance(address, str) or len(address) > 1000
+                        or not isinstance(types, list) or len(types) > 64
+                        or any(not isinstance(t, str) or len(t) > 100 for t in types)
+                        or not maps_url(url) or not isinstance(attributions, list) or len(attributions) > 8):
+                    raise ValueError("Invalid Places metadata")
+                broad_types = {"country", "locality", "political", "postal_code", "postal_code_prefix",
+                               "postal_town", "sublocality", "neighborhood", "route"}
+                specific_types = {kind for kind in types if kind not in broad_types
+                                  and not kind.startswith(("administrative_area_level_", "sublocality_level_"))}
+                if not specific_types:
+                    continue  # A city, district or whole street centroid is not the user's exact start.
+                for attribution in attributions:
+                    if (not isinstance(attribution, dict) or set(attribution) - {"provider", "providerUri"}
+                            or not isinstance(attribution.get("provider"), str) or len(attribution["provider"]) > 300
+                            or "providerUri" in attribution and (not isinstance(attribution["providerUri"], str)
+                                or len(attribution["providerUri"]) > 2048)):
+                        raise ValueError("Invalid Places attribution")
+                candidates.append({"id": place["id"], "name": display["text"], "address": address,
+                                   "lat": point["latitude"], "lon": point["longitude"],
+                                   "types": types, "source_url": url, "attributions": attributions})
+            return candidates
+        except GoogleError:
+            raise
+        except (OSError, ValueError, TypeError, UnicodeError, RecursionError, KeyError):
+            raise GoogleError("google_protocol_error", "Ответ поиска места старта не прошёл проверку.", 502) from None
 
     def details(self, place_id: str, profile: str):
         if not valid_place_id(place_id) or profile not in DETAIL_MASKS:
