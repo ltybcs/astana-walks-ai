@@ -68,7 +68,7 @@ class UnifiedTests(unittest.TestCase):
     def test_all_three_searches_overlap_and_one_answer_serves_three_budgets(self):
         barrier = self.google.barrier = Barrier(3)
         osm_value, dgis_value = self.osm.retrieve.return_value, self.dgis.search.return_value
-        def local(*_):
+        def local(*_, **_kwargs):
             barrier.wait(timeout=3)
             return osm_value
         def live(*_):

@@ -13,7 +13,7 @@ from time import monotonic
 
 from .google_budget import GoogleError
 from .google_grounded import prepare, route_minutes, validate_grounding, WALK_WARNING
-from .retrieval import architecture_evidence, detect_intent, distance_m, feature, source_goal_evidence
+from .retrieval import architecture_evidence, detect_intent, distance_m, feature, source_goal_evidence, night_hours_eligible
 from .unified_narration import narrate
 from .category_catalog import CATEGORY_CATALOG
 from .activity_intent import parse_search_intent
@@ -59,7 +59,8 @@ def _eligible(place, intent, intent_plan=None):
     for wanted, key in (("socket", "socket"), ("accessible", "wheelchair"), ("strict_quiet", "quiet")):
         if intent[wanted] and feature(place, key) != "yes":
             return False
-    if intent["night"] and place.get("opening_hours") != "24/7":
+    if not night_hours_eligible(place, night=intent["night"], allow_unknown_outdoor_hours=True,
+                                require_confirmed_hours=intent.get("require_confirmed_hours", False)):
         return False
     if intent["child"] and actual_types & {"bar", "nightclub"}:
         return False
@@ -195,7 +196,8 @@ class UnifiedWalks:
             raise GoogleError("context_timeout", "Истекло время подготовки маршрута.", 504)
         executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="unified-source")
         adapter_options = {"intent_plan": intent_plan} if intent_plan else {}
-        local_future = executor.submit(self.osm.retrieve, query, origin, max(budgets), resolved["time_of_day"], **adapter_options)
+        local_future = executor.submit(self.osm.retrieve, query, origin, max(budgets), resolved["time_of_day"],
+                                       allow_unknown_outdoor_hours=True, **adapter_options)
         live_options = {**adapter_options, "deadline": prepared.deadline} if prepared else {}
         dgis_future = executor.submit(self.dgis.search, query, origin, radius, **live_options)
         try:
@@ -216,7 +218,8 @@ class UnifiedWalks:
                         candidates["dgis"].append(_stop(poi, "dgis", "d" + str(index)))
                 # Google summary remains whole. Only structured source metadata
                 # may identify candidate places; never mine its prose for facts.
-                hard_unknown = intent["socket"] or intent["accessible"] or intent["strict_quiet"] or intent["night"]
+                hard_unknown = (intent["socket"] or intent["accessible"] or intent["strict_quiet"]
+                                or intent["night"] or intent.get("require_confirmed_hours", False))
                 # Query text is not venue-type evidence. Only a broad walk or
                 # architectural overview can use untyped Google stops; explicit
                 # venue types, exclusions and family constraints stay unverified.
@@ -246,6 +249,9 @@ class UnifiedWalks:
             executor.shutdown(wait=True, cancel_futures=True)
         for option in alternatives:
             for stop in option["stops"]:
+                if (intent["night"] and stop.get("category") in {"park", "promenade"}
+                        and stop.get("opening_hours") in (None, "")):
+                    stop["availability_note"] = "Ночной доступ и освещение не подтверждены; проверьте перед выходом."
                 stop["why_text"] = _stop_reason(stop, option, intent)
         selected_union = []
         seen = set()
@@ -284,6 +290,13 @@ class UnifiedWalks:
                 if stop["stop_id"] in descriptions:
                     stop["user_description"] = descriptions[stop["stop_id"]]
                     stop["description_origin"] = "local-model"
+                if stop.get("availability_note"):
+                    # Older open tabs render user_description but do not know
+                    # the new optional note. Keep the application notice there
+                    # too; the new UI presents that exact suffix separately.
+                    stop["user_description"] += " Примечание приложения: " + stop["availability_note"]
+                    if stop["description_origin"] == "local-model":
+                        stop["description_origin"] = "local-model-with-note"
         receipt = {}
         for provider in ("osm", "google", "dgis"):
             receipt[provider] = {"status": "searched" if candidates[provider] else "no_data",
