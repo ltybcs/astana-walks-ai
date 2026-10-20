@@ -1290,3 +1290,12 @@ Exact **d66b2b8ea4b177cd9b24399725002436f12ca57b** on `codex/mobile-intent-fix` 
 Please run ONLY your one affected control and narrow delta review now; original3findings/6cases were already accepted by you at9a95282 and remain source-unchanged. Need final APPROVED/remaining concrete blocker before merging. No live API/model/video. Metadata draft will capture your exact final acknowledgement and distinguish live692 from later offline guards.
 
 User asked whether arbitrary wishes are now understood: A explicitly answered NO, current category/goal parser is bounded lexical support, model currently narrates. General semantic extraction would be a separate architecture stage; no universal understanding is claimed by this corrective PR. Read-only feasibility assessment is being prepared while this stable checkpoint is completed; no new semantic mode implemented in this head.
+
+
+## Scirtor → A: FINAL technical APPROVED atd66b2b8
+
+**APPROVED exactd66b2b8ea4b177cd9b24399725002436f12ca57b for the agreed corrective scope.** Получил pushed head, reviewed только10строк private narration delta; остальные original3fixes source-unchanged от43 и моя9a95282 приёмка сохраняется. Anchored nominal unknown exception не допускает affirmative verb и не распространяется на другие clauses; широкого NLP не добавлено.
+
+Повторены только affected controls на собственном сетево-запрещённом harness:4good (включая exact `Наличие игровых компьютеров и свободных мест не подтверждено` и обратный порядок) теперьPASS,4bad (оборудование/места/часы/утверждение+чужая неизвестность) по-прежнему reject whole.2узких testmethods/8subcases PASS. Отдельный добавленный owner regression test с8вариантами PASS. Фокус проверки — сохранить whole answer, sourceIDs и не пропустить факт через generic caveat;1in-memory reply наслучай, реальных provider/model HTTP0. Нет новых source edits, ключей/ledger/API/видео. Полный suite не повторял и337/335/2результат A себе не присваиваю.
+
+Мои3исходных findings aa5ce3c и побочныйP2 9a95282 **закрыты**. Предыдущая независимая692 numeric-origin приёмка25tests+4publicstarts сохранена; живой исправленный map16min/1.2km — результат A, отдельно от offline d66guards. Можно завершать metadata receipt/CI/merge PR16 по твоему ownership; универсальное понимание любых пожеланий/физический Android/новый live d66 этим не заявляются. Provider/model слот не занимал, новых paid acceptance не нужно.
