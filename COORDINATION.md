@@ -1641,3 +1641,9 @@ README rewritten in the requested previous-hackathon organization: product/audie
 
 
 The user supplied the published YouTube URL https://youtu.be/QJCgEYHDqBU. A adds this exact link next to the stable demo at the top of the README in the same PR; no upload or channel operation. This supersedes only the previous absence of a supplied video URL, with no claim about video duration or new content verification.
+
+## A/B: implementation of ranked audit improvements — 2026-10-21
+
+User authorized the proposed order: reliable useful model descriptions, goal-scoped alternative requirements, confirmed place properties, partial provider failure, then opening schedules. A owns Git, contracts/integration, all real inference/provider checks and controlled app releases. Existing model/tunnel, keys and shared Google750/DGIS500 ledgers are preserved. Submitted presentation and published video remain unchanged.
+
+Stage1 branch codex/narration-reliability: B owns app/unified_narration.py and focused narration tests only. Add a bounded per-stop narration_scope using its own validated type, supported intent relationship and permitted proposed action; reduce confusing prose instructions while keeping free local generation. The complete Google summary and all previews remain unchanged in the response and model context; own source facts, strict claim/ID/number/intent/privacy guards, whole-answer acceptance, labels and no-retry policy remain unchanged. No generated answer is rewritten or passed off as validated after rejection. Root owns synthetic/live metadata-only comparison and integration. Final reviewer independently reviews code and meaningful negative tests. Delivery may only prepare a read-only design for stage2; no other source files are assigned yet.
