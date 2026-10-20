@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from app import google_lab as lab
 from app.google_budget import GoogleBudget, GoogleError
+from app.category_catalog import CATEGORY_CATALOG
 from app.google_client import GoogleClient, json_bytes, strict_json
 from app.google_grounded import GoogleGrounded, TokenSigner, validate_grounding, make_plan, narrate, _answer_rejection, protected_claim_rejection, _contains_private_origin
 from app.llm import LLMConfig
@@ -72,9 +73,9 @@ class GoogleGroundedTests(unittest.TestCase):
         cases = [
             (FORM["query"], ["walk"]),
             ("хочу прогулку в парке", ["park"]),
-            ("хочу прогуляться, детскую площадку или парк", ["park", "playground"]),
-            ("хочу погулять с ребенком", ["playground"]),
-            ("хочу кофе и погулять", ["walk", "cafe"]),
+            ("хочу прогуляться, детскую площадку или парк", ["playground", "park"]),
+            ("хочу погулять с ребенком", ["park", "playground"]),
+            ("хочу кофе и погулять", ["cafe"]),
             ("walk in a park", ["park"]),
         ]
         for query, categories in cases:
@@ -85,16 +86,16 @@ class GoogleGroundedTests(unittest.TestCase):
                 self.assertEqual(preview["outbound_search_parameters"]["pageSize"], 5)
                 self.assertIs(preview["outbound_search_parameters"]["includeExtendedDetails"], False)
                 if categories == ["walk"]:
-                    self.assertEqual(preview["outbound_search_text"],
-                                     "Прогулочные площади и архитектура на территории EXPO рядом с MEGA Silk Way, Астана. Nur Alem — только внешний осмотр.")
+                    self.assertIn(CATEGORY_CATALOG["walk"]["google_query"], preview["outbound_search_text"])
+                    self.assertIn("EXPO / Nur Alem рядом с MEGA Silk Way, Астана", preview["outbound_search_text"])
                     self.assertEqual(preview["resolved_context"]["minutes"], 45)
                     self.assertEqual(preview["resolved_context"]["time_of_day"], "day")
                     self.assertNotIn("парки", preview["outbound_search_text"])
                 if "cafe" in categories:
-                    self.assertIn("кафе для короткой паузы с кофе", preview["outbound_search_text"])
+                    self.assertIn(CATEGORY_CATALOG["cafe"]["google_query"], preview["outbound_search_text"])
                     self.assertNotIn("архитектура", preview["outbound_search_text"])
                 if categories == ["park"]:
-                    self.assertIn("парки и сады", preview["outbound_search_text"])
+                    self.assertIn(CATEGORY_CATALOG["park"]["google_query"], preview["outbound_search_text"])
                     self.assertNotIn("достопримечательности", preview["outbound_search_text"])
                     self.assertNotIn("архитектура", preview["outbound_search_text"])
         self.assertEqual(self.provider.requests, [])

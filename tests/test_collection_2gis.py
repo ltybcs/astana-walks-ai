@@ -81,6 +81,21 @@ class NormalizationTests(unittest.TestCase):
         ambiguous["Sun"]["working_hours"][0]["to"] = "00:00"
         self.assertNotEqual(opening_hours(item(schedule=ambiguous)), "24/7")
 
+    def test_official_item_not_found_is_empty_only_without_result_conflicts(self):
+        empty = {"meta": {"code": 404, "error": {"type": "itemNotFound"}}}
+        original = deepcopy(empty)
+        self.assertEqual(response_items(empty), [])
+        self.assertEqual(empty, original)
+        invalid = [{"meta": {"code": code, "error": {"type": "itemNotFound"}}}
+                   for code in (401, 403, 500, "404", 404.0, True)]
+        invalid += [{"meta": {"code": 404}}, {"meta": {"code": 404, "error": []}},
+                    {"meta": {"code": 404, "error": {"type": "otherNotFound"}}},
+                    {**empty, "result": {"items": [item()]}},
+                    {**empty, "result": {}}, {**empty, "items": [item()]}]
+        for value in invalid:
+            with self.subTest(value=value), self.assertRaises(CollectionError):
+                response_items(value)
+
     def test_rejects_failure_and_incomplete_api_envelopes(self):
         for payload in (None, [], {}, {"meta": {"code": 403}}, {"meta": {"code": 200}, "result": {}}):
             with self.assertRaises(CollectionError):

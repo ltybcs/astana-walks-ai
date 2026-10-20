@@ -23,24 +23,17 @@ from urllib.request import Request, ProxyHandler, build_opener
 from .google_budget import GoogleError
 from .google_client import GoogleClient, json_bytes, strict_json, valid_place_id, maps_url
 from .llm import LLMConfig, NoRedirect
-from .activity_intent import activity_intent, COMPUTER_CLUB_PATTERN
+from .activity_intent import parse_search_intent
+from .category_catalog import CATEGORY_CATALOG
+from .retrieval import detect_intent
 
-PUBLIC_NAMES = {"mega": "MEGA Silk Way, Astana, Kazakhstan", "baiterek": "Baiterek, Astana, Kazakhstan", "river": "Ishim River embankment, Astana, Kazakhstan", "expo": "EXPO 2017, Astana, Kazakhstan"}
+PUBLIC_NAMES = {"presidential_park": "Presidential Park, Astana, Kazakhstan", "airport": "Astana airport terminal T1, Kazakhstan", "central_park": "Central Park (Astana Park), Astana, Kazakhstan", "abu_dhabi": "Abu Dhabi Plaza, Astana, Kazakhstan", "mega": "MEGA Silk Way, Astana, Kazakhstan", "baiterek": "Baiterek, Astana, Kazakhstan", "river": "Ishim River embankment, Astana, Kazakhstan", "expo": "EXPO 2017, Astana, Kazakhstan"}
 # Operator-authored public search context, not imported Google place facts.
-# Routing still starts/ends at PUBLIC_NAMES, not at these wider search areas.
+# Public labels are search hints; unified routing uses validated coordinates.
 SEARCH_AREAS = {**PUBLIC_NAMES, "mega": "EXPO / Nur Alem рядом с MEGA Silk Way, Астана"}
-CATEGORY_WORDS = {
-    "computer_club": (COMPUTER_CLUB_PATTERN, "компьютерные клубы"),
-    "walk": (r"прогул\w*|погуля\w*|пешком|необычн\w*|walk\w*", "достопримечательности, архитектура, площади и бульвары для внешнего осмотра"),
-    "park": (r"парк\w*|сад\w*|park\w*|garden\w*", "парки и сады"),
-    "playground": (r"площадк\w*|ребен\w*|дет\w*|child\w*|playground\w*", "детские площадки или парки для семейной прогулки"),
-    "cafe": (r"коф\w*|кафе|coffee|cafe\w*", "кафе для короткой паузы с кофе"),
-    "restaurant": (r"ресторан\w*|поесть|обед\w*|ужин\w*|restaurant\w*|food", "рестораны"),
-    "museum": (r"музе\w*|museum\w*", "музеи"),
-    "theatre": (r"театр\w*|theat\w*", "театры"),
-    "architecture": (r"архитектур\w*|памятник\w*|достопримеч\w*|турист\w*|architecture|tourist\w*", "достопримечательности и архитектура для внешнего осмотра"),
-    "mall": (r"шоп\w*|магазин\w*|торгов\w*|shopping|shops", "торговые центры"),
-}
+# Compatibility view, generated from the same operator-authored catalogue.
+CATEGORY_WORDS = {identifier: ("|".join(spec["aliases"]), spec["google_query"])
+                  for identifier, spec in CATEGORY_CATALOG.items()}
 PREF_WORDS = {
     "quiet": (r"тих\w*|тишин\w*|спокойн\w*|quiet", "тихая обстановка только при подтверждении источником"),
     "socket": (r"розет\w*|socket\w*|заряд\w*", "розетка только при явном подтверждении, иначе неизвестно"),
@@ -96,20 +89,22 @@ class TokenSigner:
 
 
 def safe_intent(query):
-    normalized = query.casefold().replace("ё", "е")
-    categories = [name for name, (pattern, _) in CATEGORY_WORDS.items() if name != "computer_club" and re.search(r"\b(?:" + pattern + r")\b", normalized)]
-    # A generic walk does not imply a park. Explicit park/playground interests
-    # stay narrower, and an explicitly requested park is not lost for families.
-    if "park" in categories or "playground" in categories:
-        categories = [name for name in categories if name != "walk"]
-    preferences = [name for name, (pattern, _) in PREF_WORDS.items() if re.search(r"\b(?:" + pattern + r")\b", normalized)]
-    activity = activity_intent(query, categories)
-    if activity["unsupported"]:
+    search = parse_search_intent(query)
+    if not search["supported"]:
         raise GoogleError("unsupported_activity", "Этот тип места пока не поддерживается; другие места вместо него не подбирались.", 422)
-    if activity["categories"]:
-        categories = activity["categories"]
-    if not categories:
-        categories = ["walk"]
+    categories = list(search["categories"])
+    if search["mode"] == "single_venue":
+        categories = categories[:1]
+    if not categories or categories == ["walk"]:
+        broad = detect_intent(query)
+        # Family is a broad interest, never evidence that a returned place is a
+        # playground. Retrieval keeps its independent child/access filters.
+        if broad["child"]:
+            categories = [identifier for identifier in ("park", "playground")
+                          if identifier not in search["excluded_categories"]] or ["walk"]
+        elif not categories:
+            categories = ["architecture"] if broad["tourist"] or broad["architecture"] else ["walk"]
+    preferences = [name for name in search["preferences"] if name in PREF_WORDS]
     return {"categories": categories, "preferences": preferences}
 
 
@@ -121,9 +116,7 @@ def prepare(payload, resolver):
     intent = safe_intent(request["query"])
     categories = "; ".join(CATEGORY_WORDS[name][1] for name in intent["categories"] if name != "walk" or len(intent["categories"]) == 1)
     preferences = "; ".join(PREF_WORDS[name][1] for name in intent["preferences"])
-    text = ("Прогулочные площади и архитектура на территории EXPO рядом с MEGA Silk Way, Астана. Nur Alem — только внешний осмотр."
-            if intent["categories"] == ["walk"] and context["origin_id"] == "mega"
-            else f"{categories} в районе {SEARCH_AREAS.get(context.get('origin_id'), 'Астана')}.")
+    text = f"{categories} в районе {SEARCH_AREAS.get(context.get('origin_id'), 'Астана')}."
     if preferences:
         text += " Пожелания: " + preferences + "."
     radius = max(100, min(2000, math.floor((max(context.get("budget_options", [context["minutes"]])) - 10) * 60 / 2)))
@@ -257,6 +250,7 @@ def protected_claim_rejection(text):
         (r"тих\w*|тишин\w*|бесшум\w*|quiet", "quiet"),
         (r"безопас\w*|доступен|доступн\w*|недоступн\w*|бесплатн\w*|accessible", "access_safety"),
         (r"скамей\w*|качел\w*|горк\w*|песочниц\w*|розет\w*|детск\w* площад\w*|туалет\w*|парковк\w*|меню|обслуживан\w*", "infrastructure"),
+        (r"интерактив\w*(?:\s+экспозиц\w*)?|выставк\w*|экспозиц\w*|крыш\w*", "event_or_roof"),
     ]
     normalized = text.casefold().replace("ё", "е")
     # Advice in another clause cannot excuse an asserted fact in this clause.
@@ -269,6 +263,8 @@ def protected_claim_rejection(text):
                     re.search(r"(?:нет (?:данных|информации)|не подтвержден\w*|не гарант\w*)(?:\s+\w+){0,3}\s*$", prefix)
                     or re.search(r"(?:проверь\w*|уточн\w*|неизвест\w*)(?:\s+(?:наличие|условия|есть|ли|возможность)){0,3}\s*$", prefix)
                     or re.match(r"\s+(?:ли\b|неизвест\w*|не подтверж\w*|не гарант\w*)", suffix)
+                    or (label == "event_or_roof" and re.search(
+                        r"(?:проверь\w*|уточн\w*)(?:\s+(?:наличие|условия|посещения|возможность|доступа|на|к)){0,4}\s*$", prefix))
                     or (match.group(0) in {"тишина", "безопасность", "доступность", "розетки", "часы"}
                         and not clause[:match.start()].strip()
                         and re.match(r"\s+(?:(?:и|или)\s+(?:безопасност\w*|доступност\w*|тишин\w*|розет\w*|час\w*)\s+){1,2}(?:неизвест\w*|не подтверж\w*|не гарант\w*)", suffix))
@@ -334,6 +330,10 @@ def intent_action_instruction(intent):
                 "Не обещай занятий внутри, экспозиций, разработок или доступа на территорию. ")
     if "park" in categories or "playground" in categories:
         return "Предложи короткую прогулку или паузу у выбранной точки; не обещай оборудование, вход или безопасность. "
+    known = [CATEGORY_CATALOG[category] for category in categories if category in CATEGORY_CATALOG]
+    if known:
+        return ("Предложенное действие: " + " ".join(spec["proposed_activity"] for spec in known[:3])
+                + " Не утверждай наличие оборудования, свободных мест, конкретного события, сеанса, услуги или возможности входа. ")
     return "Предложенное действие должно прямо соответствовать переданным intent.categories, без добавления других интересов. "
 
 
@@ -344,7 +344,17 @@ def intent_action_rejection(answer, intent):
                 or not re.search(r"компьютер|кибер|игр\w*|гейм", text)):
             return "action_does_not_match_computer_club_intent"
         return None
-    if intent.get("categories") != ["cafe"]:
+    categories = intent.get("categories", [])
+    if categories != ["cafe"]:
+        if (len(categories) == 1 and categories[0] in CATEGORY_CATALOG
+                and CATEGORY_CATALOG[categories[0]]["mode"] == "single_venue"):
+            text = answer["text"].casefold()
+            # Reject an explicit outdoor replacement, without requiring a
+            # particular activity word or treating a venue name as an action.
+            if re.search(r"(?:предлага\w*|идея\s*[:—-]?|можно)\s+(?:вам\s+)?(?:"
+                         r"(?:осмотр\w*|посмотр\w*)\s+(?:его\s+|е[её]\s+)?(?:фасад\w*|облик\w*|здани\w*)|"
+                         r"(?:прогуля\w*|погуля\w*|пройтись|прогул\w*)\s+(?:по|в)\s+парк\w*)", text):
+                return "action_does_not_match_single_venue_intent"
         return None
     text = answer["text"].casefold()
     if re.search(r"фасад|внешн\w*\s+вид|осмотр\w*\s+(?:облик|здани)", text):

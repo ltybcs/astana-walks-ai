@@ -26,16 +26,10 @@ MAX_BYTES = 5_000_000
 DEFAULT_PAGE_SIZE = 10
 DEFAULT_QUERIES = ("Кофейни", "Музеи", "Парки", "Достопримечательности", "Детские площадки", "Торговые центры")
 FIELDS = "items.point,items.rubrics,items.schedule,items.schedule_special,items.flags,items.dates.deleted_at,items.attribute_groups"
-RUBRICS = {
-    "кофейни": "cafe", "кафе": "cafe", "рестораны": "restaurant",
-    "бары": "bar", "пабы": "bar", "музеи": "museum", "театры": "theatre",
-    "парки": "park", "парки культуры и отдыха": "park", "сады": "park",
-    "детские площадки": "playground", "смотровые площадки": "viewpoint",
-    "достопримечательности": "attraction", "памятники": "monument",
-    "памятники / мемориалы": "monument", "торговые центры": "mall",
-    "торгово-развлекательные центры": "mall", "набережные": "promenade",
-    "компьютерные клубы": "computer_club", "интернет-клубы": "computer_club",
-}
+# Keep direct CLI invocation working while sharing the same source vocabulary.
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from app.category_catalog import categories_from_rubrics
 DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 
@@ -58,6 +52,13 @@ def response_items(payload):
     if not isinstance(payload, dict) or not isinstance(payload.get("meta"), dict):
         raise CollectionError("Ожидается официальный ответ Places API с meta и result.")
     code = payload["meta"].get("code")
+    error = payload["meta"].get("error")
+    # Official HTTP-200 empty search envelope. Do not swallow auth/server
+    # errors, other 404 types, or a contradictory result/items payload.
+    if (type(code) is int and code == 404 and isinstance(error, dict)
+            and error.get("type") == "itemNotFound"
+            and "result" not in payload and "items" not in payload):
+        return []
     if code != 200 or type(code) is not int:
         raise CollectionError("Places API не подтвердил успешный ответ (meta.code != 200).")
     result = payload.get("result")
@@ -116,12 +117,11 @@ def normalize_items(items, collected_at, bbox=DEFAULT_BBOX):
             continue
         rubrics = item.get("rubrics", [])
         rubrics = [r.get("name") for r in rubrics if isinstance(r, dict) and isinstance(r.get("name"), str)] if isinstance(rubrics, list) else []
-        categories = [RUBRICS[r.strip().lower()] for r in rubrics if r.strip().lower() in RUBRICS]
-        # An explicit activity rubric is stronger than an accompanying cafe
-        # rubric. Neither the user's query nor a brand name proves the activity.
-        category = "computer_club" if "computer_club" in categories else next(iter(categories), None)
+        categories = list(categories_from_rubrics(rubrics))
+        category = next(iter(categories), None)
         if category is None and item.get("type") == "attraction":
             category = "attraction"
+            categories = ["attraction"]  # Explicit legacy source type, no venue inference.
         if category is None or item.get("type") not in {"branch", "attraction", "adm_div.place"}:
             continue
         attributes = []
@@ -152,7 +152,7 @@ def normalize_items(items, collected_at, bbox=DEFAULT_BBOX):
             "address": address, "features": features, "feature_evidence": evidence,
             "opening_hours": opening_hours(item),
             "source_url": f"https://2gis.kz/astana/{'firm' if item['type'] == 'branch' else 'geo'}/{identifier}",
-            "source_provider": "2gis", "source_rubrics": rubrics,
+            "source_provider": "2gis", "source_rubrics": rubrics, "source_categories": categories,
             "collected_at": collected_at, "verification": "source_reported_not_field_verified",
         })
     return sorted(places.values(), key=lambda p: p["id"])

@@ -26,7 +26,7 @@ class ActivityIntentTests(unittest.TestCase):
                 self.assertEqual(safe_intent(negative)["categories"], ["cafe"])
                 self.assertEqual(detect_intent(negative)["preferred_categories"], ["cafe"])
                 self.assertIn("computer_club", detect_intent(negative)["excluded_categories"])
-        self.assertFalse(activity_intent("Ночной клуб возле Байтерека")["categories"])
+        self.assertEqual(activity_intent("Ночной клуб возле Байтерека")["categories"], ["nightclub"])
 
     def test_english_want_negation_preserves_museum_or_cafe_instead_of_club(self):
         for negative in ("don't want", "don’t want", "do not want"):
@@ -47,12 +47,12 @@ class ActivityIntentTests(unittest.TestCase):
         query = "Я хочу в комп клуб на пару часов рядом с Байтереком PRIVATE_PERSON_ADDRESS"
         context, intent, text, _, params = prepare({"query": query, "minutes": 120, "time_of_day": "day"}, resolve_request)
         self.assertEqual(intent["categories"], ["computer_club"])
-        self.assertIn("компьютерные клубы", text)
+        self.assertIn("компьютерные клубы", text.lower())
         self.assertNotIn("достопримечательности", text)
         self.assertNotIn("PRIVATE_PERSON_ADDRESS", json.dumps(params, ensure_ascii=False))
         self.assertNotIn(query, json.dumps(params, ensure_ascii=False))
         self.assertEqual(context["budget_options"], [120])
-        for query in ("Хочу в боулинг рядом с Байтереком", "Хочу на батуты рядом с Mega", "find a bowling alley near Mega"):
+        for query in ("Хочу в планетарий рядом с Байтереком", "Хочу в обсерваторию рядом с Mega", "find a planetarium near Mega"):
             with self.subTest(query=query), self.assertRaises(GoogleError) as raised:
                 safe_intent(query)
             self.assertEqual(raised.exception.code, "unsupported_activity")
@@ -71,8 +71,8 @@ class ActivityIntentTests(unittest.TestCase):
                 self.assertTrue(safe_intent(query)["categories"])
 
     def test_unknown_primary_venue_cannot_be_replaced_by_supported_secondary_coffee(self):
-        for query in ("Хочу в боулинг и кофе рядом с Байтереком", "Хочу в боулинг рядом с кафе у Mega",
-                      "Хочу в интересный боулинг рядом с Байтереком", "find an interesting bowling alley near Mega"):
+        for query in ("Хочу в планетарий и кофе рядом с Байтереком", "Хочу в планетарий рядом с кафе у Mega",
+                      "Хочу в интересный планетарий рядом с Байтереком", "find an interesting planetarium near Mega"):
             with self.subTest(query=query):
                 self.assertTrue(detect_intent(query)["unsupported_activity"])
                 with self.assertRaises(GoogleError) as raised:
@@ -112,7 +112,7 @@ class SingleVenueWorkflowTests(unittest.TestCase):
         self.dgis.search.return_value["places"] = [club, farther, poi("2gis:3", "Парк", 51.1284, 71.4306)]
         before = deepcopy(self.grounding)
         result = self.service.recommend(self.form)
-        self.assertIn("компьютерные клубы", self.google.search_places.call_args.args[0]["textQuery"])
+        self.assertIn("компьютерные клубы", self.google.search_places.call_args.args[0]["textQuery"].lower())
         self.assertEqual(self.osm.retrieve.call_args.args[0], self.form["query"])
         self.assertEqual(self.dgis.search.call_args.args[0], self.form["query"])
         self.assertEqual(result["source_receipt"]["osm"]["candidate_count"], 0)
@@ -147,7 +147,7 @@ class SingleVenueWorkflowTests(unittest.TestCase):
 
     def test_unknown_activity_is_rejected_before_any_source_or_model_call(self):
         with self.assertRaises(GoogleError) as raised:
-            self.service.recommend({**self.form, "query": "Хочу в боулинг и кофе рядом с Байтереком"})
+            self.service.recommend({**self.form, "query": "Хочу в планетарий и кофе рядом с Байтереком"})
         self.assertEqual(raised.exception.code, "unsupported_activity")
         self.osm.retrieve.assert_not_called()
         self.dgis.search.assert_not_called()

@@ -14,6 +14,7 @@ from urllib.request import ProxyHandler
 
 from app import dgis_live as legacy
 from app import unified_dgis as module
+from app.category_catalog import CATEGORY_CATALOG
 from tests.test_dgis_live import SECRET, card, envelope
 
 ORIGIN = {"lat": 51.1546, "lon": 71.4252, "label": "PRIVATE_LABEL"}
@@ -57,7 +58,7 @@ class UnifiedDGISTests(unittest.TestCase):
         self.assertEqual((parsed.scheme, parsed.hostname, parsed.path),
                          ("https", "catalog.api.2gis.com", "/3.0/items"))
         params = parse_qs(parsed.query)
-        self.assertEqual(params["q"], ["Парки"])
+        self.assertEqual(params["q"], [CATEGORY_CATALOG["park"]["dgis_query"]])
         self.assertEqual(params["page"], ["1"])
         self.assertEqual(params["page_size"], ["10"])
         self.assertEqual(params["fields"], ["items.point,items.rubrics"])
@@ -77,12 +78,37 @@ class UnifiedDGISTests(unittest.TestCase):
         self.assertEqual(self.transport.call_count, 1)
 
     def test_empty_results_and_ten_card_page_do_not_trigger_another_request(self):
-        for items in ([], [card(id=str(70000000000000+i)) for i in range(15)]):
+        for items in ([], [card(id=str(70000000000000+i), rubrics=[{"name": "Кофейни"}]) for i in range(15)]):
             self.transport.side_effect = lambda *a, values=items, **k: Response(json.dumps(envelope(values)).encode())
             result = self.client.search("кофе", ORIGIN, 1000)
             self.assertEqual(len(result["places"]), min(10, len(items)))
         self.assertEqual(self.transport.call_count, 2)
         self.assertEqual(result["category"], "cafe")
+
+    def test_official_item_not_found_is_empty_and_charged_once_without_retry(self):
+        payload = {"meta": {"code": 404, "error": {"type": "itemNotFound"}}}
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(payload).encode())
+        result = self.client.search("Хочу в боулинг", ORIGIN, 1000)
+        self.assertEqual(result["places"], [])
+        self.assertEqual(result["quota"]["used"], 1)
+        self.assertEqual(result["search_scope"]["returned_count"], 0)
+        self.assertEqual(self.transport.call_count, 1)
+        self.assertEqual(len(self.state()["attempts"]), 1)
+
+    def test_other_error_envelopes_and_conflicting_not_found_remain_failures(self):
+        invalid = [{"meta": {"code": code, "error": {"type": "itemNotFound"}}}
+                   for code in (401, 403, 500, "404")]
+        invalid += [{"meta": {"code": 404, "error": {"type": "otherNotFound"}}},
+                    {"meta": {"code": 404, "error": {"type": "itemNotFound"}},
+                     "result": {"items": [card()]}}]
+        for payload in invalid:
+            before = len(self.state()["attempts"])
+            self.transport.side_effect = lambda *a, value=payload, **k: Response(json.dumps(value).encode())
+            with self.subTest(payload=payload), self.assertRaises(legacy.DGISLiveError) as caught:
+                self.client.search("Хочу в боулинг", ORIGIN, 1000)
+            self.assertEqual(caught.exception.code, "provider_invalid_response")
+            self.assertEqual(len(self.state()["attempts"]), before + 1)
+        self.assertEqual(self.transport.call_count, len(invalid))
 
     def test_constructor_requires_explicit_absolute_root_and_bounded_timeout(self):
         for root, timeout in (("relative", 25), (self.root, 0), (self.root, 26), (self.root, True), (self.root, float("nan"))):
@@ -293,6 +319,89 @@ class UnifiedDGISTests(unittest.TestCase):
         self.assertEqual(result["places"], [])
         self.assertEqual(result["category"], "computer_club")
         self.assertEqual(result["search_scope"]["filtered_count"], 2)
+        self.assertEqual(self.transport.call_count, 1)
+
+    def test_catalog_types_require_their_own_explicit_rubric_and_one_fixed_query(self):
+        for identifier, spec in CATEGORY_CATALOG.items():
+            if not spec["rubric_aliases"]:
+                continue
+            with self.subTest(identifier=identifier):
+                source = card(type="branch", name="Нейтральное синтетическое название",
+                              rubrics=[{"name": spec["rubric_aliases"][0]}])
+                self.transport.side_effect = lambda *a, item=source, **k: Response(json.dumps(envelope([item])).encode())
+                before = self.transport.call_count
+                result = self.client.search("Хочу " + spec["ru_label"] + " возле Mega PRIVATE_MARKER", ORIGIN, 1000)
+                params = parse_qs(urlsplit(self.transport.call_args.args[0].full_url).query)
+                self.assertEqual(params["q"], [spec["dgis_query"]])
+                self.assertNotIn("PRIVATE_MARKER", self.transport.call_args.args[0].full_url)
+                self.assertEqual([p["category"] for p in result["places"]], [identifier])
+                self.assertIn(identifier, result["places"][0]["source_categories"])
+                self.assertEqual(self.transport.call_count, before + 1)
+
+    def test_pharmacy_requires_exact_rubric_and_does_not_infer_drug_availability(self):
+        items = [card(id="1", type="branch", name="Нейтральное название", rubrics=[{"name": "Аптеки"}],
+                      drugs={"PRIVATE_DRUG_NAME": "available"}, reviews={"text": "PRIVATE_STOCK_CLAIM"}),
+                 card(id="2", type="branch", name="Аптека — только название", rubrics=[{"name": "Кафе"}]),
+                 card(id="3", type="branch", name="Аптека без рубрики", rubrics=[]),
+                 card(id="4", type="branch", name="Другая карточка", rubrics=[{"name": "Кафе"}, {"name": "Аптеки"}])]
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(envelope(items)).encode())
+        for query in ("Где рядом с Байтереком есть аптека?",
+                      "Хочу найти аптеку возле Байтерека PRIVATE_DRUG_REQUEST"):
+            with self.subTest(query=query):
+                before = self.transport.call_count
+                result = self.client.search(query, ORIGIN, 1000)
+                params = parse_qs(urlsplit(self.transport.call_args.args[0].full_url).query)
+                self.assertEqual(params["q"], [CATEGORY_CATALOG["pharmacy"]["dgis_query"]])
+                self.assertEqual(params["fields"], [legacy.FIELDS])
+                self.assertNotIn("PRIVATE_DRUG_REQUEST", self.transport.call_args.args[0].full_url)
+                self.assertEqual([p["id"] for p in result["places"]], ["2gis:1", "2gis:4"])
+                self.assertTrue(all(p["category"] == "pharmacy" for p in result["places"]))
+                self.assertEqual(result["places"][1]["source_categories"], ["cafe", "pharmacy"])
+                self.assertNotIn("PRIVATE_DRUG_NAME", repr(result))
+                self.assertNotIn("PRIVATE_STOCK_CLAIM", repr(result))
+                for place in result["places"]:
+                    for unsupported in ("drugs", "medicines", "stock", "availability", "medical_advice"):
+                        self.assertNotIn(unsupported, place)
+                self.assertEqual(self.transport.call_count, before + 1)
+
+    def test_multirubric_source_can_prove_requested_type_but_brand_and_secondary_goal_cannot(self):
+        items = [card(id="1", type="branch", name="Нейтральное название",
+                      rubrics=[{"name": "Кафе"}, {"name": "Боулинг"}]),
+                 card(id="2", type="branch", name="Bowling — это только бренд",
+                      rubrics=[{"name": "Кафе"}]),
+                 card(id="3", type="branch", name="Боулинг без рубрики", rubrics=[])]
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(envelope(items)).encode())
+        result = self.client.search("Хочу в боулинг и кафе возле Mega", ORIGIN, 1000)
+        params = parse_qs(urlsplit(self.transport.call_args.args[0].full_url).query)
+        self.assertEqual(params["q"], [CATEGORY_CATALOG["bowling"]["dgis_query"]])
+        self.assertEqual(result["categories"], ["bowling"])
+        self.assertEqual([p["id"] for p in result["places"]], ["2gis:1"])
+        self.assertEqual(result["places"][0]["category"], "bowling")
+        self.assertEqual(result["places"][0]["source_categories"], ["cafe", "bowling"])
+        self.assertEqual(result["places"][0]["source_rubrics"], ["Кафе", "Боулинг"])
+        self.assertEqual(self.transport.call_count, 1)
+
+    def test_child_policy_keeps_all_actual_adult_rubrics_before_projection(self):
+        items = [card(id="1", type="branch", rubrics=[{"name": "Кафе"}, {"name": "Ночные клубы"}]),
+                 card(id="2", type="branch", rubrics=[{"name": "Кафе"}, {"name": "Бары"}]),
+                 card(id="3", type="branch", rubrics=[{"name": "Кафе"}])]
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(envelope(items)).encode())
+        child = self.client.search("Хочу кофе с ребёнком возле Mega", ORIGIN, 1000)
+        self.assertEqual([p["id"] for p in child["places"]], ["2gis:3"])
+        ordinary = self.client.search("Хочу кофе возле Mega", ORIGIN, 1000)
+        self.assertEqual([p["id"] for p in ordinary["places"]], ["2gis:1", "2gis:2", "2gis:3"])
+        self.assertEqual(ordinary["places"][0]["source_categories"], ["cafe", "nightclub"])
+        self.assertEqual(self.transport.call_count, 2)
+
+    def test_or_categories_share_one_request_and_reject_an_unrequested_park(self):
+        items = [card(id="1", type="branch", rubrics=[{"name": "Детские площадки"}]),
+                 card(id="2", type="branch", rubrics=[{"name": "Музеи"}]), card(id="3")]
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(envelope(items)).encode())
+        result = self.client.search("Хочу детскую площадку или музей возле Mega", ORIGIN, 1000)
+        params = parse_qs(urlsplit(self.transport.call_args.args[0].full_url).query)
+        self.assertEqual(params["q"], ["; ".join(CATEGORY_CATALOG[c]["dgis_query"] for c in ("playground", "museum"))])
+        self.assertEqual(result["categories"], ["playground", "museum"])
+        self.assertEqual([p["category"] for p in result["places"]], ["playground", "museum"])
         self.assertEqual(self.transport.call_count, 1)
 
     def test_unknown_explicit_activity_is_rejected_before_key_ledger_or_http(self):

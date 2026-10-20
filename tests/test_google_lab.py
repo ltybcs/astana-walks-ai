@@ -627,7 +627,8 @@ class GoogleLabAITests(unittest.TestCase):
             response = server.recommend({"query": "Хочу что-то необычное, пешком", "minutes": 60,
                                          "geolocation": {"lat": 51.104, "lon": 71.4}, "time_of_day": "day"})
             self.assertTrue(response["recommendations"])
-            self.assertTrue(response["diagnostics"]["lab_generic_walk_fallback"])
+            # "Пешком" is recognized directly by the shared activity catalog.
+            self.assertFalse(response["diagnostics"]["lab_generic_walk_fallback"])
             empty = server.recommend({"query": "Хочу тихое кафе с розеткой", "minutes": 60,
                                       "origin_id": "mega", "time_of_day": "day"})
             self.assertEqual(empty["recommendations"], [])
