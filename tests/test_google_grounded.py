@@ -351,7 +351,8 @@ class GoogleGroundedTests(unittest.TestCase):
             self.assertEqual(set(preview), {"id", "source_id", "title", "url", "attribution"})
             for field in preview:
                 self.assertEqual(preview[field], source.get(field))
-        self.assertEqual(set(sent), {"grounding_lite_summary", "all_google_source_previews", "selected_place_id", "public_origin_id", "intent", "time_of_day", "plan", "budget_status"})
+        self.assertEqual(sent["selected_source_id"], "g0")
+        self.assertEqual(set(sent), {"grounding_lite_summary", "all_google_source_previews", "selected_place_id", "selected_source_id", "public_origin_id", "intent", "time_of_day", "plan", "budget_status"})
         self.assertEqual(requests[0][0].full_url, "http://127.0.0.1:8081/v1/chat/completions")
         self.assertNotIn("api-key", str(dict(requests[0][0].headers)).lower())
         for config in (None, LLMConfig("https://cloud.invalid/v1", "x", "secret"), LLMConfig("http://127.0.0.1:8081/v1", "x", "secret")):
@@ -403,6 +404,60 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertEqual(grounding, original)  # UI and archive still have every original URL/location.
         self.assertTrue(all("photosUrl" in source["googleMapsLinks"] for source in grounding["sources"]))
         self.assertEqual(self.provider.requests, [])
+
+    def test_selected_nonfirst_source_is_bound_in_schema_context_and_existing_guard(self):
+        places = []
+        for index in range(5):
+            place = deepcopy(self.provider.search["places"][0])
+            place["id"] = "mock-source-" + str(index)
+            place["place"] = "places/" + place["id"]
+            place["googleMapsLinks"]["placeUrl"] = "https://www.google.com/maps/place/?q=place_id:" + place["id"]
+            place["attribution"]["title"] = "Фиктивный источник " + str(index)
+            places.append(place)
+        summary = "Полный тестовый summary: источники [0], [1], [2], [3], [4]."
+        grounding = validate_grounding({"summary": summary, "places": places})
+        original = deepcopy(grounding)
+        captured = []
+        plan = {"verified": True, "visit_minutes": 20, "total_minutes": 45, "budget_minutes": 45}
+        context = {"origin_id": "mega", "time_of_day": "day"}
+        with patch("app.google_grounded.open_local_model", side_effect=AssertionError("No actual model")):
+            for cited in ("g0", "g2"):
+                expected = {"text": GOOD_TEXT.replace("[0]", "[2]"), "selected_place_ids": ["mock-source-2"], "source_ids": [cited]}
+                def model(request, timeout):
+                    captured.append((strict_json(request.data), timeout))
+                    return Response({"choices": [{"message": {"content": json.dumps(expected, ensure_ascii=False)}}]})
+                answer, status = narrate(grounding, "mock-source-2", context, {"categories": ["walk"], "preferences": []},
+                                        plan, "fits", self.config, http_open=model)
+                with self.subTest(cited=cited):
+                    if cited == "g0":
+                        self.assertIsNone(answer)
+                        self.assertEqual(status, "selected_source_missing")
+                    else:
+                        self.assertEqual(answer, expected)
+                        self.assertEqual(status, "validated_structure_sources_and_known_claims")
+                    payload, timeout = captured[-1]
+                    schema = payload["response_format"]["json_schema"]["schema"]["properties"]["source_ids"]
+                    self.assertEqual(schema, {"type": "array", "minItems": 1, "maxItems": 1, "items": {"type": "string", "enum": ["g2"]}})
+                    sent = strict_json(payload["messages"][1]["content"])
+                    self.assertEqual(sent["selected_source_id"], "g2")
+                    self.assertEqual(sent["selected_place_id"], "mock-source-2")
+                    self.assertEqual(sent["grounding_lite_summary"], summary)
+                    self.assertEqual([source["source_id"] for source in sent["all_google_source_previews"]], ["g0", "g1", "g2", "g3", "g4"])
+                    self.assertIn("source_ids должен содержать ровно selected_source_id", payload["messages"][0]["content"])
+                    self.assertEqual(payload["max_tokens"], 450)
+                    self.assertIs(payload["cache_prompt"], False)
+                    self.assertEqual(timeout, 120)
+            for missing in ("not-in-sources", None):
+                self.assertEqual(narrate(grounding, missing, context, {}, plan, "fits", self.config, http_open=model),
+                                 (None, "selected_source_missing"))
+            ambiguous = deepcopy(grounding)
+            ambiguous["sources"].append(deepcopy(grounding["sources"][2]))
+            self.assertEqual(narrate(ambiguous, "mock-source-2", context, {}, plan, "fits", self.config, http_open=model),
+                             (None, "selected_source_missing"))
+        self.assertEqual(len(captured), 2)  # Missing/ambiguous associations never reach the model.
+        self.assertEqual(grounding, original)
+        self.assertEqual(self.provider.requests, [])
+        self.assertEqual(self.budget.status()["used"], 0)
 
     def test_incomplete_model_json_keeps_summary_fallback_without_repair_or_archive(self):
         class Cache:
