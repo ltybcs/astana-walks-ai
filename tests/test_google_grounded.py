@@ -339,6 +339,11 @@ class GoogleGroundedTests(unittest.TestCase):
         payload = strict_json(requests[0][0].data)
         self.assertIs(payload["cache_prompt"], False)
         self.assertEqual(payload["temperature"], 0)
+        self.assertEqual(payload["max_tokens"], 450)
+        self.assertEqual(requests[0][1], 120)
+        system = payload["messages"][0]["content"]
+        self.assertIn("не более трёх коротких предложений", system)
+        self.assertIn("до 360 символов", system)
         sent = strict_json(payload["messages"][1]["content"])
         self.assertEqual(sent["grounding_lite_summary"], grounding["summary"])
         self.assertEqual(len(sent["all_google_source_previews"]), len(grounding["sources"]))
@@ -383,7 +388,7 @@ class GoogleGroundedTests(unittest.TestCase):
         payload, timeout = captured[0]
         self.assertEqual(timeout, 120)
         self.assertIs(payload["cache_prompt"], False)
-        self.assertEqual(payload["max_tokens"], 900)
+        self.assertEqual(payload["max_tokens"], 450)
         sent = strict_json(payload["messages"][1]["content"])
         self.assertEqual(sent["grounding_lite_summary"], summary)
         previews = sent["all_google_source_previews"]
@@ -398,6 +403,30 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertEqual(grounding, original)  # UI and archive still have every original URL/location.
         self.assertTrue(all("photosUrl" in source["googleMapsLinks"] for source in grounding["sources"]))
         self.assertEqual(self.provider.requests, [])
+
+    def test_incomplete_model_json_keeps_summary_fallback_without_repair_or_archive(self):
+        class Cache:
+            def record_grounded(self, *args):
+                raise AssertionError("Incomplete model output must not be archived")
+        self.service.cache = Cache()
+        model_requests = []
+        incomplete = json.dumps(good_answer(), ensure_ascii=False)[:-1]
+        def model(request, timeout):
+            model_requests.append((request, timeout))
+            return Response({"choices": [{"finish_reason": "length", "message": {"content": incomplete}}]})
+        self.service.narrator = lambda *args: narrate(*args, http_open=model)
+        with patch("app.google_grounded.open_local_model", side_effect=AssertionError("No actual model")):
+            result = self.service.recommend(self.consent())
+        self.assertEqual(result["mode"], "google-grounding-summary")
+        self.assertIsNone(result["answer"])
+        self.assertEqual(result["diagnostics"]["llm_status"], "local_model_unavailable_or_invalid")
+        self.assertEqual(result["diagnostics"]["cache_status"], "not_cached_fallback")
+        self.assertEqual(result["grounding"], validate_grounding(self.provider.search))
+        self.assertEqual(result["budget_status"], "fits")
+        self.assertEqual(len(model_requests), 1)  # No repair or retry after truncation.
+        self.assertEqual(strict_json(model_requests[0][0].data)["max_tokens"], 450)
+        self.assertEqual(model_requests[0][1], 120)
+        self.assertEqual(self.budget.status()["used"], 6)  # Mock MCP only.
 
     def test_whole_answer_guard_rejects_source_numeric_transport_and_protected_claims(self):
         grounding = validate_grounding(self.provider.search)
