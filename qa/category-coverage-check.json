@@ -1,0 +1,366 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-20T17:34:19+00:00",
+  "scope": "bounded category expansion, source evidence, verified walk budgets and compact UI",
+  "behavior_commit": "0bb648cfdd8ed652fc31bbf8b03091a613b72773",
+  "source_sha256": {
+    "app/activity_intent.py": "f376a63bf8592985ec246f82d49cb13389155403d184432bf0b483e3aa77dec8",
+    "app/category_catalog.py": "9a6502ab2d00ed8bc64072d3e7e9e32f87beb6a4f6ce69287f734d7c9b6e7821",
+    "app/google_grounded.py": "fc67997fdf69dc01cfd7a5b57a8844a8356f7cf8b6941a6651445e0f4fe57f01",
+    "app/lab_context.py": "38be909847d9fe98e3e646bb980fa5346153497a33f2fc63aff68378aae50c06",
+    "app/retrieval.py": "64ca6827e1d71e66c080cd083580104cf993e63b6ad9f3411bc65c5ff5bcf6e6",
+    "app/unified_dgis.py": "410e885fa9fdaa810ed2684c613ac8042476c9c30756674d2e2b918b65d723ac",
+    "app/unified_narration.py": "8a6ddbca59a4e04acaba8c911137b73383d197fa598f9c62be0fad2dbc57a303",
+    "app/unified_walks.py": "6475bfc192364e6ec780afc6ae643dc9f63cada7bdd0f7c30c94b7852c8728d9",
+    "app/google_client.py": "202b63d645f24283ce5a4ffc9580e7b8be6303ab4e23e97dcfd7fee9cf1a7634",
+    "app/google_budget.py": "4eb81c16e398fc3f650fddbfd664e89ecb8e05f87d124dc453d124e4e351844c",
+    "app/google_lab.py": "232f2ccd728cdb055496e94a35491e48f5a88a8b06d23335862ee391cd35db8b",
+    "app/route_map.py": "88b59df071291a92817332b467f6af600b3b3a022e88fd9acf353122eb71541e",
+    "app/llm.py": "f2a1cd73fb21caae8c1f3dbfdf8173a1eb71190714b5f1882cd4002541c78b4e",
+    "scripts/collect_2gis.py": "bf2f7590e52e3e55ad079f1d551ecc55764423b6c3881611e777c4f65bfae20a",
+    "web/google-lab/index.html": "333d40f871085ca9fa2c03411547095f66a4e85c19daf4d3eecf928818d35987",
+    "web/google-lab/lab.js": "79db06699f445a2413226c2d6bbb4a988265f84347505e9f4078896ad2503974",
+    "web/google-lab/lab.css": "9756d25f2a20e052d0619863ed479d3a9b96cf9863698ff2ee57ea30fcebb50c",
+    "web/google-lab/sw.js": "5c2d61afc24f39ec2d1cebb1c7228a2538c77353c5eaf17bf53daad6c299ffa2",
+    "web/google-lab/pwa.js": "36d670a5c07a8f394ce7378ccffa7b6287b08a046e4bb448877fc6a066dbe93c",
+    "tests/test_activity_intent.py": "9f76af863667487f400ffee99dc43ec4d64358d44f8d13ecffe8339ccc22fb10",
+    "tests/test_category_catalog.py": "23dc3dcb610e8d8f4a5a33b5d4bc0049210583e37188c64a889645b9e0c283ec",
+    "tests/test_category_context.py": "b6c376989768b06179d315a2b5e4c3aec2378565478b70d7442bdba0a15056e7",
+    "tests/test_category_search.py": "c0ec912429eed799fcb658c4af6df193d768ba755a6358fdd2cc68bd29d9a01f",
+    "tests/test_category_unified.py": "3fb1c615dd8fb496776df4d3b7e3a50d465669e4d57e945200edf1abacf5f398",
+    "tests/test_stop_reason.py": "1c3e9622b39dab86ab8d2591e90cbbcea8a11295616cb3706bbe49a9f7d9ec11",
+    "tests/test_collection_2gis.py": "034970a399cc641295c6c5304f5a99c9763f644bfbcf694ca534dce2a9f03461",
+    "tests/test_unified_dgis.py": "143d820910e2563e793193cac2f974e5223ef500e950ba334195b4ba39029927",
+    "tests/test_google_grounded.py": "89bcab7e7966e6c95a36dba218156883272b054826f8fdae051b499781769214",
+    "tests/test_google_lab_frontend.js": "3109b3b831ce545d6178ef1d1ccd4270520303b8e32bd630f18f3b1355ac506d",
+    "tests/test_google_lab_pwa.js": "64878c89582beac23637984925037c0f7e2c69a7f578eba2aa21c57630ae58ba",
+    "tests/test_unified_walks.py": "adc0583c99338ae6479f6a2ebb9ec579d3f23af27244806f1789b11274fa9ccd"
+  },
+  "hash_normalization": "CRLF to LF only",
+  "rollback_tag": "checkpoint/before-expanded-intents-2026-10-20",
+  "offline": {
+    "python_methods_run": 380,
+    "passed": 378,
+    "skipped": 2,
+    "skip_reason": "Windows symlink privileges",
+    "frontend_cases_passed": 82,
+    "pwa_cases_passed": 23,
+    "provider_http_calls": 0,
+    "model_http_calls": 0,
+    "mandatory_scenarios": 6,
+    "canonical_categories": 30,
+    "external_parser_matrix_passed": 30,
+    "external_review_reference": "https://github.com/ltybcs/astana-walks-ai/commit/db4ec89"
+  },
+  "live": {
+    "initial_quota": {
+      "google_used": 288,
+      "dgis_used": 23
+    },
+    "before_correction": [
+      {
+        "case": "bowling",
+        "http_status": 502,
+        "elapsed_seconds": 2.56,
+        "before": {
+          "google_used": 288,
+          "dgis_used": 23
+        },
+        "after": {
+          "google_used": 292,
+          "dgis_used": 24
+        },
+        "code": "unified_provider_unavailable"
+      },
+      {
+        "case": "socket",
+        "http_status": 200,
+        "elapsed_seconds": 2.3,
+        "before": {
+          "google_used": 292,
+          "dgis_used": 24
+        },
+        "after": {
+          "google_used": 293,
+          "dgis_used": 25
+        },
+        "mode": "grounding-only",
+        "llm_status": "no_verified_plan",
+        "llm_attempts": 0,
+        "budget_options": [
+          60,
+          120,
+          240
+        ],
+        "activity_mode": "single_venue",
+        "categories": [
+          "cafe"
+        ],
+        "google_preview_count": 5,
+        "whole_google_summary_present": true,
+        "receipt": {
+          "osm": {
+            "candidate_count": 0,
+            "selected_count": 0
+          },
+          "google": {
+            "candidate_count": 0,
+            "selected_count": 0
+          },
+          "dgis": {
+            "candidate_count": 0,
+            "selected_count": 0
+          }
+        },
+        "plans": [
+          {
+            "budget_minutes": 60,
+            "status": "no_candidates",
+            "route_built": false,
+            "stop_categories": [],
+            "total_minutes": null,
+            "walk_minutes": null,
+            "return_minutes": null
+          },
+          {
+            "budget_minutes": 120,
+            "status": "no_candidates",
+            "route_built": false,
+            "stop_categories": [],
+            "total_minutes": null,
+            "walk_minutes": null,
+            "return_minutes": null
+          },
+          {
+            "budget_minutes": 240,
+            "status": "no_candidates",
+            "route_built": false,
+            "stop_categories": [],
+            "total_minutes": null,
+            "walk_minutes": null,
+            "return_minutes": null
+          }
+        ]
+      }
+    ],
+    "second_bowling_failure": {
+      "http_status": 502,
+      "code": "unified_provider_unavailable",
+      "google_used_before": 293,
+      "google_used_after": 294,
+      "dgis_used_before": 25,
+      "dgis_used_after": 26,
+      "outcome": "FAIL retained"
+    },
+    "diagnosis": {
+      "meta_code": 404,
+      "error_type": "itemNotFound",
+      "result_present": false,
+      "old_adapter_code": "provider_invalid_response",
+      "outcome": "official empty envelope misclassified; fixed with narrow offline regressions",
+      "dgis_used_before": 26,
+      "dgis_used_after": 27,
+      "reference": "https://docs.2gis.com/en/api/search/places/troubleshooting"
+    },
+    "corrective_bowling": {
+      "case": "bowling",
+      "http_status": 200,
+      "elapsed_seconds": 2.75,
+      "before": {
+        "google_used": 294,
+        "dgis_used": 27
+      },
+      "after": {
+        "google_used": 298,
+        "dgis_used": 28
+      },
+      "mode": "grounding-only",
+      "llm_status": "no_verified_plan",
+      "llm_attempts": 0,
+      "budget_options": [
+        120
+      ],
+      "activity_mode": "single_venue",
+      "categories": [
+        "bowling"
+      ],
+      "google_preview_count": 3,
+      "whole_google_summary_present": true,
+      "receipt": {
+        "osm": {
+          "candidate_count": 0,
+          "selected_count": 0
+        },
+        "google": {
+          "candidate_count": 0,
+          "selected_count": 0
+        },
+        "dgis": {
+          "candidate_count": 0,
+          "selected_count": 0
+        }
+      },
+      "plans": [
+        {
+          "budget_minutes": 120,
+          "status": "no_candidates",
+          "route_built": false,
+          "stop_categories": [],
+          "total_minutes": null,
+          "walk_minutes": null,
+          "return_minutes": null
+        }
+      ]
+    },
+    "expo": {
+      "behavior_commit": "0bb648cfdd8ed652fc31bbf8b03091a613b72773",
+      "mode": "grounding-only",
+      "llm_attempts": 1,
+      "llm_status": "unsupported_number",
+      "outcome": "AI answer FAIL retained; verified route remains",
+      "budgets": [
+        60,
+        90,
+        120
+      ],
+      "all_routes_fit_and_return_verified": true,
+      "source_candidate_counts": {
+        "osm": 3,
+        "google": 2,
+        "dgis": 6
+      },
+      "google_used_before": 298,
+      "google_used_after": 308,
+      "dgis_used_before": 28,
+      "dgis_used_after": 29
+    },
+    "club": {
+      "behavior_commit": "0bb648cfdd8ed652fc31bbf8b03091a613b72773",
+      "outcome": "PASS accepted whole local-model answer and actual walking map",
+      "mode": "llm-grounded-unified",
+      "llm_status": "validated_structure_sources_and_known_claims",
+      "llm_attempts": 1,
+      "budget_minutes": 120,
+      "walk_minutes": 18,
+      "proposed_visit_minutes": 97,
+      "buffer_minutes": 5,
+      "return_walk_minutes": 9,
+      "selected_stop_count": 1,
+      "selected_category": "computer_club",
+      "receipt": {
+        "osm": {
+          "candidate_count": 0,
+          "selected_count": 0
+        },
+        "google": {
+          "candidate_count": 0,
+          "selected_count": 0
+        },
+        "dgis": {
+          "candidate_count": 10,
+          "selected_count": 1
+        }
+      },
+      "all_three_searches_executed": true,
+      "google_preview_count": 5,
+      "original_preview_count": 5,
+      "full_source_disclosure_verified_in_one_click": true,
+      "map_frames": 1,
+      "map_observed_minutes": 16,
+      "map_observed_km": 1.2,
+      "same_validated_numeric_origin_and_return": true
+    },
+    "final_quota": {
+      "google_used": 320,
+      "google_limit": 500,
+      "dgis_used": 31,
+      "dgis_limit": 500
+    },
+    "quota_interpretation": "Observed shared ledgers, not provider dashboard billing. Seven controlled 2GIS diagnostic/search attempts were performed; observed shared usage advanced by eight. The shared public site can receive concurrent requests; that extra attempt is not attributed to a test without evidence. User-approved 500 limits and existing ledgers were retained.",
+    "controlled_dgis_attempts": 7,
+    "controlled_internal_ceiling_changes": [
+      {
+        "from": 4,
+        "to": 6,
+        "reason": "diagnose and correct official empty response"
+      },
+      {
+        "from": 6,
+        "to": 7,
+        "reason": "separate positive AI acceptance after rejected EXPO answer"
+      }
+    ]
+  },
+  "public_free_checks": {
+    "exact_cafeshka_context": {
+      "status": 200,
+      "origin_id": "presidential_park",
+      "minutes": 180,
+      "needs_geolocation": false
+    },
+    "synthetic_in_city_granted_location": 200,
+    "synthetic_outside_city_location": 422,
+    "specific_server_reason_preserved": true,
+    "no_start_or_unsupported": 422,
+    "provider_and_model_calls": 0,
+    "quotas_unchanged": true,
+    "model_health": 200
+  },
+  "mobile": {
+    "test_kind": "desktop browser viewport; not physical device",
+    "width": 390,
+    "observed_document_width_initial": 390,
+    "initial_form_height_px": 218.75,
+    "single_initial_form": true,
+    "terms_initially_collapsed": true,
+    "initial_map_count": 0,
+    "expo_map_count": 1,
+    "expo_card_reason_count": 2,
+    "horizontal_overflow_observed": false,
+    "proof_initial_relative": "tmp/category-mobile-initial-390.png",
+    "club_map_count": 1,
+    "club_reason_count": 1,
+    "whole_previews_after_one_click": 5,
+    "raw_summary_previews_after_same_click": 5,
+    "actual_map_readable_with_copyright": true,
+    "proof_map_relative": "tmp/category-mobile-route-390.png"
+  },
+  "storage": {
+    "raw_source_response_saved": false,
+    "mixed_response_or_model_reply_saved": false,
+    "personal_location_saved": false,
+    "key_matches": 0,
+    "actual_keys_checked": 3,
+    "files_scanned": 299,
+    "proof_image_sha256": {
+      "tmp/category-mobile-initial-390.png": "7f6075476285eab907e237948dc89555112f8b123f865ac73df6253fe222b40a",
+      "tmp/category-mobile-route-390.png": "743a3f815128400861658ebd3f6ef4562b463269c5d2caea82b585ba59d86ce7"
+    },
+    "audit_stage": "files_scanned is the pre-receipt scan; final_files_scanned includes the new receipt.",
+    "final_files_scanned": 300,
+    "proof_storage": "Proof paths are relative to the operator primary workspace, not this checkout; images are local-only and excluded from Git."
+  },
+  "limitations": [
+    "30-category lexical support is bounded; a general semantic intent model is not implemented.",
+    "Public landmark aliases and local OSM name/address matching are not general address geocoding.",
+    "No claim of live coverage for every category or all six mandatory inputs.",
+    "Missing socket/quiet/access/night evidence may result in no plan.",
+    "No physical GPS, physical phone or new PWA installation verified in this stage.",
+    "Earlier failed workflow outcomes remain negative.",
+    "Full Google output and all source previews remain together behind one disclosure.",
+    "User explicitly requested removal of special flight wording; program does not estimate catching flights."
+  ],
+  "external_review": {
+    "status": "APPROVED for agreed technical scope",
+    "behavior_commit": "0bb648cfdd8ed652fc31bbf8b03091a613b72773",
+    "coordination_commit": "b7778436658bb70ee763a93d7f8bff272ed12d49",
+    "parser_matrix_passed": 30,
+    "affected_methods_passed": 22,
+    "orchestration_methods_passed": 7,
+    "frontend_cases_passed": 82,
+    "pwa_cases_passed": 23,
+    "calls_to_providers_or_model": 0,
+    "physical_gps_test": false,
+    "scope_note": "Special flight wording intentionally omitted following direct user instruction; reviewer withdrew restoration request."
+  }
+}

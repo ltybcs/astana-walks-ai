@@ -58,3 +58,5 @@ Offline fixtures проверяют одновременность трёх ис
 [Maps Embed](https://developers.google.com/maps/documentation/embed/embedding-map), [биллинг Embed](https://developers.google.com/maps/documentation/embed/usage-and-billing), [Google Grounding Lite](https://developers.google.com/maps/ai/grounding-lite), [условия Google](https://cloud.google.com/maps-platform/terms/maps-service-terms), [2ГИС для AI](https://docs.2gis.com/en/api/ai/mcp-server/overview), [оферта 2ГИС](https://law.2gis.ru/webapi-offer).
 
 Финальный протокол с хешами исходников и границами реальных проверок: [qa/unified-search-check.json](../qa/unified-search-check.json).
+
+Текущий протокол категорий, компактного UI и исправления пустой выдачи: [qa/category-coverage-check.json](../qa/category-coverage-check.json). Предыдущие протоколы выше исторические.

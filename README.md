@@ -56,6 +56,8 @@ python -m unittest discover -s tests -v
 
 Node.js в PATH включает автономные JS-проверки интерфейса и PWA. Они используют mock DOM/fetch/geolocation и не доказывают реальную работу провайдеров, GPS или телефона. Фактические проверки и source SHA — в [qa/unified-search-check.json](qa/unified-search-check.json); исходы без принятого текста остаются отрицательными. Метаданные не содержат приватных запросов/координат или сырых данных провайдеров. Исправления категории, словесного времени, старта маршрута и мобильной вёрстки описаны в [qa/mobile-intent-check.json](qa/mobile-intent-check.json): прежняя ошибочная карта сохранена как FAIL, живая карта на692630b отделена от более поздних offline-проверок защит.
 
+Итог расширения категорий и компактного интерфейса: [qa/category-coverage-check.json](qa/category-coverage-check.json). 380 Python checks (378 PASS, 2 Windows skip), 82 frontend и 23 PWA. Отрицательные живые исходы сохранены отдельно от успешной приёмки клуба; это не проверка всех типов и всех сценариев на реальном телефоне.
+
 ## Сохранённая версия и материалы
 
 До переноса на GitHub сохранён tag **[checkpoint/before-unified-2026-10-20](https://github.com/ltybcs/astana-walks-ai/tree/checkpoint/before-unified-2026-10-20)**, commit `a20dc81`. Он отличается от развёрнутого прежнего `a46b` только координационной записью. Откат выполняется в **новой папке worktree**, без reset существующей рабочей копии; команда — в [DEPLOYMENT](docs/DEPLOYMENT.md).
