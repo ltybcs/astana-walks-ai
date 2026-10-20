@@ -1,8 +1,8 @@
-"""Isolated Google-embed lab backed only by the shipped OSM snapshot.
+"""Isolated AI walks lab: shipped OSM plus an explicitly enabled Google pilot.
 
 Run python -m app.google_lab and open http://127.0.0.1:8003.
 The existing RAG core is reused; inference is opt-in on an existing local model.
-No Google/2GIS/Overpass backend client or main HTTP server is instantiated.
+Google pilot is separately opt-in; main HTTP server and OSM core stay unchanged.
 Google frames and optional map tiles are browser-only frontend choices.
 """
 from __future__ import annotations
@@ -18,8 +18,12 @@ import math
 from pathlib import Path, PurePosixPath
 import re
 from threading import Lock
+from time import monotonic
 from urllib.parse import urlparse
 
+from .google_budget import GoogleError
+from .google_client import GoogleClient
+from .google_grounded import GoogleGrounded, disabled_status
 from .generation import recommend as core_recommend
 from .llm import LLMConfig
 from .retrieval import Retriever, distance_m
@@ -385,7 +389,7 @@ class LabServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, address: tuple[str, int], root: Path, *, llm_enabled: bool = False, recommender=None):
+    def __init__(self, address: tuple[str, int], root: Path, *, llm_enabled: bool = False, recommender=None, google=None):
         self.root = Path(root).resolve()
         self.catalog = load_catalog(self.root)
         self.catalog_json = _json_bytes(self.catalog)
@@ -397,10 +401,20 @@ class LabServer(ThreadingHTTPServer):
         self.llm_requested = bool(llm_enabled)
         self.llm_config = _local_llm_config() if llm_enabled else None
         self.llm_enabled = self.llm_config is not None
+        self.google = google
         self._stats_lock = Lock()
         self._provider_attempts = 0
         self._validated_answers = 0
         super().__init__(address, LabHandler)
+        if self.google is not None:
+            self.google.start_cleanup()
+
+    def server_close(self):
+        try:
+            super().server_close()
+        finally:
+            if self.google is not None:
+                self.google.close()
 
     def llm_available(self) -> bool:
         if not self.llm_enabled:
@@ -414,11 +428,15 @@ class LabServer(ThreadingHTTPServer):
     def health_json(self) -> bytes:
         with self._stats_lock:
             attempts, validated = self._provider_attempts, self._validated_answers
+        google_status = self.google.status() if self.google else disabled_status()
+        google_attempts = google_status["quota"]["used"]
         return _json_bytes({
             "status": "ok", "service": "google-maps-lab", "lab": True,
-            "free": True, "mode": "rag-assistant", "provider_calls": attempts,
+            "free": self.google is None, "mode": "rag-assistant", "provider_calls": attempts,
             "provider_call_count_scope": "Core-reported local LLM attempts in this lab process only",
-            "backend_outbound_calls": attempts > 0,
+            "backend_outbound_calls": attempts > 0 or type(google_attempts) is int and google_attempts > 0,
+            "backend_outbound_calls_scope": "Local LLM attempts in this lab process OR Google HTTP attempts across the shared pilot ledger",
+            "local_llm_outbound_calls": attempts > 0, "google_http_attempts_pilot": google_attempts,
             "llm_opt_in": self.llm_requested, "llm_configured": self.llm_available(),
             "llm_validated_answers": validated, "live_verified": False,
             "generation": "local-llm-with-extractive-fallback" if self.llm_available() else "extractive",
@@ -426,6 +444,7 @@ class LabServer(ThreadingHTTPServer):
             "places_count": self.catalog["summary"]["visible_count"],
             "rag_index_sha256": self.index_sha256,
             "data_source": "Shipped OSM snapshot", "google_embed": "browser-only",
+            "google": google_status,
         })
 
     def recommend(self, payload: object) -> dict:
@@ -475,15 +494,55 @@ class LabHandler(BaseHTTPRequestHandler):
         self.send_header("X-Frame-Options", "DENY")
         super().end_headers()
 
+    def _discard_small_rejected_body(self):
+        """Avoid a TCP reset hiding early errors from ordinary small clients.
+
+        Never interpret chunked/ambiguous framing, never process another request.
+        A single bounded body is discarded under one 200ms wall-clock deadline.
+        """
+        lengths = self.headers.get_all("Content-Length", [])
+        if self.headers.get_all("Transfer-Encoding") or len(lengths) != 1 or re.fullmatch(r"[0-9]{1,6}", lengths[0]) is None:
+            return 0
+        length = int(lengths[0])
+        if not 0 < length <= MAX_REQUEST_BYTES:
+            return 0
+        timeout = self.connection.gettimeout()
+        deadline, discarded = monotonic() + 0.2, 0
+        try:
+            while discarded < length:
+                remaining = deadline - monotonic()
+                if remaining <= 0:
+                    break
+                self.connection.settimeout(remaining)
+                chunk = self.rfile.read1(min(4096, length - discarded))
+                if not chunk:
+                    break
+                discarded += len(chunk)
+        except (OSError, TimeoutError):
+            pass
+        finally:
+            try:
+                self.connection.settimeout(timeout)
+            except OSError:
+                pass
+        return discarded
+
+    def _reject(self, status, body, *, head=False):
+        self.close_connection = True
+        self._discard_small_rejected_body()
+        self._send(status, body, head=head)
+
     def _send(self, status: int, body: bytes, content_type: str = "application/json; charset=utf-8", *, head: bool = False):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
+        if self.close_connection:
+            self.send_header("Connection", "close")
         self.end_headers()
         if not head:
             try:
                 self.wfile.write(body)
-            except (BrokenPipeError, ConnectionResetError, TimeoutError):
+            except (ConnectionError, TimeoutError):
                 pass
 
     def _local_host(self) -> bool:
@@ -497,12 +556,14 @@ class LabHandler(BaseHTTPRequestHandler):
 
     def _get(self, *, head: bool = False):
         if not self._local_host():
-            self._send(403, _json_bytes({"error": "Local lab requests only", "code": "forbidden"}), head=head)
+            self._reject(403, _json_bytes({"error": "Local lab requests only", "code": "forbidden"}), head=head)
             return
         if self.path == "/api/catalog":
             self._send(200, self.server.catalog_json, head=head)
         elif self.path == "/api/health":
             self._send(200, self.server.health_json, head=head)
+        elif self.path == "/api/google/status":
+            self._send(200, _json_bytes(self.server.google.status() if self.server.google else disabled_status()), head=head)
         elif self.path in STATIC_FILES:
             relative, content_type = STATIC_FILES[self.path]
             try:
@@ -524,25 +585,25 @@ class LabHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if not self._local_host():
-            self._send(403, _json_bytes({"error": "Local lab requests only", "code": "forbidden"}))
+            self._reject(403, _json_bytes({"error": "Local lab requests only", "code": "forbidden"}))
             return
-        if self.path != "/api/recommend":
-            self._send(404, _json_bytes({"error": "Lab route not found", "code": "not_found"}))
+        if self.path not in {"/api/recommend", "/api/google/preview", "/api/google/recommend", "/api/google/details"}:
+            self._reject(404, _json_bytes({"error": "Lab route not found", "code": "not_found"}))
             return
         if len(self.headers.get_all("Content-Type", [])) != 1 or self.headers.get_content_type() != "application/json":
-            self._send(415, _json_bytes({"error": "Нужен Content-Type: application/json.", "code": "unsupported_media_type"}))
+            self._reject(415, _json_bytes({"error": "Нужен Content-Type: application/json.", "code": "unsupported_media_type"}))
             return
         lengths = self.headers.get_all("Content-Length", [])
-        if self.headers.get("Transfer-Encoding") or len(lengths) != 1:
-            self._send(400, _json_bytes({"error": "Нужен один Content-Length, без Transfer-Encoding.", "code": "invalid_request"}))
+        if self.headers.get_all("Transfer-Encoding") or len(lengths) != 1:
+            self._reject(400, _json_bytes({"error": "Нужен один Content-Length, без Transfer-Encoding.", "code": "invalid_request"}))
             return
         try:
             length = int(lengths[0])
         except ValueError:
-            self._send(400, _json_bytes({"error": "Некорректный Content-Length.", "code": "invalid_request"}))
+            self._reject(400, _json_bytes({"error": "Некорректный Content-Length.", "code": "invalid_request"}))
             return
         if not 0 < length <= MAX_REQUEST_BYTES:
-            self._send(413, _json_bytes({"error": "JSON должен занимать не более 16384 байт.", "code": "request_too_large"}))
+            self._reject(413, _json_bytes({"error": "JSON должен занимать не более 16384 байт.", "code": "request_too_large"}))
             return
         try:
             raw = self.rfile.read(length)
@@ -556,8 +617,19 @@ class LabHandler(BaseHTTPRequestHandler):
             self._send(400, _json_bytes({"error": "Некорректный JSON запроса.", "code": "invalid_json"}))
             return
         try:
-            response = self.server.recommend(payload)
+            if self.path == "/api/recommend":
+                response = self.server.recommend(payload)
+            else:
+                if self.server.google is None:
+                    raise GoogleError("google_disabled", "Google-пилот не включён; OSM-подбор работает отдельно.", 503)
+                method = {"/api/google/preview": "preview", "/api/google/recommend": "recommend", "/api/google/details": "details"}[self.path]
+                response = getattr(self.server.google, method)(payload)
             serialized = _json_bytes(response)
+        except GoogleError as error:
+            response = error.as_dict()
+            response["quota"] = self.server.google.status()["quota"] if self.server.google else disabled_status()["quota"]
+            self._send(error.status, _json_bytes(response))
+            return
         except ContextError as error:
             self._send(error.status, _json_bytes(error.as_dict()))
             return
@@ -567,7 +639,7 @@ class LabHandler(BaseHTTPRequestHandler):
         self._send(200, serialized)
 
     def _method_not_allowed(self):
-        self._send(405, _json_bytes({"error": "Метод не поддерживается.", "code": "method_not_allowed"}))
+        self._reject(405, _json_bytes({"error": "Метод не поддерживается.", "code": "method_not_allowed"}))
 
     do_PUT = _method_not_allowed
     do_DELETE = _method_not_allowed
@@ -575,7 +647,7 @@ class LabHandler(BaseHTTPRequestHandler):
     do_OPTIONS = _method_not_allowed
 
 
-def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROOT, llm_enabled: bool = False, recommender=None) -> LabServer:
+def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROOT, llm_enabled: bool = False, recommender=None, google=None, google_config=None) -> LabServer:
     """Create one context-managed lab server; startup never calls inference."""
     if host == "localhost":
         host = "127.0.0.1"
@@ -585,7 +657,20 @@ def create_server(host: str = "127.0.0.1", port: int = 8003, *, root: Path = ROO
         raise ValueError("Lab binds only to IPv4 loopback") from error
     if address.version != 4 or not address.is_loopback or type(port) is not int or not 0 <= port <= 65535:
         raise ValueError("Lab binds only to IPv4 loopback and a valid port")
-    return LabServer((host, port), Path(root), llm_enabled=llm_enabled, recommender=recommender)
+    if google is not None and google_config is not None:
+        raise ValueError("Choose injected Google service or explicit runtime config")
+    if google_config is not None:
+        client = GoogleClient.from_runtime(google_config)
+        cache, cache_init_error = None, False
+        if client.cache_dir is not None:
+            try:
+                from .google_cache import GoogleCache
+                cache = GoogleCache(client.cache_dir)
+            except Exception:
+                cache_init_error = True
+        google = GoogleGrounded(client, resolve_request, llm_config=_local_llm_config() if llm_enabled else None,
+                                cache=cache, cache_init_error=cache_init_error)
+    return LabServer((host, port), Path(root), llm_enabled=llm_enabled, recommender=recommender, google=google)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -593,9 +678,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8003)
     parser.add_argument("--llm", action="store_true", help="Use an already configured loopback LLM; never start or download a model")
+    parser.add_argument("--google", action="store_true", help="Opt in to the separately budgeted official Google pilot")
+    parser.add_argument("--google-config", help="Absolute ignored JSON with key_file, shared ledger_file and optional cache_dir; never printed")
     args = parser.parse_args(argv)
+    if bool(args.google) != bool(args.google_config):
+        parser.error("--google and --google-config must be supplied together")
     try:
-        with create_server(args.host, args.port, llm_enabled=args.llm) as server:
+        with create_server(args.host, args.port, llm_enabled=args.llm, google_config=args.google_config if args.google else None) as server:
             print(f"AI walks lab: http://127.0.0.1:{server.server_port} — {server.catalog['summary']['visible_count']} OSM places", flush=True)
             try:
                 server.serve_forever(poll_interval=0.2)

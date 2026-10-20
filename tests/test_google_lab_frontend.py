@@ -17,7 +17,7 @@ class GoogleLabFrontendTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         report = json.loads(result.stdout.strip().splitlines()[-1])
-        self.assertGreaterEqual(report["total"], 20)
+        self.assertGreaterEqual(report["total"], 50)
         self.assertEqual(report["passed"], report["total"])
         self.assertEqual(report["network_calls"], 0)
 

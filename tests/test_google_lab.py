@@ -2,9 +2,12 @@
 from contextlib import contextmanager, redirect_stderr
 from copy import deepcopy
 import hashlib
-from http.client import HTTPConnection
+from http.client import HTTPConnection, HTTPResponse
+from email.message import Message
 import io
 import json
+import socket
+import time
 from pathlib import Path
 import tempfile
 from threading import Thread
@@ -179,6 +182,77 @@ class GoogleLabTests(unittest.TestCase):
             for headers in ({"Origin": "https://foreign.example"}, {"Host": "foreign.example"}, {"Host": "127.0.0.1:1"}):
                 with self.subTest(headers=headers):
                     self.assertEqual(request(server, "/api/catalog", headers=headers)[0], 403)
+
+    def test_early_415_and_405_drain_delayed_small_bodies_before_closing(self):
+        with running_server(self.root) as (server, _thread):
+            for method, path, content_type, expected in (
+                ("POST", "/api/recommend", "text/plain", 415),
+                ("PUT", "/api/2gis/search", "application/json", 405),
+            ):
+                with self.subTest(method=method), socket.create_connection(("127.0.0.1", server.server_port), timeout=2) as connection:
+                    payload = b"not forwarded"
+                    headers = (f"{method} {path} HTTP/1.1\r\nHost: 127.0.0.1:{server.server_port}\r\n"
+                               f"Content-Type: {content_type}\r\nContent-Length: {len(payload)}\r\n\r\n").encode("ascii")
+                    connection.sendall(headers)
+                    connection.settimeout(0.04)
+                    # Old behavior returned/closed before the declared body.
+                    with self.assertRaises(TimeoutError):
+                        connection.recv(1)
+                    connection.sendall(payload)
+                    connection.settimeout(2)
+                    response = HTTPResponse(connection)
+                    response.begin()
+                    self.assertEqual(response.status, expected)
+                    self.assertEqual(response.getheader("Connection"), "close")
+                    self.assertTrue(response.read())
+                    response.close()
+
+    def test_early_reject_has_a_total_deadline_when_declared_body_is_withheld(self):
+        with running_server(self.root) as (server, _thread), socket.create_connection(("127.0.0.1", server.server_port), timeout=2) as connection:
+            headers = (f"PUT /api/2gis/search HTTP/1.1\r\nHost: 127.0.0.1:{server.server_port}\r\n"
+                       "Content-Length: 16384\r\n\r\n").encode("ascii")
+            start = time.monotonic()
+            connection.sendall(headers)
+            response = HTTPResponse(connection)
+            response.begin()
+            self.assertEqual(response.status, 405)
+            self.assertLess(time.monotonic() - start, 1.5)
+            self.assertTrue(response.read())
+            response.close()
+
+    def test_even_empty_transfer_encoding_is_rejected_without_reading_body(self):
+        with running_server(self.root) as (server, _thread), socket.create_connection(("127.0.0.1", server.server_port), timeout=2) as connection:
+            headers = (f"POST /api/recommend HTTP/1.1\r\nHost: 127.0.0.1:{server.server_port}\r\n"
+                       "Content-Type: application/json\r\nContent-Length: 2\r\nTransfer-Encoding:\r\n\r\n").encode("ascii")
+            connection.sendall(headers)
+            response = HTTPResponse(connection)
+            response.begin()
+            self.assertEqual(response.status, 400)
+            self.assertEqual(json.loads(response.read())["code"], "invalid_request")
+            response.close()
+
+    def test_reject_cleanup_never_reads_ambiguous_large_or_malformed_framing(self):
+        class Connection:
+            def gettimeout(self):
+                return 15
+            def settimeout(self, timeout):
+                pass
+        for pairs in (
+            [("Content-Length", "2"), ("Transfer-Encoding", "chunked")],
+            [("Content-Length", "2"), ("Transfer-Encoding", "")],
+            [("Content-Length", "2"), ("Content-Length", "2")],
+            [("Content-Length", "16385")], [("Content-Length", "-2")],
+            [("Content-Length", "+2")], [("Content-Length", "garbage")], [],
+        ):
+            handler = object.__new__(lab.LabHandler)
+            handler.headers = Message()
+            for key, value in pairs:
+                handler.headers[key] = value
+            handler.connection = Connection()
+            handler.rfile = io.BytesIO(b"not forwarded")
+            with self.subTest(headers=pairs):
+                self.assertEqual(handler._discard_small_rejected_body(), 0)
+                self.assertEqual(handler.rfile.tell(), 0)
 
     def test_static_symlink_is_never_served(self):
         target = self.root / "web/google-lab/lab.js"
