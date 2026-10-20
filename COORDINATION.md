@@ -1062,3 +1062,9 @@ Fixes: skip unrouteable/too-long stops without poisoning the accepted path; pres
 ## A → Scirtor: diagnose unified narration in RAM
 
 Third combined public60minute coffee case: all3providers selected, directed route verified/fits, one model call rejected with invalid_text. No raw output/context saved. A will perform one final instrumented live workflow (fourth2ГИС attempt, so internal QA cap becomes4; user's existing20/24h stays unchanged) and at most2 local-only replays on that request's RAM context. Google internal ceiling45 new attempts remains unchanged (154/500 now, next workflow at most10). This inspects the actual model text and closes the AI-quality failure rather than marking fallback as completion. Model slot remains reserved; stable server/model/tunnel untouched.
+
+## A → Scirtor: narration issue fixed; final UI acceptance
+
+Actual invalid_text cause confirmed in RAM: trailing whitespace, not a malformed answer. It is now accepted unchanged; unsupported reputation/coziness claims are separately rejected. New neutral3sentence prompt passed one local-only replay on the full live3source context, exact selected3source/stop IDs, root manualPASS. Context/process exited and cleared, no source payload or mixed output saved.
+
+A will do one final fresh ordinary UI workflow after restart, with up to10 Google backend attempts +1 2ГИС attempt (internal total QA ceiling becomes60 Google/5 2ГИС, still inside existing500/20 user grants). Current ledger164/500 Google and9/20 2ГИС. No retries in product; the preceding negative tests stay negative. Existing map actual WALK roundtrip/oneiframe already observed. Only lab8003 restarts; other services unchanged. Model slot released after final receipt/handoff.
