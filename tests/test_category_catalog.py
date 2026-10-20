@@ -218,6 +218,18 @@ class CategoryCatalogTests(unittest.TestCase):
         self.assertTrue(negative["supported"])
         self.assertEqual(negative["categories"], ["cafe"])
         self.assertIn("pharmacy", negative["excluded_categories"])
+        for query in ("Хочу не аптеку, а ветклинику возле Байтерека",
+                      "Хочу не аптеку, а ломбард возле Байтерека",
+                      "Где есть не аптека, а ветклиника рядом с Байтереком?",
+                      "Не кафе, а ветклинику и музей возле Байтерека",
+                      "Хочу не аптеку, а ветклинику и кофе возле Байтерека"):
+            with self.subTest(query=query):
+                self.assertFalse(parse_search_intent(query)["supported"])
+        for query, expected in (("Хочу не аптеку, а кафе возле Байтерека", ["cafe"]),
+                                ("Не аптеку, а где погулять возле Байтерека", ["walk"])):
+            result = parse_search_intent(query)
+            self.assertTrue(result["supported"])
+            self.assertEqual(result["categories"], expected)
         self.assertEqual(categories_from_rubrics(["Аптеки"]), ("pharmacy",))
         self.assertEqual(categories_from_rubrics(["Аптека — название кафе", "Лекарства"]), ())
         self.assertNotIn("наличие лекарств подтверждено", CATEGORY_CATALOG["pharmacy"]["proposed_activity"])

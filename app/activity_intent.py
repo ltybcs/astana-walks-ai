@@ -127,7 +127,15 @@ def _known_goal_lead(prefix):
 
 
 def _unsupported_primary(query, matches):
-    for target in _TARGET.finditer(query):
+    targets = list(_TARGET.finditer(query))
+    # An unknown replacement after a rejected known activity is still a goal:
+    # "not a pharmacy, but a vet clinic" must not fall back to parks/museums.
+    for replacement in re.finditer(r"(?:,\s*|\s+)(?:а|но|but|instead)\s+(?:(?:в|на|to|a|an)\s+)?", query):
+        if any(0 <= replacement.start() - end <= 160
+               and not re.search(r"[.!?]", query[end:replacement.start()])
+               and _negated(query, start, end) for start, end, _ in matches):
+            targets.append(replacement)
+    for target in sorted(targets, key=lambda value: value.start()):
         # "don't want X" and "не хочу X" reject X; they are not new goals.
         if (_negated(query, target.start(), target.end())
                 or re.search(r"\b(?:don\x27t|do\s+not)\s+$", _clause_prefix(query, target.start()))):
