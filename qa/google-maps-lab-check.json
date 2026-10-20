@@ -1,19 +1,179 @@
 {
-  "checked_at": "2026-10-20T06:35:09+00:00",
-  "pass": true,
-  "branch": "codex/google-maps-lab",
-  "separate_service": "http://127.0.0.1:8003/",
+  "checked_at": "2026-10-20T07:15:09.445241+00:00",
+  "scope": "Task1 AI assistant restored in isolated free Google Maps lab; main app and accepted artifacts unchanged",
+  "source_commit_before_receipt": "a0b6ef4d4812188b63fbce2fb40e2f3e8f5d2531",
   "source_hashes": {
-    "app/google_lab.py": "24cf4569883485b324ae7a43ff0d6bafe555330d6d1d121c559f409066501a0c",
-    "tests/test_google_lab.py": "1ce9a7e8e25f497006df913e9da2ee6d4b6a717a6b1f5aeac672d1b73e3bfd63",
-    "web/google-lab/lab.js": "f31e3e760e5721103cfd751ae246b4916b96dbbe3fd554a9129e99652dc54518",
-    "web/google-lab/index.html": "24a1c1461dc5a30194c82cc4f34de128ac558ccb8958298bc2ab982636c571de",
-    "web/google-lab/lab.css": "18cbc4a79f65a54001cdc62e37e3b796d4b3d5ac9fd66b103c3c6ef479445ae8",
+    "app/google_lab.py": "1a0b67b659bfed8ecb370afe62043a2a174d489dacbd3d0c732ebed88ccd3f56",
+    "tests/test_google_lab.py": "9c6d6409d4a6fec858eaf61eb028ac0483269256e1fc72425fa611c4a11b3653",
+    "web/google-lab/lab.js": "5780a16a3868a326c459b331b4c8044845f0d3c88234a63fef116584a0063df4",
+    "web/google-lab/index.html": "89bd628c927f44491018bbabf28c02d6f9600f59c20682e0155215ab753daf2a",
+    "web/google-lab/lab.css": "69091cca165cff4c681a8064121dd01c35992bf63212a562be122dc3545f687d",
     "web/google-lab/embeds.json": "f09ff4cc7273c0da617734b18e899919b7bf991830dbc10be2d33657f5e268ba",
-    "docs/GOOGLE_MAPS_LAB.md": "145c321e31d86227b5ebef5a674db47a3755d6f3409db9133861d48c9d25fa47",
-    "README.md": "783a502a88b59cf536fca133fcc938ffd452e0e497395298752ef6738fdff386"
+    "docs/GOOGLE_MAPS_LAB.md": "a077c5b141f56006cb36be871c10501abf08474edd5cbe08f8d2e26ca83ed670",
+    "docs/GOOGLE_LAB_SCENARIOS.md": "8be6849c6429f89920e622ded45643b7c8e33ad123e68c3c6b3bcf3d56aa7148",
+    "README.md": "bc8447035291cac820d6d3d96b411792533e527a3445e8075d856a22e7b0c0b3",
+    "tests/test_google_lab_frontend.js": "7f120747d4b0393a9cdee02bdff09b109cb4b371396ee01caf802facd40f4fdc",
+    "tests/test_google_lab_frontend.py": "3f375504428881ac11df1e4217610ec0ac4aae68f81ae4716c4163ef47613dd9"
   },
-  "http_checks": [
+  "historical_viewer_receipt": {
+    "path": "qa/history/google-maps-lab-viewer-9b0217f.json",
+    "sha256": "2b955ef95f775b9c024e6d639b79bea66adf0f2b19ce9e696331c385037aa8e1",
+    "source_head": "9b0217f5daaf2c8d2c5fa6095a41782d652e6d9a"
+  },
+  "unit_suite": {
+    "run": 166,
+    "pass": 165,
+    "skipped": 1,
+    "failures": 0,
+    "log_sha256": "aed5519d0d5ba1faf58873adc8e9b7e43d65a852eb0e4933dc92fbb2b5c53b57",
+    "boundary": "Mocks and local ephemeral HTTP only, not provider quality evidence"
+  },
+  "actual_browser": {
+    "source_js_sha256": "5780a16a3868a326c459b331b4c8044845f0d3c88234a63fef116584a0063df4",
+    "checks": [
+      {
+        "name": "Assistant-first layout and query-only example; catalog secondary; Google opt-in",
+        "pass": true,
+        "observed": {
+          "catalogClosed": true,
+          "formBeforeMaps": true,
+          "iframes": 0,
+          "query": "У меня 45 минут возле Mega, хочу короткую прогулку",
+          "scrollWidth": 1027,
+          "width": 1027
+        }
+      },
+      {
+        "name": "Real MEGA45 browser request yields grounded LLM card, context and 42-minute round trip",
+        "pass": true,
+        "observed": {
+          "area": "mega",
+          "budget": "≈ 42 мин всего из 45 · 22 мин пешком · 20 мин в местах. Возвращение к старту учтено (11 мин).",
+          "cards": [
+            {
+              "action": "Идея: сделать короткую остановку в парке для отдыха. Перед выходом проверьте доступ и часы по источнику.",
+              "name": "NU Park",
+              "source": "https://www.openstreetmap.org/way/1467797207",
+              "why": "Парк соответствует интересу в прогулке на воздухе"
+            }
+          ],
+          "context": "MEGA Silk Way — публичная точка · из запроса45 мин · из запросаДнём · по умолчанию",
+          "markers": 2,
+          "mode": "LLM + найденные места",
+          "route": "https://www.google.com/maps/dir/?api=1&origin=51.0892%2C71.4074&destination=51.0892%2C71.4074&travelmode=walking&waypoints=51.0872699%2C71.3994394",
+          "source": "Подбор по снимку OpenStreetMap от 20 октября 2026 г.. Google-карта служит для просмотра."
+        }
+      },
+      {
+        "name": "Google walking link uses same public start/return/ordered stop; map area matches MEGA",
+        "pass": true
+      },
+      {
+        "name": "Numbered OSM plan and start/return on real street tiles; map focus stable",
+        "pass": true,
+        "observed": {
+          "active": "osm-map",
+          "hasReturn": true,
+          "loadedTiles": 15,
+          "markers": 2,
+          "polyline": 0,
+          "tileStatus": "Сервис тайлов получает IP и область карты. Личная геолокация не запрашивается.",
+          "renderer": "canvas",
+          "dashed_route_visually_verified": true
+        }
+      },
+      {
+        "name": "Google embed opt-in shows actual MEGA area",
+        "pass": true,
+        "observed": {
+          "area": "mega",
+          "iframeCount": 1,
+          "iframeTitle": "Google Maps: MEGA Silk Way и EXPO"
+        }
+      },
+      {
+        "name": "Returning to OSM unloads Google frame",
+        "pass": true
+      },
+      {
+        "name": "390px mobile result preserves grounded card without horizontal overflow",
+        "pass": true,
+        "observed": {
+          "cards": 1,
+          "mode": "LLM + найденные места",
+          "scrollWidth": 375,
+          "width": 375
+        }
+      },
+      {
+        "name": "Coffee/socket constraint yields honest empty result and no invented route",
+        "pass": true,
+        "observed": {
+          "cards": 0,
+          "href": null,
+          "mode": "Поиск + шаблон",
+          "source": "Подбор по снимку OpenStreetMap от 20 октября 2026 г.. Google-карта служит для просмотра.",
+          "status": "Нет подходящего места с подтверждённой в источнике розеткой. Увеличьте время, выберите другую отправную точку или уточните условия; неизвестные свойства не считаются подтверждёнными. Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены. Тишина меняется в течение дня. Уровень шума не подтверждён, если это явно не указано источником."
+        }
+      },
+      {
+        "name": "Natural night outdoor walk keeps 24-7 constraint and honestly returns no confirmed place",
+        "pass": true,
+        "observed": {
+          "cards": 0,
+          "context": "Байтерек — публичная точка · из запроса60 мин · из запросаНочью · из запроса",
+          "href": null,
+          "status": "нет подходящей точки с явно указанным режимом 24/7. Увеличьте время, выберите другую отправную точку или уточните условия; неизвестные свойства не считаются подтверждёнными. Расстояние и ходьба приблизительны: прямая дистанция × 1,3 и скорость 75 м/мин. Маршрут включает возврат; переходы по улицам и погода не проверены. Ночной запрос: отобраны только точки, где источник явно указал 24/7; актуальный доступ, освещение и безопасность не проверены."
+        }
+      },
+      {
+        "name": "Explicit 60 conflicts with text45, restores button, clears result/route",
+        "pass": true,
+        "observed": {
+          "cards": 0,
+          "disabled": false,
+          "href": null,
+          "status": "Время в сообщении отличается от выбранного бюджета. Согласуйте их."
+        }
+      },
+      {
+        "name": "Missing origin and budget ask for clarification without defaults",
+        "pass": true,
+        "observed": {
+          "cards": 0,
+          "href": null,
+          "status": "Уточните старт и точный бюджет прогулки: их нельзя определить из сообщения."
+        }
+      },
+      {
+        "name": "Editing request clears prior context, cards, source note and route",
+        "pass": true,
+        "observed": {
+          "cards": 0,
+          "contextHidden": true,
+          "href": null,
+          "sourceHidden": true
+        }
+      }
+    ],
+    "additional_probe": {
+      "scenario": "Night activity example (not outdoor walk)",
+      "observation": {
+        "cards": 0,
+        "context": "",
+        "href": null,
+        "status": "Подбираем прогулку по вашим условиям. Объяснения могут занять некоторое время…"
+      },
+      "scope": "Initial observation was taken while async request pending; later form changed, its generated prose was not captured or quality scored. Backend model-attempt counter may include it."
+    },
+    "screenshots": [
+      "assistant-desktop.jpg",
+      "assistant-mobile.jpg",
+      "route-osm.jpg",
+      "route-google.jpg"
+    ]
+  },
+  "actual_http": [
     {
       "path": "/api/health",
       "status": 200,
@@ -45,150 +205,44 @@
       "pass": true
     }
   ],
-  "browser": {
-    "checks": [
-      {
-        "name": "Google waits for load button",
-        "pass": true
-      },
-      {
-        "name": "Google loads one shared map",
-        "pass": true,
-        "title": "Google Maps: Байтерек и бульвар Нуржол"
-      },
-      {
-        "name": "Area change removes previous frame",
-        "pass": true
-      },
-      {
-        "name": "Selected MEGA shared frame is created",
-        "pass": true
-      },
-      {
-        "name": "Unload removes Google frame",
-        "pass": true
-      },
-      {
-        "name": "Returning to OSM removes Google frame",
-        "pass": true
-      },
-      {
-        "client_width": 375,
-        "name": "Mobile 390 viewport has no horizontal overflow",
-        "pass": true,
-        "scroll_width": 375
-      },
-      {
-        "name": "Keyboard Enter keeps focus on stable map",
-        "pass": true,
-        "observed_active_id": "osm-map"
-      },
-      {
-        "name": "Named culture filter shows 72 objects",
-        "pass": true,
-        "count": 72
-      },
-      {
-        "name": "Food filter shows 623 objects",
-        "pass": true,
-        "count": 623
-      },
-      {
-        "name": "Load more expands food list from60 to120",
-        "pass": true,
-        "counts": [
-          60,
-          120
-        ]
-      },
-      {
-        "name": "Unnamed children layer is optional",
-        "pass": true,
-        "named_only": 1,
-        "with_unnamed": 341
-      },
-      {
-        "name": "Desktop has no horizontal overflow",
-        "pass": true,
-        "client_width": 1265,
-        "scroll_width": 1265
-      },
-      {
-        "name": "Zoom controls are44px with Russian labels",
-        "pass": true,
-        "width": 44,
-        "height": 44
-      },
-      {
-        "name": "Actual OSM streets and attribution visually inspected",
-        "pass": true
-      },
-      {
-        "name": "Actual Google streets and attribution visually inspected",
-        "pass": true
-      }
-    ],
-    "scope": "Actual CUA browser interaction and pixel inspection at desktop1280x1050/mobile390x844; public landmarks only. No physical-phone, LLM, paid API, Google-POI import or 2GIS search test."
+  "runtime_evidence": {
+    "path": "qa/google-lab-ai-runtime.json",
+    "sha256": "b93bd352e7b00ca4aac8b786e8997144926c192e09af8c18dd0addd960c9ceb8",
+    "records": 7,
+    "llm_grounded_responses": 3
   },
-  "local_captures": [
-    {
-      "local_capture": "tmp/google-maps-lab/osm-desktop.jpg",
-      "format": "JPEG",
-      "dimensions": [
-        1265,
-        1038
-      ],
-      "sha256": "f5f6a8e6d19c8f83222d71573589aedd7658e6a1ee677787824d044d7320f7f0"
-    },
-    {
-      "local_capture": "tmp/google-maps-lab/google-desktop.jpg",
-      "format": "JPEG",
-      "dimensions": [
-        1265,
-        1038
-      ],
-      "sha256": "641a8c79d1da9c0cea8fe5ee6554a9e2f3e3b093708c5a8bcd81a46f4a53adc0"
-    },
-    {
-      "local_capture": "tmp/google-maps-lab/google-mobile.jpg",
-      "format": "JPEG",
-      "dimensions": [
-        375,
-        812
-      ],
-      "sha256": "4f669df4f0bbe797813584e05281dfbd9ee8c079f20e960093010f3e057d8f41"
-    }
-  ],
-  "suite": {
-    "run": 145,
-    "passed": 144,
-    "skipped": 1,
-    "failures": 0,
-    "errors": 0,
-    "node_in_path": true,
-    "skip_reason": "Windows could not create an actual symlink; Linux CI can exercise it.",
-    "log_sha256": "5ea0d9763092e4cd2f92a7a7aeb03e08d4d50bd9fdb524cdcb22b59d717817bd",
-    "note": "Existing 2GIS collector tests use mock records; no actual provider search."
+  "health": {
+    "status": "ok",
+    "service": "google-maps-lab",
+    "lab": true,
+    "free": true,
+    "mode": "rag-assistant",
+    "provider_calls": 5,
+    "provider_call_count_scope": "Core-reported local LLM attempts in this lab process only",
+    "backend_outbound_calls": true,
+    "llm_opt_in": true,
+    "llm_configured": true,
+    "llm_validated_answers": 5,
+    "live_verified": false,
+    "generation": "local-llm-with-extractive-fallback",
+    "source_count": 1267,
+    "places_count": 1266,
+    "rag_index_sha256": "73be2d4a48f7e56b3656648c3b0998c8b8b56533059d4e1942535660de58ebbf",
+    "data_source": "Shipped OSM snapshot",
+    "google_embed": "browser-only"
   },
-  "frontend_checks": {
-    "syntax": true,
-    "baseline_offline": {
-      "passed": 16,
-      "total": 16
-    },
-    "final_delta_offline": {
-      "passed": 6,
-      "total": 6
-    },
-    "scope": "Baseline covers consent/filter/source behavior before unchanged-logic copy fixes; final delta covers focus/tile lifecycle. Actual final browser observations are separate."
+  "providers": {
+    "google_paid_api_calls": 0,
+    "google_poi_import": false,
+    "two_gis_calls": 0,
+    "overpass_refresh_calls": 0,
+    "local_llm": "Existing pinned Qwen3-4B astana-local on loopback8081; opt-in --llm"
   },
-  "independent_review": {
-    "backend": "approved exact module/test hashes",
-    "frontend": "approved exact final JS/HTML/CSS hashes"
-  },
-  "observed_issues_fixed": [
-    "Tile requests initially lacked Referer and showed blocked bitmap; scoped normal referrer policy restored actual streets.",
-    "Keyboard selection recreated focused button; stable map container now receives focus after Enter."
-  ],
-  "scope": "No-key shared Google map and OSM directory. No Google Places import, paid API key, LLM inference, 2GIS search or physical-device/PWA test. Stable main changed only by separately reviewed PR14, not this lab."
+  "limitations": [
+    "No field pedestrian-route verification: approximate straight-line plan includes return",
+    "No new physical-phone PWA certification or new presentation/video/ZIP certification",
+    "Google iframe is an opt-in public-area view; walking plan opens via Maps URL, not overlaid programmatically",
+    "Unknown hours/access/socket are not confirmed; honest empty/fallback allowed",
+    "No YouTube upload; user provides URL later"
+  ]
 }
