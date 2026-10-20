@@ -129,7 +129,9 @@
     "exact_owner_frame_parent_preserved": true,
     "embed_referrer_replacement_user_authorized_and_saved": true,
     "backend_keys_and_ledgers_retained": true,
-    "owner_hosted_redirect_updated": false
+    "owner_hosted_redirect_updated": true,
+    "owner_hosted_frame_visually_verified": true,
+    "owner_entry_url": "https://ltybcs.com/demo"
   },
   "boundaries": [
     "Walk duration and budget verification does not confirm night access, lighting or safety.",
