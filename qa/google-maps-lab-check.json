@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-10-20T09:41:53.947994+00:00",
+  "checked_at": "2026-10-20T09:44:37.155852+00:00",
   "scope": "Isolated Google lab: opt-in bounded Google APIs + loopback Qwen, permitted local storage. Stable main app and accepted submission remain separate.",
   "tested_source_commit": "aabe55e911aa7dd00d177bdef7cf7f8f146e3f82",
   "hash_normalization": "CRLF to LF, matching repository text blobs",
@@ -175,7 +175,7 @@
   },
   "live_runtime": {
     "path": "qa/google-live-runtime.json",
-    "sha256": "cfa2b4c9ffce937197f33ec7cc6d78e6c2d9f42faacd6ff48c5e0f1e94abda9a",
+    "sha256": "4d032055491aaf1b885c8c742058f1a156fe74de5d61aa46c67118b41df34034",
     "current_source_live_cases": 1,
     "all_http_attempts_used": 75,
     "authorized_total_limit": 500,

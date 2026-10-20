@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-10-20T09:41:53.946995+00:00",
+  "checked_at": "2026-10-20T09:44:37.153854+00:00",
   "scope": "One current-source MEGA45 live Google + local Qwen case verified through the actual browser. Metadata only.",
   "current_source_cases": [
     {
@@ -135,7 +135,7 @@
     },
     {
       "path": "qa/history/google-live-mega45-model-timeout-75d7b1d.json",
-      "sha256": "77d60cdf9107311a51f08e0e4309457dc8cf9bb44b7e1efed9026a5459521ae6",
+      "sha256": "215a602b7b11390f6a1dc0cea3fc05daaa8a7305b82dd25c3da0e90681a88c15",
       "source_commit": "75d7b1dea4095b36540060a32a90319f0d4a35c1",
       "mode": "google-grounding-summary",
       "accepted_live_recommendation": false,
@@ -159,7 +159,7 @@
     },
     {
       "path": "qa/history/google-live-mega45-no-nearby-71fb904.json",
-      "sha256": "765ec8b750462cec242c346e6fcb7bd07246cd8573923dbfa179e4023a1985f7",
+      "sha256": "ba74f24a306985890cc65d73691f397bcefe4ac6859d73db44d24cc4736c5929",
       "source_commit": "71fb90402bd187e04ad595b76fa469f0bdecf5f4",
       "mode": "google-grounding-summary",
       "accepted_live_recommendation": false,
