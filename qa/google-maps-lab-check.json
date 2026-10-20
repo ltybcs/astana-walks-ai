@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-10-20T06:31:28+00:00",
+  "checked_at": "2026-10-20T06:35:09+00:00",
   "pass": true,
   "branch": "codex/google-maps-lab",
   "separate_service": "http://127.0.0.1:8003/",
@@ -11,7 +11,7 @@
     "web/google-lab/lab.css": "18cbc4a79f65a54001cdc62e37e3b796d4b3d5ac9fd66b103c3c6ef479445ae8",
     "web/google-lab/embeds.json": "f09ff4cc7273c0da617734b18e899919b7bf991830dbc10be2d33657f5e268ba",
     "docs/GOOGLE_MAPS_LAB.md": "145c321e31d86227b5ebef5a674db47a3755d6f3409db9133861d48c9d25fa47",
-    "README.md": "297188a60db0935c7a79be1119f7e2ea8ad72d0d194f4b816767001d6dbde2b6"
+    "README.md": "783a502a88b59cf536fca133fcc938ffd452e0e497395298752ef6738fdff386"
   },
   "http_checks": [
     {
