@@ -112,7 +112,7 @@ class SingleVenueWorkflowTests(unittest.TestCase):
         self.assertTrue(option["plan"]["visit_is_proposal"])
         self.assertEqual(len(option["plan"]["legs"]), 2)
         self.assertEqual(len(self.google.legs), 4)
-        self.assertTrue(all(start=={"address": "Baiterek, Astana, Kazakhstan"} for start, _ in self.google.legs[::2]))
+        self.assertTrue(all(start=={"latLng": {"latitude": 51.1283, "longitude": 71.4305}} for start, _ in self.google.legs[::2]))
         self.assertEqual(self.narrator.call_count, 1)
         self.assertEqual(self.narrator.call_args.args[4]["categories"], ["computer_club"])
         self.assertEqual(result["grounding"]["summary"], before["summary"])

@@ -4,6 +4,7 @@ from copy import deepcopy
 from threading import Barrier
 import unittest
 from unittest.mock import Mock
+from urllib.parse import parse_qs, urlsplit
 
 from app.google_budget import GoogleError
 from app.lab_context import ContextError, PUBLIC_ORIGINS, resolve_request
@@ -267,22 +268,30 @@ class UnifiedTests(unittest.TestCase):
 
 
     def test_routing_preserves_google_ids_public_anchor_and_private_coordinate_start(self):
-        from app.google_grounded import PUBLIC_NAMES
-        origin = PUBLIC_ORIGINS["mega"]
-        stop = {**poi("opaque-google-id", "Синтетическая точка", 51.09, 71.41),
-                "stop_id": "google:opaque-google-id", "provider": "google"}
-        contexts = [{"origin_id": "mega", "sensitive_origin": False},
-                    {"origin_id": "mega", "sensitive_origin": True}]
-        for context in contexts:
-            with self.subTest(context=context):
-                self.google.legs.clear()
-                option = self.service._plans([stop], [60], context, origin)[0]
-                anchor = ({"latLng": {"latitude": origin["lat"], "longitude": origin["lon"]}}
-                          if context["sensitive_origin"] else {"address": PUBLIC_NAMES["mega"]})
-                self.assertEqual(self.google.legs, [(anchor, {"id": "opaque-google-id"}),
-                                                   ({"id": "opaque-google-id"}, anchor)])
-                self.assertEqual(option["budget_status"], "fits")
-                self.map.close()
+        self.addCleanup(self.map.close)
+        cases = [(identifier, deepcopy(origin), False) for identifier, origin in PUBLIC_ORIGINS.items()]
+        cases.append(("mega", {"lat": 51.088123, "lon": 71.405234}, True))
+        for identifier, origin, sensitive in cases:
+            for provider in ("google", "dgis"):
+                with self.subTest(identifier=identifier, sensitive=sensitive, provider=provider):
+                    self.google.legs.clear()
+                    original = deepcopy(origin)
+                    stop = {**poi("opaque-google-id" if provider == "google" else "2gis:synthetic",
+                                  "Синтетическая точка", origin["lat"] + .001, origin["lon"] + .001),
+                            "stop_id": provider + ":synthetic", "provider": provider}
+                    context = {"origin_id": identifier, "sensitive_origin": sensitive}
+                    option = self.service._plans([stop], [60], context, origin)[0]
+                    anchor = {"latLng": {"latitude": origin["lat"], "longitude": origin["lon"]}}
+                    waypoint = ({"id": stop["id"]} if provider == "google" else
+                                {"latLng": {"latitude": stop["lat"], "longitude": stop["lon"]}})
+                    self.assertEqual(self.google.legs, [(anchor, waypoint), (waypoint, anchor)])
+                    self.assertEqual(option["budget_status"], "fits")
+                    params = parse_qs(urlsplit(self.map.resolve({"ticket": option["map_ticket"]})["url"]).query)
+                    self.assertEqual(params["origin"], [f"{origin['lat']:.7f},{origin['lon']:.7f}"])
+                    self.assertEqual(params["origin"], params["destination"])
+                    self.assertEqual(params["waypoints"], ["place_id:" + stop["id"] if provider == "google" else
+                                                          f"{stop['lat']:.7f},{stop['lon']:.7f}"])
+                    self.assertEqual(origin, original)
 
 
 if __name__ == "__main__":

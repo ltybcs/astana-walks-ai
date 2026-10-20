@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from threading import BoundedSemaphore
 
 from .google_budget import GoogleError
-from .google_grounded import prepare, route_minutes, validate_grounding, WALK_WARNING, PUBLIC_NAMES
+from .google_grounded import prepare, route_minutes, validate_grounding, WALK_WARNING
 from .retrieval import architecture_evidence, detect_intent, distance_m, feature
 from .unified_narration import narrate
 
@@ -231,9 +231,9 @@ class UnifiedWalks:
 
     def _plans(self, selected, budgets, context, origin):
         memo = {}
-        anchor = ({"address": PUBLIC_NAMES[context["origin_id"]]}
-                  if not context.get("sensitive_origin") and context.get("origin_id") in PUBLIC_NAMES
-                  else _point(origin))
+        # Planner and Embed share this validated coordinate start. Public
+        # landmark names can resolve to a different place and must not reroute it.
+        anchor = {"latLng": {"latitude": origin["lat"], "longitude": origin["lon"]}}
         def leg(a, b, a_ref, b_ref):
             key = (a_ref, b_ref)
             if key not in memo:
