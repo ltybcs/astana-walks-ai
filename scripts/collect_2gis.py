@@ -52,6 +52,13 @@ def response_items(payload):
     if not isinstance(payload, dict) or not isinstance(payload.get("meta"), dict):
         raise CollectionError("Ожидается официальный ответ Places API с meta и result.")
     code = payload["meta"].get("code")
+    error = payload["meta"].get("error")
+    # Official HTTP-200 empty search envelope. Do not swallow auth/server
+    # errors, other 404 types, or a contradictory result/items payload.
+    if (type(code) is int and code == 404 and isinstance(error, dict)
+            and error.get("type") == "itemNotFound"
+            and "result" not in payload and "items" not in payload):
+        return []
     if code != 200 or type(code) is not int:
         raise CollectionError("Places API не подтвердил успешный ответ (meta.code != 200).")
     result = payload.get("result")

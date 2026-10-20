@@ -188,6 +188,14 @@ class CategoryCatalogTests(unittest.TestCase):
         self.assertEqual(parse_search_intent("Хочу музей или кафе возле главного входа")["mode"], "walk")
         self.assertEqual(parse_search_intent("Не хочу кидать шары в кегли, хочу музей")["excluded_categories"], ["bowling"])
 
+    def test_user_cafeshka_request_keeps_cafe_as_the_primary_activity(self):
+        result = parse_search_intent("Мне срочно нужно в кафешку на 3 часаоколо Президентского парка")
+        self.assertTrue(result["supported"])
+        self.assertEqual(result["categories"], ["cafe"])
+        self.assertEqual(result["mode"], "single_venue")
+        self.assertEqual(parse_search_intent("Не хочу кафешку, хочу музей")["excluded_categories"], ["cafe"])
+        self.assertEqual(parse_search_intent("Не хочу кафешку, хочу музей")["categories"], ["museum"])
+
     def test_preferences_negation_privacy_and_legacy_wrapper(self):
         result = parse_search_intent("Хочу тихое кафе с розеткой для коляски PRIVATE_NAME 51.1,71.4 https://private.example")
         self.assertEqual(result["preferences"], ["quiet", "socket", "accessible"])

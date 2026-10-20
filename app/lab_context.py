@@ -8,6 +8,7 @@ import re
 import unicodedata
 
 PUBLIC_ORIGINS = {
+    "presidential_park": {"lat": 51.1248323, "lon": 71.4579236, "label": "Президентский парк — ориентировочная публичная точка"},
     "airport": {"lat": 51.027825, "lon": 71.463770, "label": "Аэропорт Астаны — ориентировочная точка терминала T1"},
     "central_park": {"lat": 51.1548152, "lon": 71.4195693, "label": "Центральный парк (Парк Астана) — ориентировочная публичная точка"},
     "abu_dhabi": {"lat": 51.1219718, "lon": 71.4279322, "label": "Abu Dhabi Plaza — публичная точка"},
@@ -18,12 +19,14 @@ PUBLIC_ORIGINS = {
 }
 EXPO_REFERENCE = "https://www.wikidata.org/w/index.php?title=Q1074528&oldid=2425505851#P625"
 ORIGIN_REFERENCES = {
+    "presidential_park": "https://www.openstreetmap.org/way/112177946",
     "expo": EXPO_REFERENCE,
     "airport": "https://www.openstreetmap.org/way/166500591",
     "central_park": "https://www.openstreetmap.org/relation/15957444",
     "abu_dhabi": "https://www.openstreetmap.org/way/762780007",
 }
 ORIGIN_PATTERNS = {
+    "presidential_park": r"(?<!\w)(?:президентск\w*\s+парк\w*|president(?:ial)?\s+park|президент\s+саяба\w*)(?!\w)",
     "airport": r"(?<!\w)(?:аэропорт\w*|airport|nqz)(?!\w)",
     "central_park": r"(?<!\w)(?:центральн\w*\s+парк\w*|central\s+park|парк\s+астана)(?!\w)",
     "abu_dhabi": r"(?<!\w)(?:абу[\s-]+даби(?:[\s-]+плаза)?|abu[\s-]+dhabi(?:[\s-]+plaza)?)(?!\w)",
@@ -52,6 +55,7 @@ class ContextError(ValueError):
 def _normalize(text):
     text = unicodedata.normalize("NFKC", text).casefold().replace("ё", "е")
     text = re.sub("[\u200b\u200c\u200d\u2060\ufeff]", "", text)
+    text = re.sub(r"(\d+\s*(?:час(?:а|ов)?|ч|минут(?:а|ы)?|мин))(?=(?:около|возле|рядом)\b)", r"\1 ", text)
     return re.sub(r"\s+", " ", text).strip()
 
 

@@ -67,6 +67,29 @@ def _eligible(place, intent):
     return True
 
 
+def _stop_reason(stop, option, intent):
+    """Explain an existing choice from its own evidence and verified plan."""
+    category = stop.get("category")
+    spec = CATEGORY_CATALOG.get(category)
+    labels = {"attraction":"достопримечательность", "monument":"памятник", "viewpoint":"видовая точка"}
+    provider = {"osm":"OpenStreetMap", "dgis":"2ГИС", "google":"Google Maps"}[stop["provider"]]
+    if spec or category in labels:
+        label = spec["ru_label"].lower() if spec else labels[category]
+        parts = ["Подходит по типу: " + label + ", по данным " + provider + "."]
+    else:
+        parts = ["Google Maps предложил это место рядом с вашим стартом."]
+    for wanted, key, fact in (("socket","socket","розетки"), ("accessible","wheelchair","доступный вход"),
+                               ("strict_quiet","quiet","тишина")):
+        if intent.get(wanted) and feature(stop,key) == "yes":
+            parts.append("В источнике подтверждены: " + fact + ".")
+    if intent.get("night") and stop.get("opening_hours") == "24/7":
+        parts.append("В источнике указан круглосуточный режим.")
+    plan = option["plan"]
+    if option.get("route_built") and plan.get("verified") and plan.get("returns_to_origin"):
+        parts.append("Пеший путь с возвращением проверен; план укладывается в " + str(option["budget_minutes"]) + " мин.")
+    return " ".join(parts)
+
+
 def _stop(place, provider, source_id):
     return {"stop_id": provider + ":" + place["id"], "id": place["id"], "source_id": source_id,
             "provider": provider, **{key: deepcopy(place.get(key)) for key in
@@ -183,6 +206,9 @@ class UnifiedWalks:
             # Both adapter and local retrieval are bounded; never keep content
             # workers alive after the request or start a background retry.
             executor.shutdown(wait=True, cancel_futures=True)
+        for option in alternatives:
+            for stop in option["stops"]:
+                stop["why_text"] = _stop_reason(stop, option, intent)
         selected_union = []
         seen = set()
         for option in alternatives:
@@ -204,8 +230,6 @@ class UnifiedWalks:
                                  "candidate_count": len(candidates[provider]),
                                  "selected_count": sum(stop["provider"] == provider for stop in selected_union)}
         warnings = list(context["assumptions"]) + list(live.get("warnings", []))
-        if any(word in query.casefold() for word in ("вылет", "аэропорт", "рейс", "flight", "airport")):
-            warnings.append("Дорога в аэропорт, регистрация, контроль и посадка не входят в бюджет прогулки. Два часа до вылета не означают два свободных часа; возможность выхода и запас до посадки проверьте самостоятельно.")
         if "интерактив" in query.casefold():
             warnings.append("Категория музея не подтверждает интерактивы, текущую выставку или возрастной допуск; эти условия требуют отдельной проверки.")
         warnings += [WALK_WARNING, "Время остановок предложено приложением; часы работы, доступ и свойства мест могут быть неизвестны.",

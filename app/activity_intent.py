@@ -53,7 +53,9 @@ _PUBLIC_ANCHOR = re.compile(
 
 
 def _normalize(query):
-    return unicodedata.normalize("NFKC", query).casefold().replace("ё", "е").replace("’", "'")
+    text = unicodedata.normalize("NFKC", query).casefold().replace("ё", "е").replace("’", "'")
+    # Repair a missing space only after a numeric duration, matching context.
+    return re.sub(r"(\d+\s*(?:час(?:а|ов)?|ч|минут(?:а|ы)?|мин))(?=(?:около|возле|рядом)\b)", r"\1 ", text)
 
 
 def _clause_prefix(query, start):

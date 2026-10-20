@@ -27,7 +27,7 @@ from .activity_intent import parse_search_intent
 from .category_catalog import CATEGORY_CATALOG
 from .retrieval import detect_intent
 
-PUBLIC_NAMES = {"airport": "Astana airport terminal T1, Kazakhstan", "central_park": "Central Park (Astana Park), Astana, Kazakhstan", "abu_dhabi": "Abu Dhabi Plaza, Astana, Kazakhstan", "mega": "MEGA Silk Way, Astana, Kazakhstan", "baiterek": "Baiterek, Astana, Kazakhstan", "river": "Ishim River embankment, Astana, Kazakhstan", "expo": "EXPO 2017, Astana, Kazakhstan"}
+PUBLIC_NAMES = {"presidential_park": "Presidential Park, Astana, Kazakhstan", "airport": "Astana airport terminal T1, Kazakhstan", "central_park": "Central Park (Astana Park), Astana, Kazakhstan", "abu_dhabi": "Abu Dhabi Plaza, Astana, Kazakhstan", "mega": "MEGA Silk Way, Astana, Kazakhstan", "baiterek": "Baiterek, Astana, Kazakhstan", "river": "Ishim River embankment, Astana, Kazakhstan", "expo": "EXPO 2017, Astana, Kazakhstan"}
 # Operator-authored public search context, not imported Google place facts.
 # Public labels are search hints; unified routing uses validated coordinates.
 SEARCH_AREAS = {**PUBLIC_NAMES, "mega": "EXPO / Nur Alem рядом с MEGA Silk Way, Астана"}

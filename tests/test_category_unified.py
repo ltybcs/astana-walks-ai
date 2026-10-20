@@ -189,8 +189,7 @@ class CategoryUnifiedTests(unittest.TestCase):
                         self.assertLessEqual(option["plan"]["total_minutes"], option["budget_minutes"])
                         self.assertEqual(option["plan"]["legs"][-1]["to_ref"], "origin")
                 if origin_id == "airport":
-                    self.assertTrue(any("аэропорт" in warning.lower() or "рейс" in warning.lower()
-                                        for warning in result["warnings"]))
+                    self.assertIn("166500591", result["resolved_context"]["origin_reference"])
 
 
 if __name__ == "__main__":

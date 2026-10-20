@@ -29,6 +29,20 @@ class CategoryContextTests(unittest.TestCase):
             self.assertEqual(self.resolve("Хочу " + phrase + " у Байтерека")["time_of_day"], "day")
             self.assertEqual(self.resolve("Хочу " + phrase + " у Байтерека ночью")["time_of_day"], "night")
 
+    def test_exact_cafeshka_glued_time_query_uses_named_park_without_gps(self):
+        from app.activity_intent import parse_search_intent
+        query="Мне срочно нужно в кафешку на 3 часаоколо Президентского парка"
+        for extra in ({},{"geolocation":{"lat":55.7,"lon":37.6},"location_status":"granted"}):
+            result=resolve_request({"query":query,**extra},probe=True)
+            context=result["resolved_context"]
+            self.assertFalse(result["needs_geolocation"])
+            self.assertEqual(context["origin_id"],"presidential_park")
+            self.assertEqual(context["budget_options"],[180])
+            self.assertIn("112177946",context["origin_reference"])
+            intent=parse_search_intent(result["query"])
+            self.assertEqual(intent["categories"],["cafe"])
+            self.assertTrue(intent["supported"])
+
     def test_new_known_landmark_still_wins_over_untrusted_gps(self):
         context=resolve_request({"query":"У Abu Dhabi Plaza хочу кино на час", "geolocation":{"lat":55.7,"lon":37.6}})["resolved_context"]
         self.assertEqual(context["origin_id"],"abu_dhabi")

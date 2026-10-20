@@ -74,6 +74,9 @@ function clearResult() {
   $("google-original-text").textContent = "";
   $("walk-context").textContent = "";
   $("walk-budget").textContent = "";
+  show("walk-warnings", false);
+  $("walk-explanation").open = false;
+  $("source-receipt-details").open = false;
 }
 function cancelFlow(message = "Сообщение изменилось. Подбор можно запустить снова.") {
   state.requestId += 1;
@@ -94,7 +97,10 @@ function onInputChange() {
   cancelFlow();
 }
 function errorMessage(error) {
-  if (error && error.code === "known_start_required") return "Старт не определён. Поиск по источникам и обращение к модели не выполнены.";
+  if (error && error.code === "known_start_required") {
+    const reason = typeof error.message === "string" && error.message.trim() ? error.message : "Старт не определён.";
+    return reason + " Поиск по источникам и обращение к модели не выполнены.";
+  }
   if (error && error.code === "timeout") return "Ожидание завершено. Удалённый запрос мог выполниться и учесться в лимите. Автоматического повтора нет.";
   if (error && error.name === "AbortError") return "Подбор отменён. Удалённый запрос мог выполниться и учесться в лимите.";
   if (error && typeof error.message === "string") return error.message;
@@ -123,8 +129,14 @@ function startKnown(context) {
     && !context.is_city_sample && context.origin_source !== "city_sample"
     && context.origin_source !== "pending_geolocation");
 }
-function startError() {
-  const error = new Error("Старт не определён. Поиск не выполнен.");
+function startError(reason) {
+  const messages = {
+    denied: "Браузер не разрешил доступ к геолокации.",
+    timeout: "Браузер не успел определить местоположение за 8 секунд.",
+    unsupported: "Этот браузер не поддерживает геолокацию.",
+    unavailable: "Браузер не смог определить местоположение."
+  };
+  const error = new Error(messages[reason] || "Старт не определён.");
   error.code = "known_start_required";
   return error;
 }
@@ -187,9 +199,7 @@ function validateResult(data) {
 function contextText(context) {
   const time = {day: "день", evening: "вечер", night: "ночь"}[context.time_of_day] || "текущее время";
   const source = ORIGIN_SOURCES[context.origin_source] || "подтверждённый старт";
-  const assumptions = Array.isArray(context.assumptions) ? context.assumptions.filter(value => typeof value === "string") : [];
-  return "Старт: " + context.origin.label + " · " + source + " · " + time
-    + (assumptions.length ? "\n" + assumptions.join(" ") : "");
+  return "Старт: " + context.origin.label + " · " + source + " · " + time;
 }
 function renderGoogleSources(hostId, sources) {
   const host = $(hostId);
@@ -251,7 +261,9 @@ function renderResult(data) {
   renderGoogleSources("google-original-sources", data.grounding.sources);
   const warnings = $("walk-warnings");
   warnings.replaceChildren();
-  if (Array.isArray(data.warnings)) data.warnings.filter(value => typeof value === "string").forEach(value => warnings.append(node("li", value)));
+  const notes = [...(Array.isArray(data.warnings) ? data.warnings : []),
+                 ...(Array.isArray(data.resolved_context.assumptions) ? data.resolved_context.assumptions : [])];
+  [...new Set(notes.filter(value => typeof value === "string"))].forEach(value => warnings.append(node("li", value)));
   show("walk-warnings", warnings.children.length > 0);
   renderOtherSources(data.sources);
   const variants = $("walk-variants");
@@ -373,6 +385,7 @@ function selectOption(id) {
     const item = node("li");
     const content = node("div", null, "stop-content");
     content.append(node("strong", stop.name));
+    if (typeof stop.why_text === "string" && stop.why_text.trim()) content.append(node("p", "Почему: " + stop.why_text, "stop-why"));
     content.append(node("p", PROVIDERS[stop.provider] + (finite(stop.visit_minutes) ? " · посещение " + stop.visit_minutes + " мин" : "")));
     content.append(link("Источник места ↗", stop.source_url, stop.provider));
     item.append(content);
@@ -410,7 +423,7 @@ async function submitWalk(event) {
       const location = await requestLocation(id, sig);
       if (!current(id, sig)) return;
     if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
-      if (location.status !== "granted") throw startError();
+      if (location.status !== "granted") throw startError(location.status);
       payload.location_status = "granted";
       payload.geolocation = location.geolocation;
       probe = await post("/api/context", payload, controller.signal);

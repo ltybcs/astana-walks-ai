@@ -85,6 +85,31 @@ class UnifiedDGISTests(unittest.TestCase):
         self.assertEqual(self.transport.call_count, 2)
         self.assertEqual(result["category"], "cafe")
 
+    def test_official_item_not_found_is_empty_and_charged_once_without_retry(self):
+        payload = {"meta": {"code": 404, "error": {"type": "itemNotFound"}}}
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(payload).encode())
+        result = self.client.search("Хочу в боулинг", ORIGIN, 1000)
+        self.assertEqual(result["places"], [])
+        self.assertEqual(result["quota"]["used"], 1)
+        self.assertEqual(result["search_scope"]["returned_count"], 0)
+        self.assertEqual(self.transport.call_count, 1)
+        self.assertEqual(len(self.state()["attempts"]), 1)
+
+    def test_other_error_envelopes_and_conflicting_not_found_remain_failures(self):
+        invalid = [{"meta": {"code": code, "error": {"type": "itemNotFound"}}}
+                   for code in (401, 403, 500, "404")]
+        invalid += [{"meta": {"code": 404, "error": {"type": "otherNotFound"}}},
+                    {"meta": {"code": 404, "error": {"type": "itemNotFound"}},
+                     "result": {"items": [card()]}}]
+        for payload in invalid:
+            before = len(self.state()["attempts"])
+            self.transport.side_effect = lambda *a, value=payload, **k: Response(json.dumps(value).encode())
+            with self.subTest(payload=payload), self.assertRaises(legacy.DGISLiveError) as caught:
+                self.client.search("Хочу в боулинг", ORIGIN, 1000)
+            self.assertEqual(caught.exception.code, "provider_invalid_response")
+            self.assertEqual(len(self.state()["attempts"]), before + 1)
+        self.assertEqual(self.transport.call_count, len(invalid))
+
     def test_constructor_requires_explicit_absolute_root_and_bounded_timeout(self):
         for root, timeout in (("relative", 25), (self.root, 0), (self.root, 26), (self.root, True), (self.root, float("nan"))):
             with self.subTest(root=root, timeout=timeout), self.assertRaises(ValueError):
