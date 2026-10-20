@@ -415,5 +415,35 @@ class UnifiedNarrationTests(unittest.TestCase):
         self.assertEqual(status, "validated_structure_sources_and_known_claims")
 
 
+    def test_coordinated_club_unknown_subjects_share_only_their_own_predicate(self):
+        self.intent["categories"] = ["computer_club"]
+        for stop in self.stops:
+            stop.update(category="computer_club", features={}, opening_hours=None)
+        for statement in ("Наличие игровых компьютеров и свободных мест не подтверждено.",
+                          "Наличие свободных мест и игровых компьютеров не подтверждено.",
+                          "Игровые компьютеры и свободные места неизвестны.",
+                          "Наличие свободных мест и мощных игровых компьютеров пока неизвестно."):
+            with self.subTest(statement=statement):
+                self.calls.clear()
+                value = {**self.answer, "text": statement + " Предлагаю игровую паузу в компьютерном клубе."}
+                answer, status = self.run_narrator(http_open=self.model(value))
+                self.assertEqual(answer, value)
+                self.assertEqual(status, "validated_structure_sources_and_known_claims")
+                self.assertEqual(len(self.calls), 1)
+        for statement, expected in (
+            ("Есть компьютеры; наличие свободных мест не подтверждено.", "equipment"),
+            ("Есть свободные места; наличие игровых компьютеров неизвестно.", "availability"),
+            ("Есть компьютеры и свободные места. Условия посещения неизвестны.", "equipment"),
+            ("Наличие игровых компьютеров и свободных мест не подтверждено, но есть компьютеры.", "equipment"),
+        ):
+            with self.subTest(statement=statement):
+                self.calls.clear()
+                value = {**self.answer, "text": statement + " Предлагаю игровую паузу в компьютерном клубе."}
+                answer, status = self.run_narrator(http_open=self.model(value))
+                self.assertIsNone(answer)
+                self.assertEqual(status, "unsupported_computer_club_" + expected)
+                self.assertEqual(len(self.calls), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

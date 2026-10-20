@@ -176,8 +176,18 @@ def _club_claim_rejection(prose):
     advice = r"(?:проверь(?:те)?|проверить|проверять|уточни(?:те)?|уточнить|уточнять|спроси(?:те)?|спросить|узнай(?:те)?|узнать)"
     linking = (r"(?:наличие|доступность|есть|ли|и|или|свободн\w*|мощн\w*|игров\w*|современн\w*|"
                r"компьютер\w*|оборудовани\w*|мест\w*)")
+    equipment_np = (r"(?:(?:игров\w*|мощн\w*|современн\w*)\s+){0,2}"
+                    r"(?:компьютер(?:ы|ов|ами|ам|ах|ом|а|у|е)?|оборудовани\w*|пк)")
+    seats_np = r"свободн\w*\s+(?:игров\w*\s+)?мест\w*"
+    coordinated_unknown = (r"\s*(?:наличие\s+)?(?:" + equipment_np + r"\s+(?:и|или)\s+" + seats_np
+                           + "|" + seats_np + r"\s+(?:и|или)\s+" + equipment_np
+                           + r")\s+(?:пока\s+)?(?:неизвестн\w*|не\s+подтвержден\w*|не\s+гарантирован\w*)\s*")
     normalized = prose.casefold().replace("ё", "е")
     for clause in re.split(r"[.!?;,\n]+|\s+(?:но|однако|зато)\s+", normalized):
+        # One anchored nominal subject can share one unknown predicate. It
+        # contains no affirmative verb and grants no exception to other clauses.
+        if re.fullmatch(coordinated_unknown, clause):
+            continue
         for kind, pattern in subjects:
             for match in re.finditer(pattern, clause):
                 prefix, suffix = clause[max(0, match.start()-120):match.start()], clause[match.end():match.end()+80]
