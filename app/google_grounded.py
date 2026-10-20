@@ -25,6 +25,9 @@ from .google_client import GoogleClient, json_bytes, strict_json, valid_place_id
 from .llm import LLMConfig, NoRedirect
 
 PUBLIC_NAMES = {"mega": "MEGA Silk Way, Astana, Kazakhstan", "baiterek": "Baiterek, Astana, Kazakhstan", "river": "Ishim River embankment, Astana, Kazakhstan"}
+# Operator-authored public search context, not imported Google place facts.
+# Routing still starts/ends at PUBLIC_NAMES, not at these wider search areas.
+SEARCH_AREAS = {**PUBLIC_NAMES, "mega": "EXPO / Nur Alem рядом с MEGA Silk Way, Астана"}
 CATEGORY_WORDS = {
     "walk": (r"прогул\w*|погуля\w*|walk\w*", "достопримечательности, архитектура, площади и бульвары для внешнего осмотра"),
     "park": (r"парк\w*|сад\w*|park\w*|garden\w*", "парки и сады"),
@@ -113,8 +116,8 @@ def prepare(payload, resolver):
     intent = safe_intent(request["query"])
     categories = "; ".join(CATEGORY_WORDS[name][1] for name in intent["categories"])
     preferences = "; ".join(PREF_WORDS[name][1] for name in intent["preferences"])
-    text = (f"Найдите места для одной короткой пешей остановки рядом с {PUBLIC_NAMES[context['origin_id']]}. "
-            f"Интересы: {categories}. Бюджет прогулки с возвратом: {context['minutes']} минут. "
+    text = (f"{categories} в районе {SEARCH_AREAS[context['origin_id']]}. "
+            f"Одна пешая остановка с возвратом, бюджет {context['minutes']} минут. "
             f"Время суток: {context['time_of_day']}.")
     if preferences:
         text += " Пожелания: " + preferences + "."
@@ -156,7 +159,7 @@ def validate_grounding(data):
     return {"summary": data["summary"], "sources": sources}
 
 
-def closest_source(sources, origin, radius_meters):
+def closest_source(sources, origin, radius_meters, min_distance_meters=0):
     # Only source metadata, never names or POI facts extracted from summary.
     located = [source for source in sources if source.get("location") is not None]
     if not located:
@@ -168,7 +171,7 @@ def closest_source(sources, origin, radius_meters):
         lon = math.radians(point["longitude"] - origin["lon"])
         hav = math.sin(lat / 2) ** 2 + math.cos(first) * math.cos(second) * math.sin(lon / 2) ** 2
         return 2 * 6371000 * math.asin(min(1, math.sqrt(hav)))
-    eligible = [source for source in located if score(source) <= radius_meters]
+    eligible = [source for source in located if min_distance_meters <= score(source) <= radius_meters]
     return min(eligible, key=score) if eligible else None
 
 
@@ -201,14 +204,15 @@ def make_plan(minutes, outgoing, incoming):
             "total_minutes": None, "walk_minutes": None, "outbound_minutes": outward,
             "return_minutes": returning, "visit_minutes": None, "buffer_minutes": 5,
             "route_attributions": [value for value in (out_attribution, return_attribution) if value],
-            "visit_is_proposal": True, "verification_scope": "Google returned both WALK durations; physical access and safety are unverified"}
+            "visit_is_proposal": True, "verification_scope": "WALK durations are incomplete or unverified; physical access and safety are unverified"}
     if outward is None or returning is None:
         return base, "unverified"
     # A proposed pause is our allocation, never an opening/event/service fact.
     remaining = minutes - outward - returning - 5
     visit = min(20, max(0, remaining))
     base.update(total_minutes=outward + returning + visit + 5, walk_minutes=outward + returning,
-                visit_minutes=visit, verified=True)
+                visit_minutes=visit, verified=True,
+                verification_scope="Google returned both WALK durations; physical access and safety are unverified")
     return base, "fits" if remaining >= 5 else "does_not_fit"
 
 
@@ -419,7 +423,8 @@ class GoogleGrounded:
             self.signer.verify(payload.get("preview_token"), "preview", consume=True)
             with self.client.workflow(60) if hasattr(self.client, "workflow") else nullcontext():
                 grounding = validate_grounding(self.client.search_places(parameters))
-                selected = closest_source(grounding["sources"], context["origin"], parameters["locationBias"]["circle"]["radiusMeters"])
+                minimum_stop_distance = 100 if intent["categories"] == ["walk"] else 0
+                selected = closest_source(grounding["sources"], context["origin"], parameters["locationBias"]["circle"]["radiusMeters"], minimum_stop_distance)
                 selected_id = selected["id"] if selected else None
                 route_errors = []
                 outgoing = incoming = {}
@@ -453,14 +458,14 @@ class GoogleGrounded:
                 directions = "https://www.google.com/maps/dir/?" + urlencode({"api": "1", "origin": anchor_name, "destination": anchor_name, "waypoints": str(selected["location"]["latitude"]) + "," + str(selected["location"]["longitude"]), "waypoint_place_ids": selected_id, "travelmode": "walking"})
             warnings = [WALK_WARNING, "Часы, вход, розетки, тишина и семейная безопасность не гарантируются. Google-ответ не добавляется в OSM-базу."]
             if not selected_id:
-                warnings.append("Google не вернул мест с координатами внутри близкого радиуса. Полный summary показан как ответ источника, а не подходящий маршрут в вашем бюджете.")
+                warnings.append("Google не вернул подходящей остановки в выбранном диапазоне расстояний. Полный summary показан как ответ источника, а не подходящий маршрут в вашем бюджете.")
             if status != "fits":
                 warnings.append("Этот маршрут не подтверждён как укладывающийся в бюджет; уточните старт/время или проверьте другой вариант.")
             return {"mode": "google-grounded-llm" if answer else "google-grounding-summary",
                     "resolved_context": context, "answer": answer, "grounding": grounding, "plan": plan,
                     "budget_status": status, "selected_place_id": selected_id, "selection_token": token,
                     "directions_url": directions, "quota": self.client.budget.status(), "warnings": warnings,
-                    "diagnostics": {"llm_status": llm_status, "route_errors": route_errors, "selection_policy": "nearest_google_source_within_budget_derived_circle", "nearby_radius_meters": parameters["locationBias"]["circle"]["radiusMeters"],
+                    "diagnostics": {"llm_status": llm_status, "route_errors": route_errors, "selection_policy": "nearest_google_source_within_budget_derived_circle", "nearby_radius_meters": parameters["locationBias"]["circle"]["radiusMeters"], "minimum_stop_distance_meters": minimum_stop_distance,
                                     "google_source": "Maps Grounding Lite", "semantic_entailment_guaranteed": False, "cache_status": cache_status}}
         finally:
             self._slots.release()

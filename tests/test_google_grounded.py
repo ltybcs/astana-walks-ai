@@ -51,7 +51,10 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertEqual(preview["resolved_context"]["origin_id"], "mega")
         self.assertEqual(preview["resolved_context"]["minutes"], 45)
         self.assertEqual(preview["structured_intent"], {"categories": ["cafe"], "preferences": ["quiet", "socket"]})
-        self.assertIn("MEGA Silk Way, Astana, Kazakhstan", preview["outbound_search_text"])
+        self.assertIn("EXPO / Nur Alem рядом с MEGA Silk Way, Астана", preview["outbound_search_text"])
+        self.assertIn("45 минут", preview["outbound_search_text"])
+        self.assertIn("Время суток: day", preview["outbound_search_text"])
+        self.assertIn("розетка только при явном подтверждении", preview["outbound_search_text"])
         self.assertEqual(preview["nearby_radius_meters"], 1050)
         self.assertEqual(preview["outbound_search_parameters"]["locationBias"],
                          {"circle": {"center": {"latitude": 51.0892, "longitude": 71.4074}, "radiusMeters": 1050}})
@@ -148,6 +151,8 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertEqual(calls[1]["arguments"]["destination"], {"placeId": "mock-place"})
         self.assertEqual(calls[2]["arguments"]["origin"], {"placeId": "mock-place"})
         self.assertEqual(calls[1]["arguments"]["origin"], calls[2]["arguments"]["destination"])
+        self.assertEqual(calls[1]["arguments"]["origin"], {"address": "MEGA Silk Way, Astana, Kazakhstan"})
+        self.assertNotIn("EXPO", calls[1]["arguments"]["origin"]["address"])
         self.assertIn("travelmode=walking", result["directions_url"])
         self.assertIn("waypoint_place_ids=mock-place", result["directions_url"])
         self.assertNotIn("DRIVE", result["directions_url"])
@@ -223,16 +228,40 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertEqual(self.provider.requests, [])
 
     def test_closest_uses_metadata_not_first_or_summary_names(self):
-        second = deepcopy(self.provider.search["places"][0])
+        prototype = deepcopy(self.provider.search["places"][0])
         self.provider.search["places"][0]["location"] = {"latitude": 52, "longitude": 72}
-        second.update(id="closer", place="places/closer")
-        second["location"] = {"latitude": 51.0892, "longitude": 71.4074}
-        self.provider.search["places"].append(second)
-        self.provider.search["summary"] = "Порядок текста не определяет географическую близость [0], [1]."
+        origin = deepcopy(prototype)
+        origin.update(id="origin", place="places/origin")
+        origin["location"] = {"latitude": 51.0892, "longitude": 71.4074}
+        origin["googleMapsLinks"]["placeUrl"] = "https://www.google.com/maps/place/?q=place_id:origin"
+        nearby = deepcopy(prototype)
+        nearby.update(id="nearby", place="places/nearby")
+        nearby["location"] = {"latitude": 51.0937, "longitude": 71.4074}
+        nearby["googleMapsLinks"]["placeUrl"] = "https://www.google.com/maps/place/?q=place_id:nearby"
+        self.provider.search["places"].extend([origin, nearby])
+        self.provider.search["summary"] = "Дальний источник [0], сам старт [1] и другая близкая остановка [2]."
         self.service.narrator = lambda *args: (None, "not_called_live")
+        for query, expected, minimum in (
+            (FORM["query"], "nearby", 100),
+            ("хочу архитектуру", "origin", 0),
+            ("хочу кофе и прогулку", "origin", 0),
+        ):
+            with self.subTest(query=query):
+                form = {"query": query, "origin_id": "mega", "minutes": 45}
+                result = self.service.recommend(self.consent(form))
+                self.assertEqual(result["selected_place_id"], expected)
+                self.assertEqual(result["diagnostics"]["minimum_stop_distance_meters"], minimum)
+                self.assertEqual(len(result["grounding"]["sources"]), 3)
+                self.assertEqual(result["grounding"]["summary"], self.provider.search["summary"])
+        self.provider.search["places"] = [origin]
+        self.provider.search["summary"] = "Только сам старт [0]."
+        before_model, before_http = len(self.calls), len(self.provider.requests)
         result = self.service.recommend(self.consent())
-        self.assertEqual(result["selected_place_id"], "closer")
-        self.assertEqual(len(result["grounding"]["sources"]), 2)
+        self.assertIsNone(result["selected_place_id"])
+        self.assertIsNone(result["answer"])
+        self.assertEqual(len(self.calls), before_model)
+        self.assertEqual(len(self.provider.requests) - before_http, 1)  # Search only; no legs.
+
 
     def test_unknown_invalid_and_long_routes_never_claim_fit(self):
         attribution = {"title": "Google Maps", "url": "https://www.google.com/maps"}
@@ -242,6 +271,7 @@ class GoogleGroundedTests(unittest.TestCase):
             self.assertEqual(status, "unverified")
             self.assertFalse(plan["verified"])
             self.assertIsNone(plan["total_minutes"])
+            self.assertNotIn("returned both", plan["verification_scope"])
         plan, status = make_plan(45, route("1200s"), route("2400s"))
         self.assertEqual(status, "does_not_fit")
         self.assertEqual(plan["outbound_minutes"], 20)
