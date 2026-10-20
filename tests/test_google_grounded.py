@@ -301,6 +301,8 @@ class GoogleGroundedTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(protected_claim_rejection(text), "unsupported_protected_quiet")
         self.assertIsNone(protected_claim_rejection("Тишина не подтверждена."))
+        self.assertEqual(protected_claim_rejection("Кафе тихое и часы неизвестны."), "unsupported_protected_quiet")
+        self.assertEqual(protected_claim_rejection("Кафе открыто и часы неизвестны."), "unsupported_protected_hours")
         from app.google_grounded import intent_action_instruction, intent_action_rejection
         instruction = intent_action_instruction({"categories": ["cafe"]})
         self.assertIn("пауза", instruction.replace("паузу", "пауза"))
