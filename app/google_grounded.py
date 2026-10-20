@@ -114,14 +114,13 @@ def prepare(payload, resolver):
     if context.get("origin_id") not in PUBLIC_NAMES or context.get("origin_source") == "explicit_coordinates":
         raise GoogleError("needs_context", "В Google-пилоте выберите публичный старт MEGA, Байтерек или набережную; свои GPS не отправляются.", 422)
     intent = safe_intent(request["query"])
-    categories = "; ".join(CATEGORY_WORDS[name][1] for name in intent["categories"])
+    categories = "; ".join(CATEGORY_WORDS[name][1] for name in intent["categories"] if name != "walk" or len(intent["categories"]) == 1)
     preferences = "; ".join(PREF_WORDS[name][1] for name in intent["preferences"])
-    text = (f"{categories} в районе {SEARCH_AREAS[context['origin_id']]}. "
-            f"Одна пешая остановка с возвратом, бюджет {context['minutes']} минут. "
-            f"Время суток: {context['time_of_day']}.")
+    text = ("Прогулочные площади и архитектура на территории EXPO рядом с MEGA Silk Way, Астана. Nur Alem — только внешний осмотр."
+            if intent["categories"] == ["walk"] and context["origin_id"] == "mega"
+            else f"{categories} в районе {SEARCH_AREAS[context['origin_id']]}.")
     if preferences:
         text += " Пожелания: " + preferences + "."
-    text += " Не предполагайте неизвестные часы, безопасность, розетки или доступ."
     radius = max(100, min(2000, math.floor((context["minutes"] - 10) * 60 / 2)))
     parameters = {"textQuery": text, "languageCode": "ru", "regionCode": "KZ",
                   "locationBias": {"circle": {"center": {"latitude": context["origin"]["lat"], "longitude": context["origin"]["lon"]},

@@ -52,8 +52,10 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertEqual(preview["resolved_context"]["minutes"], 45)
         self.assertEqual(preview["structured_intent"], {"categories": ["cafe"], "preferences": ["quiet", "socket"]})
         self.assertIn("EXPO / Nur Alem рядом с MEGA Silk Way, Астана", preview["outbound_search_text"])
-        self.assertIn("45 минут", preview["outbound_search_text"])
-        self.assertIn("Время суток: day", preview["outbound_search_text"])
+        self.assertEqual(preview["resolved_context"]["minutes"], 45)
+        self.assertEqual(preview["resolved_context"]["time_of_day"], "day")
+        self.assertNotIn("45", preview["outbound_search_text"])
+        self.assertNotIn("day", preview["outbound_search_text"])
         self.assertIn("розетка только при явном подтверждении", preview["outbound_search_text"])
         self.assertEqual(preview["nearby_radius_meters"], 1050)
         self.assertEqual(preview["outbound_search_parameters"]["locationBias"],
@@ -80,12 +82,18 @@ class GoogleGroundedTests(unittest.TestCase):
                 self.assertEqual(preview["outbound_search_parameters"]["pageSize"], 5)
                 self.assertIs(preview["outbound_search_parameters"]["includeExtendedDetails"], False)
                 if categories == ["walk"]:
-                    for interest in ("достопримечательности", "архитектура", "площади", "бульвары"):
-                        self.assertIn(interest, preview["outbound_search_text"])
+                    self.assertEqual(preview["outbound_search_text"],
+                                     "Прогулочные площади и архитектура на территории EXPO рядом с MEGA Silk Way, Астана. Nur Alem — только внешний осмотр.")
+                    self.assertEqual(preview["resolved_context"]["minutes"], 45)
+                    self.assertEqual(preview["resolved_context"]["time_of_day"], "day")
                     self.assertNotIn("парки", preview["outbound_search_text"])
+                if "cafe" in categories:
+                    self.assertIn("кафе для короткой паузы с кофе", preview["outbound_search_text"])
+                    self.assertNotIn("архитектура", preview["outbound_search_text"])
                 if categories == ["park"]:
                     self.assertIn("парки и сады", preview["outbound_search_text"])
                     self.assertNotIn("достопримечательности", preview["outbound_search_text"])
+                    self.assertNotIn("архитектура", preview["outbound_search_text"])
         self.assertEqual(self.provider.requests, [])
         self.assertEqual(self.budget.status()["used"], 0)
 
