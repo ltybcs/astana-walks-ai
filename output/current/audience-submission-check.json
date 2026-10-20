@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "slides": 10,
+  "speech_estimated_seconds": 380,
+  "speech_words": 800,
+  "audience_copy": true,
+  "pdf_method": "Exact artifact-tool renders; PPTX has native editable text/table",
+  "qa": {
+    "slide_visual_review": "all 10 inspected",
+    "pdf_pages": 10,
+    "pdf_visual_review": "all 10 Poppler renders inspected; pass",
+    "independent_visual_review": "final_review approved all10; speech-only notes confirmed",
+    "native_editability": "text and budget table native, table on slide6",
+    "notes_speech_only_scan": "pass"
+  },
+  "files": {
+    "assets/01-initial.png": "a8b4d0a8bbbce2260334f103dd169de62099ad9c2ba914ba2597ff434d1de5fc",
+    "assets/04-current-route.png": "3ab20962a290551ac9bcc0ec2d57dbf71b747d8faec708cc5e361196337da2f1",
+    "astana-walks-current.pdf": "4b2951a88660a7e23c11fcf7528744278a49f2b40a829225918fd9fd65359bcb",
+    "astana-walks-current.pptx": "3c24a0c6015ae979df5984de7f5a60c1c6bb225ee1ce0593faea1790d042fa9d",
+    "build_current.mjs": "6364f8e1c10d97f5b3ce9cea15b7380d8ff06b647b47f0c0129adc31970564a8",
+    "build_current_pdf.py": "3dbea3a993d8a56445d70303b574e5c95e16ebfede06aee9b10a63f9a17b420c",
+    "finalize-only.mjs": "7e6bbac3501f5e770f79b5e09e3b1d8f3e35e9930808ff879bc4c91f4f9fc8bc",
+    "presentation-validation.json": "d2600662c286830ae7dddd0105bc65f981d8196e0b946b8820ee96a3afd4ecd3",
+    "speaker-script.md": "dc879a96e585855fbbd6dab99e4e99a8e52d5b65794a9954b92d86d90e68e2f7"
+  }
+}

@@ -1,21 +1,21 @@
 {
   "schema": 1,
-  "reviewed_at_utc": "2026-10-20T18:30:08.193294+00:00",
+  "reviewed_at_utc": "2026-10-20T18:43:53.996277+00:00",
   "reviewer": "Codex independent final_review",
   "status": "APPROVED",
   "media": {
     "path": "astana-walks-current-demo.mp4",
-    "sha256": "9c4b79c9555c840ab3ad5d258aca283c6f37a6fa937d669f4501f3c24a38c16f",
-    "bytes": 1738468,
-    "duration_seconds": 100,
+    "sha256": "2d3f801c726c8878593cdbf05e223dea96012f8a4fb7a6dc247fcaa31a1b2d9d",
+    "bytes": 1505266,
+    "duration_seconds": 84,
     "width": 1920,
     "height": 1080,
     "fps": 25,
     "audio": false
   },
-  "manifest_sha256": "d319086b85e72907415d487425c63cb0053f2ace1b7aa27768d240f4c69f4c45",
-  "evidence_sha256": "6ff3d8964ff7d8598a2aa49915473093131523757b3f028a0777e4ec7affb6b6",
-  "publishing_notes_sha256": "5b99775761dc1d6e090a29def387bfffcf238f50f210901b4ae6e661212a52a5",
+  "manifest_sha256": "0643f69ec844f59bd027f9f1bbc6c3318ae9f6cce6337be15e09b32ad655d2bb",
+  "evidence_sha256": "06fea08640466948e0888bd3ad6752b7d4d22e92d5d31dbba27272d05bd60696",
+  "publishing_notes_sha256": "b45f1319f89d377946270600bf35205f8b7b3af43260158eac978356451608c1",
   "capture_source_commit": "33190241ee951f4939094d4a15ddf9baf7b66ee8",
   "runtime_merge_commit": "d2be9e00811b12eb188d84d936f7ba7da3019c20",
   "source_images": [
@@ -48,28 +48,20 @@
       "sha256": "3ab20962a290551ac9bcc0ec2d57dbf71b747d8faec708cc5e361196337da2f1",
       "matches": true,
       "caption_matches": true
-    },
-    {
-      "path": "video-frames/06-unsupported.png",
-      "sha256": "11519fced8b7307017cdf217b7b7fcf10cf67d190cd6148d40ea30c40bb5c219",
-      "matches": true,
-      "caption_matches": true
     }
   ],
   "checks": {
     "full_ffmpeg_decode": true,
-    "all_six_input_images_visually_reviewed": true,
-    "all_six_image_hashes_match_manifest_and_evidence": true,
+    "all_five_input_images_previously_visually_reviewed_and_same_bytes": true,
+    "all_five_image_hashes_match_manifest_and_evidence": true,
     "all_scene_captions_match_evidence": true,
-    "actual_encoded_samples_reviewed_seconds": [
+    "actual_final_encoded_samples_visually_reviewed_seconds": [
       45,
-      70,
-      92
+      83.8
     ],
-    "changed_caption_visually_rechecked_in_final_encode": true,
-    "other_final_samples_pixel_identical_to_reviewed_samples": true,
-    "sample_captions_readable_without_overlap": true,
-    "google_map_attribution_visible": true,
+    "last_frame_is_google_map_with_visible_attribution": true,
+    "captions_readable_without_overlap": true,
+    "no_refusal_scene_or_caption_in_current_manifest_or_evidence": true,
     "no_visible_backend_secrets_or_private_gps": true,
     "no_visible_raw_2gis_record_cards": true,
     "montage_disclosure_present": true,
@@ -78,14 +70,18 @@
   "resolved_findings": [
     {
       "code": "ai_budget_scene_wrong_crop",
-      "resolution": "Caption now describes only visible completed state; full AI text is explicitly not shown. Original technical image filename is retained."
+      "resolution": "Caption describes only visible completed state. Original technical image filename retained."
+    },
+    {
+      "code": "remove_refusal_segment",
+      "resolution": "Refusal segment removed completely from scene list and encoded video; video ends with the route map."
     }
   ],
   "blockers": [],
   "scope_limits": [
-    "Actual browser screenshot montage; not continuous real-time screen recording.",
+    "Actual browser screenshot montage; not continuous real-time recording.",
     "Desktop capture; no physical-phone verification.",
-    "AI status was reported as observed separately by the capture owner; this review does not claim that an AI badge or complete generated answer is visible in the video.",
+    "Complete generated AI answer and AI badge are not visible in the video.",
     "No new provider, model or GPS calls were made for this review.",
     "YouTube publication was not performed or verified."
   ]

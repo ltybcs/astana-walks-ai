@@ -25,11 +25,6 @@
       "image": "video-frames/04-current-route.png",
       "seconds": 26,
       "caption": "Одна карта с возвращением. Google показывает 16 мин / 1,2 км; оценки различаются."
-    },
-    {
-      "image": "video-frames/06-unsupported.png",
-      "seconds": 16,
-      "caption": "Неизвестная категория: честный отказ. Другие занятия вместо неё не предлагаются."
     }
   ],
   "capture": {
@@ -41,7 +36,6 @@
     "raw_provider_responses_saved": false,
     "backend_keys_saved": false,
     "route_and_model_case": "fresh computer_club request; public Baiterek origin; observed accepted AI badge and 120 minute budget",
-    "unknown_category_case": "fresh unsupported category refusal",
     "images": [
       {
         "image": "video-frames/01-initial.png",
@@ -67,11 +61,6 @@
         "image": "video-frames/04-current-route.png",
         "sha256": "3ab20962a290551ac9bcc0ec2d57dbf71b747d8faec708cc5e361196337da2f1",
         "captured_at_unix": 1792520441.4653726
-      },
-      {
-        "image": "video-frames/06-unsupported.png",
-        "sha256": "11519fced8b7307017cdf217b7b7fcf10cf67d190cd6148d40ea30c40bb5c219",
-        "captured_at_unix": 1792520617.0983076
       }
     ]
   }

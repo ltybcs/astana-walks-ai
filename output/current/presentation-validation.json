@@ -1,7 +1,7 @@
 {
   "schemaVersion": "presentation-finalization.v1",
-  "finalSha256": "750f630e9140b1dcda17ac4e462d2efc3d36343c0afdab7a91c32aafdf8d24a8",
-  "byteCount": 126159,
+  "finalSha256": "3c24a0c6015ae979df5984de7f5a60c1c6bb225ee1ce0593faea1790d042fa9d",
+  "byteCount": 174132,
   "packageIntegrity": {
     "chart_count": 0,
     "claim_boundary": "Structural package checks only; no slide text, notes, formulas, chart values, or native PowerPoint execution were inspected.",
@@ -19,13 +19,13 @@
     "finding_count": 0,
     "findings": [],
     "font_policy": {
-      "checked_text_script_count": 101,
+      "checked_text_script_count": 82,
       "native_font_rendering_verified": false,
       "observed_font_families": [
         "Arial"
       ],
       "observed_font_use_counts": {
-        "Arial": 101
+        "Arial": 82
       },
       "passed": true,
       "performed": true
@@ -40,13 +40,13 @@
     "exitCode": 0,
     "findingCount": 0,
     "fontPolicy": {
-      "checked_text_script_count": 101,
+      "checked_text_script_count": 82,
       "native_font_rendering_verified": false,
       "observed_font_families": [
         "Arial"
       ],
       "observed_font_use_counts": {
-        "Arial": 101
+        "Arial": 82
       },
       "passed": true,
       "performed": true
@@ -60,13 +60,13 @@
     "scriptFonts": {},
     "referenceSha256": null,
     "referenceFontsVerifiedInEncodedText": false,
-    "checked_text_script_count": 101,
+    "checked_text_script_count": 82,
     "native_font_rendering_verified": false,
     "observed_font_families": [
       "Arial"
     ],
     "observed_font_use_counts": {
-      "Arial": 101
+      "Arial": 82
     },
     "passed": true,
     "performed": true
@@ -75,7 +75,7 @@
     "performed": true,
     "passed": true,
     "slideCount": 10,
-    "sha256": "750f630e9140b1dcda17ac4e462d2efc3d36343c0afdab7a91c32aafdf8d24a8",
+    "sha256": "3c24a0c6015ae979df5984de7f5a60c1c6bb225ee1ce0593faea1790d042fa9d",
     "runtimeNodeModules": "C:\\Users\\ltybcs\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules",
     "nodeExecutable": "C:\\Users\\ltybcs\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe"
   },
@@ -93,7 +93,7 @@
     "skipped_tables": [
       {
         "reason": "no_numeric_amounts",
-        "slide": 5,
+        "slide": 6,
         "table": 1
       }
     ],
@@ -109,7 +109,7 @@
     "native_chart_count": 0,
     "native_powerpoint_verified": false,
     "passed": true,
-    "presentation_sha256": "750f630e9140b1dcda17ac4e462d2efc3d36343c0afdab7a91c32aafdf8d24a8",
+    "presentation_sha256": "3c24a0c6015ae979df5984de7f5a60c1c6bb225ee1ce0593faea1790d042fa9d",
     "schema_version": "presentation-native-chart-titles.v1",
     "slide_count": 10,
     "source_text_emitted": false,
@@ -120,7 +120,7 @@
     "12192000,6858000",
     "--validate-heading-fit",
     "--require-native-table-slide",
-    "5",
+    "6",
     "--cover-role",
     "none",
     "--expected-slide-count",
