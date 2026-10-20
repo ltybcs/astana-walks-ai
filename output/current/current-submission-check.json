@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "created_for": "current unified submission, 2026-10-20",
+  "slides": 10,
+  "estimated_speech_seconds": 380,
+  "pdf_method": "Exact artifact-tool slide PNG exports placed as PDF pages; PPTX retains native editable text and table.",
+  "test_boundary": "386 total / 384 passed / 2 Windows skips at source 8d49; frontend82 and PWA23 included. Subsequent iframe5 separate.",
+  "screenshots": [
+    {
+      "path": "output/current/assets/category-mobile-initial-390.jpg",
+      "sha256": "7f6075476285eab907e237948dc89555112f8b123f865ac73df6253fe222b40a",
+      "source": "0bb; actual UI illustration, not newer pharmacy live proof"
+    },
+    {
+      "path": "output/current/assets/category-mobile-route-390.jpg",
+      "sha256": "743a3f815128400861658ebd3f6ef4562b463269c5d2caea82b585ba59d86ce7",
+      "source": "0bb; actual UI illustration, not newer pharmacy live proof"
+    }
+  ],
+  "files": {
+    "assets/category-mobile-initial-390.jpg": "7f6075476285eab907e237948dc89555112f8b123f865ac73df6253fe222b40a",
+    "assets/category-mobile-route-390.jpg": "743a3f815128400861658ebd3f6ef4562b463269c5d2caea82b585ba59d86ce7",
+    "astana-walks-current.pdf": "e623aea1f6b1b09b4761c48ef527f93f7ca433caab63290c965f91dbc450f584",
+    "astana-walks-current.pptx": "750f630e9140b1dcda17ac4e462d2efc3d36343c0afdab7a91c32aafdf8d24a8",
+    "BUILD.md": "d804ddc293bdde48622b6d97f3167ffd98bed295ec52b216d4fe1199f80c048b",
+    "build_current.mjs": "c792dd47c26ff6f6926bd0e0d07af818b6906365f4e77e0d4d5acc60e18965f3",
+    "build_current_pdf.py": "3b619d76856f604ee0d5023b826b648e81629a48dbd1bce9f8f5cd1d507de4fd",
+    "presentation-validation.json": "0b105ac42eb732ba8cd72cc69a449b24c73b28b6442d0072aa55fb53cf212947",
+    "speaker-script.md": "ad85f66fe7e1c67e3ee03f7fae4a5f9411d4395cb61ddb312b6f99a71a221f0d"
+  },
+  "youtube_url": null,
+  "owner_permanent_url_status": "ltybcs.com/demo planned, not confirmed deployed",
+  "qa": {
+    "all_slide_renders_created": true,
+    "pdf_pages": 10,
+    "visual_review": "pass: all 10 artifact-tool slide PNGs and all 10 Poppler PDF renders individually inspected",
+    "text_overflow": "none observed",
+    "copyright": "actual map screenshot retains attribution",
+    "native_powerpoint_execution": "not tested"
+  },
+  "speech_word_count_approx": 804
+}

@@ -1,0 +1,78 @@
+{
+  "title": "Astana Walks — единый поиск и локальный ИИ",
+  "scenes": [
+    {
+      "image": "video-frames/01-initial.png",
+      "seconds": 14,
+      "caption": "Текущий интерфейс: одно сообщение о месте, времени и занятии."
+    },
+    {
+      "image": "video-frames/02-request.png",
+      "seconds": 14,
+      "caption": "Публичный тест: компьютерный клуб у Байтерека, «пару часов» = 120 минут."
+    },
+    {
+      "image": "video-frames/03-searching.png",
+      "seconds": 8,
+      "caption": "Единый поиск проверяет OSM, Google и 2ГИС; затем маршрут и локальную модель."
+    },
+    {
+      "image": "video-frames/05-ai-budget.png",
+      "seconds": 22,
+      "caption": "Подбор завершён. Следующий экран — единственный пеший маршрут."
+    },
+    {
+      "image": "video-frames/04-current-route.png",
+      "seconds": 26,
+      "caption": "Одна карта с возвращением. Google показывает 16 мин / 1,2 км; оценки различаются."
+    },
+    {
+      "image": "video-frames/06-unsupported.png",
+      "seconds": 16,
+      "caption": "Неизвестная категория: честный отказ. Другие занятия вместо неё не предлагаются."
+    }
+  ],
+  "capture": {
+    "kind": "montage of actual browser screenshots; not continuous real-time recording",
+    "source_commit": "33190241ee951f4939094d4a15ddf9baf7b66ee8",
+    "runtime_merge_commit": "d2be9e00811b12eb188d84d936f7ba7da3019c20",
+    "public_synthetic_scenario": true,
+    "personal_geolocation_used": false,
+    "raw_provider_responses_saved": false,
+    "backend_keys_saved": false,
+    "route_and_model_case": "fresh computer_club request; public Baiterek origin; observed accepted AI badge and 120 minute budget",
+    "unknown_category_case": "fresh unsupported category refusal",
+    "images": [
+      {
+        "image": "video-frames/01-initial.png",
+        "sha256": "a8b4d0a8bbbce2260334f103dd169de62099ad9c2ba914ba2597ff434d1de5fc",
+        "captured_at_unix": 1792520217.733824
+      },
+      {
+        "image": "video-frames/02-request.png",
+        "sha256": "7e007b0205d5682bbdf699c889cf66197ba88341ecb6a553a8010f4d641c5fe9",
+        "captured_at_unix": 1792520257.7590692
+      },
+      {
+        "image": "video-frames/03-searching.png",
+        "sha256": "f71c85a209fe6176af90d14ef65cc5f5167fb48a2df17dfcc59520ac7379e1d1",
+        "captured_at_unix": 1792520262.4368348
+      },
+      {
+        "image": "video-frames/05-ai-budget.png",
+        "sha256": "b58c7a6e7b8098e6745e15627c1b65a84fe247a57c4f8d98d9513f9014dce442",
+        "captured_at_unix": 1792520560.8841622
+      },
+      {
+        "image": "video-frames/04-current-route.png",
+        "sha256": "3ab20962a290551ac9bcc0ec2d57dbf71b747d8faec708cc5e361196337da2f1",
+        "captured_at_unix": 1792520441.4653726
+      },
+      {
+        "image": "video-frames/06-unsupported.png",
+        "sha256": "11519fced8b7307017cdf217b7b7fcf10cf67d190cd6148d40ea30c40bb5c219",
+        "captured_at_unix": 1792520617.0983076
+      }
+    ]
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "1920x1080, H.264, 25 fps, silent",
+  "kind": "captioned actual UI scenario screenshots",
+  "duration_seconds": 100.0,
+  "scenes": [
+    {
+      "image": "video-frames/01-initial.png",
+      "sha256": "a8b4d0a8bbbce2260334f103dd169de62099ad9c2ba914ba2597ff434d1de5fc",
+      "caption": "Текущий интерфейс: одно сообщение о месте, времени и занятии.",
+      "seconds": 14.0
+    },
+    {
+      "image": "video-frames/02-request.png",
+      "sha256": "7e007b0205d5682bbdf699c889cf66197ba88341ecb6a553a8010f4d641c5fe9",
+      "caption": "Публичный тест: компьютерный клуб у Байтерека, «пару часов» = 120 минут.",
+      "seconds": 14.0
+    },
+    {
+      "image": "video-frames/03-searching.png",
+      "sha256": "f71c85a209fe6176af90d14ef65cc5f5167fb48a2df17dfcc59520ac7379e1d1",
+      "caption": "Единый поиск проверяет OSM, Google и 2ГИС; затем маршрут и локальную модель.",
+      "seconds": 8.0
+    },
+    {
+      "image": "video-frames/05-ai-budget.png",
+      "sha256": "b58c7a6e7b8098e6745e15627c1b65a84fe247a57c4f8d98d9513f9014dce442",
+      "caption": "Подбор завершён. Следующий экран — единственный пеший маршрут.",
+      "seconds": 22.0
+    },
+    {
+      "image": "video-frames/04-current-route.png",
+      "sha256": "3ab20962a290551ac9bcc0ec2d57dbf71b747d8faec708cc5e361196337da2f1",
+      "caption": "Одна карта с возвращением. Google показывает 16 мин / 1,2 км; оценки различаются.",
+      "seconds": 26.0
+    },
+    {
+      "image": "video-frames/06-unsupported.png",
+      "sha256": "11519fced8b7307017cdf217b7b7fcf10cf67d190cd6148d40ea30c40bb5c219",
+      "caption": "Неизвестная категория: честный отказ. Другие занятия вместо неё не предлагаются.",
+      "seconds": 16.0
+    }
+  ]
+}

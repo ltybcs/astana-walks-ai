@@ -1,10 +1,10 @@
 # Передача второму Codex
 
-Репозиторий: https://github.com/ltybcs/astana-walks-ai (private). Scirtor добавлен с ролью write; доступ подтверждён GitHub API 20 октября 2026.
+Репозиторий: https://github.com/ltybcs/astana-walks-ai (public). Scirtor добавлен с ролью write; доступ подтверждён GitHub API 20 октября 2026.
 
 ## Текущий единый интерфейс
 
-Основные инструкции — [README](../README.md) и [DEPLOYMENT](DEPLOYMENT.md). Текущий сервер запускается как `python -m app.google_lab` с существующими Google/2ГИС/Maps Embed настройками и локальной моделью; `python -m app.server` ниже относится к исторической версии. Общие ledger пилота не копировать и не обнулять. Scirtor проверяет технические изменения через COORDINATION и PR. Radkurzior выбыл после исчерпания токенов. Категории и обязательные сценарии описаны в [CATEGORY_COVERAGE](CATEGORY_COVERAGE.md).
+Основные инструкции — [README](../README.md) и [DEPLOYMENT](DEPLOYMENT.md). Текущий сервер запускается как `python -m app.google_lab` с существующими Google/2ГИС/Maps Embed настройками и локальной моделью; `python -m app.server` ниже относится к исторической версии. Общие ledger пилота не копировать и не обнулять. Scirtor временно недоступен из-за технических проблем; текущее завершение выполняет Codex A. Radkurzior выбыл после исчерпания токенов. Категории и обязательные сценарии описаны в [CATEGORY_COVERAGE](CATEGORY_COVERAGE.md).
 
 ## Исторический первый запуск
 

@@ -58,13 +58,20 @@ Node.js в PATH включает автономные JS-проверки инт
 
 Итог расширения категорий и компактного интерфейса: [qa/category-coverage-check.json](qa/category-coverage-check.json). 380 Python checks (378 PASS, 2 Windows skip), 82 frontend и 23 PWA. Отрицательные живые исходы сохранены отдельно от успешной приёмки клуба; это не проверка всех типов и всех сценариев на реальном телефоне.
 
+## Материалы для сдачи текущей версии
+
+- [Презентация PDF](output/current/astana-walks-current.pdf), [редактируемые слайды](output/current/astana-walks-current.pptx) и [речь на 5–7 минут](output/current/speaker-script.md).
+- [Тестовые сценарии и ограничения](docs/CURRENT_SCENARIOS.md): обязательные примеры задачи, критерии, фактические исходы и границы проверок.
+- [Демо MP4](output/current/astana-walks-current-demo.mp4) и [описание для YouTube](output/current/PUBLISHING.txt). Ролик смонтирован из фактических экранов; монтаж не показывает реальную задержку ответа. Детали и SHA в [протоколе материалов](output/current/materials.json).
+- [Статус сдачи и методы реализации](docs/CURRENT_SUBMISSION.md). YouTube-публикация выполняется пользователем; до получения настоящей ссылки это требование не выполнено.
+
 ## Сохранённая версия и материалы
 
 До переноса на GitHub сохранён tag **[checkpoint/before-unified-2026-10-20](https://github.com/ltybcs/astana-walks-ai/tree/checkpoint/before-unified-2026-10-20)**, commit `a20dc81`. Он отличается от развёрнутого прежнего `a46b` только координационной записью. Откат выполняется в **новой папке worktree**, без reset существующей рабочей копии; команда — в [DEPLOYMENT](docs/DEPLOYMENT.md).
 
 Прежние Leaflet/PWA/extractive-проверки, [PDF](output/pdf/astana-walks-presentation.pdf), [PPTX](output/presentations/astana-walks.pptx), [сценарии PDF](output/pdf/astana-walks-scenarios.pdf), [речь](output/speaker-script.md) и [видео 4:10,64](output/video/final/astana-walks-demo.mp4) сохранены с собственной датой, SHA и областью проверки. Они **не сертифицируют новый объединённый интерфейс**. Пользователь загрузит MP4 на YouTube самостоятельно; `video_url=null` не является выполненной публикацией.
 
-[Историческая сдача](docs/SUBMISSION.md) · [команда и передача](docs/HANDOFF.md) · [правила](AGENTS.md) · [координация](COORDINATION.md). Закрытый репозиторий требует доступа; ссылка сама по себе не открывает его жюри. История отдельных Google/OSM/viewer режимов в GOOGLE_* документах и qa сохранена с явными историческими пометками.
+[Историческая сдача](docs/SUBMISSION.md) · [команда и передача](docs/HANDOFF.md) · [правила](AGENTS.md) · [координация](COORDINATION.md). Репозиторий публичный; жюри может открыть код и материалы без приглашения. История отдельных Google/OSM/viewer режимов в GOOGLE_* документах и qa сохранена с явными историческими пометками.
 
 Последнее исправление запроса аптеки и вопросительных форм: [qa/pharmacy-question-check.json](qa/pharmacy-question-check.json). 386 Python checks (384 PASS, 2 Windows skip); живой точный запрос не подставляет кафе. Предыдущий category-протокол относится к указанному в нём0bb648c.
 
