@@ -28,6 +28,21 @@ class ActivityIntentTests(unittest.TestCase):
                 self.assertIn("computer_club", detect_intent(negative)["excluded_categories"])
         self.assertFalse(activity_intent("Ночной клуб возле Байтерека")["categories"])
 
+    def test_english_want_negation_preserves_museum_or_cafe_instead_of_club(self):
+        for negative in ("don't want", "don’t want", "do not want"):
+            for requested in ("museum", "cafe"):
+                query = f"I {negative} a computer club, I want a {requested} near Baiterek"
+                with self.subTest(negative=negative, requested=requested):
+                    self.assertEqual(safe_intent(query)["categories"], [requested])
+                    local = detect_intent(query)
+                    self.assertEqual(local["preferred_categories"], [requested])
+                    self.assertIn("computer_club", local["excluded_categories"])
+                    self.assertFalse(activity_intent(query)["unsupported"])
+        # A rejected activity in an earlier clause must not suppress the new one.
+        positive = "I don't want coffee, I want a computer club near Baiterek"
+        self.assertEqual(safe_intent(positive)["categories"], ["computer_club"])
+        self.assertEqual(detect_intent(positive)["preferred_categories"], ["computer_club"])
+
     def test_known_venue_search_is_safe_and_unknown_explicit_venue_is_not_a_walk(self):
         query = "Я хочу в комп клуб на пару часов рядом с Байтереком PRIVATE_PERSON_ADDRESS"
         context, intent, text, _, params = prepare({"query": query, "minutes": 120, "time_of_day": "day"}, resolve_request)

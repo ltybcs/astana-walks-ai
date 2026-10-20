@@ -160,6 +160,39 @@ def _unselected_venue_rejection(text, previews, facts):
     return None
 
 
+def _club_claim_rejection(prose):
+    """Reject bounded equipment/seat assertions, not a proposed gaming pause.
+
+    Club taxonomy does not establish hardware or current capacity. Qualifiers
+    apply to the particular clause/subject; a later generic caveat cannot erase
+    an earlier assertion. Exact selected source names were removed by _prose.
+    """
+    subjects = (
+        ("equipment", r"\b(?:компьютер(?:ы|ов|ами|ам|ах|ом|а|у|е)?|оборудован\w*|оснащ[её]н\w*|"
+                      r"видеокарт\w*|монитор\w*|консол\w*|приставк\w*|гарнитур\w*|пк|pc|computers?)\b"),
+        ("availability", r"\b(?:свободн\w*\s+(?:игров\w*\s+)?мест\w*|мест\w*\s+(?:свободн\w*|доступн\w*)|"
+                        r"(?:есть|имеются|доступны)\s+(?:свободн\w*\s+)?мест\w*)\b"),
+    )
+    advice = r"(?:проверь(?:те)?|проверить|проверять|уточни(?:те)?|уточнить|уточнять|спроси(?:те)?|спросить|узнай(?:те)?|узнать)"
+    linking = (r"(?:наличие|доступность|есть|ли|и|или|свободн\w*|мощн\w*|игров\w*|современн\w*|"
+               r"компьютер\w*|оборудовани\w*|мест\w*)")
+    normalized = prose.casefold().replace("ё", "е")
+    for clause in re.split(r"[.!?;,\n]+|\s+(?:но|однако|зато)\s+", normalized):
+        for kind, pattern in subjects:
+            for match in re.finditer(pattern, clause):
+                prefix, suffix = clause[max(0, match.start()-120):match.start()], clause[match.end():match.end()+80]
+                uncertain = (
+                    re.search(r"\b" + advice + r"\s+(?:" + linking + r"\s+){0,8}$", prefix)
+                    or re.search(r"\b(?:есть|имеются|доступны)\s+ли\s*$", prefix)
+                    or re.search(r"\b(?:неизвестн\w*|не\s+подтвержден\w*)\s+(?:" + linking + r"\s+){0,5}$", prefix)
+                    or re.search(r"\bесли\s+(?:(?:есть|имеются|доступны|мощн\w*|игров\w*)\s+){0,4}$", prefix)
+                    or re.match(r"\s*(?:(?:их|его|ее)\s+)?(?:наличие\s+)?(?:пока\s+)?(?:неизвестн\w*|не\s+подтвержден\w*|не\s+гарантирован\w*)\b", suffix)
+                )
+                if not uncertain:
+                    return "unsupported_computer_club_" + kind
+    return None
+
+
 def _answer_rejection(answer, facts, stop_ids, source_ids, all_fit):
     if not isinstance(answer, dict) or set(answer) != {"text", "source_ids", "stop_ids"}:
         return "invalid_shape"
@@ -192,6 +225,10 @@ def _answer_rejection(answer, facts, stop_ids, source_ids, all_fit):
         return "unsupported_budget_fit"
     if re.search(r"репутац\w*|уютн\w*|популярн\w*|вкусн\w*|отличн\w*|великолепн\w*|прекрасн\w*|лучш\w*|идеальн\w*|живописн\w*|комфортн\w*", normalized):
         return "unsupported_quality_claim"
+    if any(fact["category"] == "computer_club" for fact in facts):
+        club_claim = _club_claim_rejection(prose)
+        if club_claim:
+            return club_claim
     return protected_claim_rejection(prose)
 
 

@@ -9,6 +9,7 @@ from urllib.parse import parse_qs, urlsplit
 from app.google_budget import GoogleError
 from app.lab_context import ContextError, PUBLIC_ORIGINS, resolve_request
 from app.route_map import RouteMap
+from app.retrieval import Retriever
 from app.unified_walks import UnifiedWalks
 
 
@@ -96,6 +97,50 @@ class UnifiedTests(unittest.TestCase):
             self.assertEqual(plan["legs"][0]["from_ref"], "origin")
             self.assertTrue(option["map_ticket"])
         self.assertEqual([receipt["selected_count"] for receipt in result["source_receipt"].values()], [1, 1, 1])
+
+    def test_single_venue_retrieval_does_not_expand_to_secondary_architecture(self):
+        origin = PUBLIC_ORIGINS["baiterek"]
+        museum = poi("osm:node/1", "Синтетический музей", 51.1284, 71.4306, "museum")
+        club = poi("osm:node/2", "Синтетический клуб", 51.129, 71.432, "computer_club")
+        query = "Хочу в компьютерный клуб на пару часов рядом с Байтереком, интересует архитектура и туристическая прогулка"
+        for has_club in (False, True):
+            for needs_socket in (False, True):
+                with self.subTest(has_club=has_club, needs_socket=needs_socket):
+                    places = [museum, club] if has_club else [museum]
+                    retriever = Retriever(data={"dataset": {"is_demo": True}, "places": deepcopy(places)})
+                    result = retriever.retrieve(query + (" нужна розетка" if needs_socket else ""), origin, 120)
+                    expected = [club["id"]] if has_club and not needs_socket else []
+                    self.assertEqual([item["poi"]["id"] for item in result["selected"]], expected)
+                    self.assertEqual(result["intent"]["activity_mode"], "single_venue")
+                    self.assertTrue(all(result["intent"][flag] for flag in ("architecture", "tourist", "outdoor")))
+
+    def test_single_venue_rechecks_adapter_categories_before_routing_or_model(self):
+        self.addCleanup(self.map.close)
+        museum = poi("osm:node/1", "Синтетический музей", 51.1284, 71.4306, "museum")
+        club = poi("osm:node/2", "Синтетический клуб", 51.129, 71.432, "computer_club")
+        self.dgis.search.return_value = {"places": [{**museum, "id": "2gis:synthetic"}], "warnings": []}
+        query = "Хочу в компьютерный клуб на пару часов рядом с Байтереком, интересует архитектура и туристическая прогулка"
+        for has_club, needs_socket in ((False, False), (True, False), (True, True)):
+            with self.subTest(has_club=has_club, needs_socket=needs_socket):
+                self.google.legs.clear()
+                self.narrator.reset_mock()
+                places = [museum, club] if has_club else [museum]
+                self.osm.retrieve.return_value = {"selected": [{"poi": deepcopy(place)} for place in places]}
+                result = self.service.recommend({**self.form, "minutes": 120,
+                    "query": query + (" нужна розетка" if needs_socket else "")})
+                eligible = has_club and not needs_socket
+                self.assertEqual(result["source_receipt"]["osm"]["candidate_count"], int(eligible))
+                self.assertEqual(result["source_receipt"]["dgis"]["candidate_count"], 0)
+                self.assertEqual(result["source_receipt"]["google"]["candidate_count"], 0)
+                self.assertEqual([stop["id"] for stop in result["alternatives"][0]["stops"]],
+                                 [club["id"]] if eligible else [])
+                self.assertEqual(len(self.google.legs), 2 if eligible else 0)
+                self.assertEqual(self.narrator.call_count, int(eligible))
+                if not eligible:
+                    self.assertIsNone(result["answer"])
+                    self.assertFalse(result["alternatives"][0]["route_built"])
+                self.assertEqual(result["grounding"]["summary"], "Полный синтетический ответ Google [0].")
+                self.assertEqual(len(result["grounding"]["sources"]), 1)
 
     def test_operator_status_contains_only_safe_metadata_and_never_repeats_search(self):
         self.service.recommend({**self.form, "query": "PRIVATE_QUERY_MARKER Хочу прогулку возле Mega"})

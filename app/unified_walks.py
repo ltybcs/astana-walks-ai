@@ -27,6 +27,9 @@ def _eligible(place, intent):
     preferred = intent["preferred_categories"]
     if category in intent["excluded_categories"]:
         return False
+    # Secondary interests cannot substitute another kind of venue.
+    if intent.get("activity_mode") == "single_venue" and category not in preferred:
+        return False
     if preferred and category not in preferred and not (intent["architecture"] and architecture_evidence(place)):
         return False
     if place.get("source_tags", {}).get("access") in {"private", "no"}:

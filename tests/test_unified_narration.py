@@ -374,5 +374,46 @@ class UnifiedNarrationTests(unittest.TestCase):
         self.assertEqual(status, "action_does_not_match_computer_club_intent")
 
 
+    def test_unknown_club_equipment_or_current_capacity_rejects_whole_answer(self):
+        self.intent["categories"] = ["computer_club"]
+        for stop in self.stops:
+            stop.update(category="computer_club", features={}, opening_hours=None)
+        for assertion, expected in (
+            ("В компьютерном клубе есть мощные игровые компьютеры.", "equipment"),
+            ("В компьютерном клубе есть свободные места.", "availability"),
+            ("Клуб оснащён игровыми компьютерами.", "equipment"),
+            ("Свободные места есть, но условия неизвестны.", "availability"),
+            ("Свободных мест нет.", "availability"),
+        ):
+            with self.subTest(assertion=assertion):
+                self.calls.clear()
+                value = {**self.answer, "text": assertion + " Предлагаю запланировать игровую паузу. Условия посещения неизвестны."}
+                original = deepcopy(value)
+                answer, status = self.run_narrator(http_open=self.model(value))
+                self.assertIsNone(answer)
+                self.assertEqual(status, "unsupported_computer_club_" + expected)
+                self.assertEqual(len(self.calls), 1)
+                self.assertEqual(value, original)
+
+    def test_club_equipment_advice_unknown_and_source_identity_are_not_claims(self):
+        self.intent["categories"] = ["computer_club"]
+        for stop in self.stops:
+            stop.update(category="computer_club", features={}, opening_hours=None)
+        for statement in ("Уточните наличие мощных игровых компьютеров и свободных мест.",
+                          "Наличие компьютеров неизвестно. Наличие свободных мест не подтверждено.",
+                          "Уточните, есть ли компьютеры. Если есть свободные места, проверьте условия."):
+            with self.subTest(statement=statement):
+                value = {**self.answer, "text": "Компьютерный клуб соответствует выбранному занятию. " + statement + " Предлагаю запланировать игровую паузу. Условия посещения неизвестны."}
+                answer, status = self.run_narrator(http_open=self.model(value))
+                self.assertEqual(answer, value)
+                self.assertEqual(status, "validated_structure_sources_and_known_claims")
+        # A literal source name is identity, not proof or an assertion of capacity.
+        self.stops[1]["name"] = "Компьютеры и свободные места"
+        value = {**self.answer, "text": "Выбранный источник «Компьютеры и свободные места» соответствует интересу к компьютерному клубу. Предлагаю запланировать игровую паузу. Условия посещения неизвестны."}
+        answer, status = self.run_narrator(http_open=self.model(value))
+        self.assertEqual(answer, value)
+        self.assertEqual(status, "validated_structure_sources_and_known_claims")
+
+
 if __name__ == "__main__":
     unittest.main()

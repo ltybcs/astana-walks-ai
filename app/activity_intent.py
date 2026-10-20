@@ -20,7 +20,7 @@ def _positive(query, pattern):
     for match in re.finditer(r"(?<!\w)(?:" + pattern + r")(?!\w)", query):
         prefix, suffix = query[max(0, match.start()-45):match.start()], query[match.end():match.end()+30]
         if (not re.search(r"\bне\s+(?:(?:в|на)\s+)?$", prefix)
-                and not re.search(r"(?:\bбез|\bне\s+(?:хочу|нуж\w*|надо|интерес\w*)|\bno|\bnot|\bwithout)\s+(?:\w+\s+){0,3}$", prefix)
+                and not re.search(r"(?:\bбез|\bне\s+(?:хочу|нуж\w*|надо|интерес\w*)|\bdon['’]t\s+want|\bno|\bnot|\bwithout)\s+(?:\w+\s+){0,3}$", prefix)
                 and not re.match(r"\s+не\s+(?:нуж\w*|надо|интерес\w*)", suffix)):
             return True
     return False

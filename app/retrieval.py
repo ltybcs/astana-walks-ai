@@ -278,7 +278,9 @@ class Retriever:
         filtered = Counter()
         terms = tokens(query)
         preferred = set(intent["preferred_categories"])
-        allowed_requested = preferred | {"monument", "theatre", "museum", "attraction"} if preferred and intent["architecture"] else preferred
+        allowed_requested = (preferred | {"monument", "theatre", "museum", "attraction"}
+                             if preferred and intent["architecture"] and intent["activity_mode"] != "single_venue"
+                             else preferred)
         outdoor_categories = {"park", "playground", "promenade", "monument", "attraction", "viewpoint", "theatre"}
         tourist_categories = (outdoor_categories - {"playground"}) | {"museum"}
         for index, poi in enumerate(self.places):
