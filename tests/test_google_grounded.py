@@ -61,6 +61,30 @@ class GoogleGroundedTests(unittest.TestCase):
         self.assertNotIn(query, json.dumps(preview))
         self.assertEqual(self.provider.requests, [])
         self.assertEqual(self.budget.status()["used"], 0)
+        cases = [
+            (FORM["query"], ["walk"]),
+            ("хочу прогулку в парке", ["park"]),
+            ("хочу прогуляться, детскую площадку или парк", ["park", "playground"]),
+            ("хочу погулять с ребенком", ["playground"]),
+            ("хочу кофе и погулять", ["walk", "cafe"]),
+            ("walk in a park", ["park"]),
+        ]
+        for query, categories in cases:
+            with self.subTest(query=query):
+                preview = self.service.preview({"query": query, "origin_id": "mega", "minutes": 45})
+                self.assertEqual(preview["structured_intent"]["categories"], categories)
+                self.assertEqual(preview["nearby_radius_meters"], 1050)
+                self.assertEqual(preview["outbound_search_parameters"]["pageSize"], 5)
+                self.assertIs(preview["outbound_search_parameters"]["includeExtendedDetails"], False)
+                if categories == ["walk"]:
+                    for interest in ("достопримечательности", "архитектура", "площади", "бульвары"):
+                        self.assertIn(interest, preview["outbound_search_text"])
+                    self.assertNotIn("парки", preview["outbound_search_text"])
+                if categories == ["park"]:
+                    self.assertIn("парки и сады", preview["outbound_search_text"])
+                    self.assertNotIn("достопримечательности", preview["outbound_search_text"])
+        self.assertEqual(self.provider.requests, [])
+        self.assertEqual(self.budget.status()["used"], 0)
 
     def test_unknown_context_custom_gps_and_unsupported_intent_have_no_network(self):
         cases = ({"query": "кофе"}, {"query": "хочу бассейн", "origin_id": "mega", "minutes": 45},

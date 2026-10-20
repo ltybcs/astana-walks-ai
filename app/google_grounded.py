@@ -26,7 +26,8 @@ from .llm import LLMConfig, NoRedirect
 
 PUBLIC_NAMES = {"mega": "MEGA Silk Way, Astana, Kazakhstan", "baiterek": "Baiterek, Astana, Kazakhstan", "river": "Ishim River embankment, Astana, Kazakhstan"}
 CATEGORY_WORDS = {
-    "park": (r"парк\w*|сад\w*|park\w*|garden\w*|прогул\w*|погуля\w*|walk\w*", "парки, скверы, аллеи, площади и места для короткой пешей прогулки"),
+    "walk": (r"прогул\w*|погуля\w*|walk\w*", "достопримечательности, архитектура, площади и бульвары для внешнего осмотра"),
+    "park": (r"парк\w*|сад\w*|park\w*|garden\w*", "парки и сады"),
     "playground": (r"площадк\w*|ребен\w*|дет\w*|child\w*|playground\w*", "детские площадки или парки для семейной прогулки"),
     "cafe": (r"коф\w*|кафе|coffee|cafe\w*", "кафе для короткой паузы с кофе"),
     "restaurant": (r"ресторан\w*|поесть|обед\w*|ужин\w*|restaurant\w*|food", "рестораны"),
@@ -92,9 +93,10 @@ class TokenSigner:
 def safe_intent(query):
     normalized = query.casefold().replace("ё", "е")
     categories = [name for name, (pattern, _) in CATEGORY_WORDS.items() if re.search(r"\b(?:" + pattern + r")\b", normalized)]
-    # A family request must not lose the requested playground behind generic walk.
-    if "playground" in categories:
-        categories = [name for name in categories if name != "park"]
+    # A generic walk does not imply a park. Explicit park/playground interests
+    # stay narrower, and an explicitly requested park is not lost for families.
+    if "park" in categories or "playground" in categories:
+        categories = [name for name in categories if name != "walk"]
     preferences = [name for name, (pattern, _) in PREF_WORDS.items() if re.search(r"\b(?:" + pattern + r")\b", normalized)]
     if not categories:
         raise GoogleError("needs_context", "Уточните цель: прогулка, парк, площадка, кофе, ресторан, музей, театр, архитектура или магазины.", 422)
