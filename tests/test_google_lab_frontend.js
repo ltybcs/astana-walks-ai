@@ -155,7 +155,7 @@ test("own place facts stay collapsed, ignore other IDs and never promise route a
   await h.submit();const content=h.elements["walk-stops"].children[0].children[0];
   const details=content.children.find(el=>el.className==="stop-details");assert(details);assert(!details.open);const facts=details.children.find(el=>el.className==="stop-source-facts");assert(facts);assert.equal(facts.tagName,"DIV");assert.equal(content.children.filter(el=>el.tagName==="DETAILS").length,1);
   assert(facts.textContent.includes("Розетки: неизвестно"));assert(facts.textContent.includes("Тишина: неизвестно"));
-  assert(facts.textContent.includes("Доступный вход: указано в источнике"));assert(facts.textContent.includes("2026-10-20"));
+  assert(facts.textContent.includes("Доступный вход: есть, по данным источника"));assert(facts.textContent.includes("2026-10-20"));
   assert(facts.textContent.includes("не подтверждают доступность всего маршрута"));assert(facts.textContent.includes("Фактический доступ не проверен"));
   assert(facts.textContent.includes(own.opening_hours));assert(!facts.children.some(el=>el.tagName==="B"));
 });
@@ -520,7 +520,7 @@ test("per-stop unconfirmed keys can differ while the option describes their unio
   assert(h.elements["walk-stops"].children[1].textContent.includes(second.amenity_note));
 });
 test("Wi-Fi evidence is shown only for the stop own provider and identifier",async()=>{
-  for(const [provider,place_id,value,expected]of [["osm","own-cafe","yes","указано в источнике"],["osm","own-cafe","no","в источнике указано отсутствие"],["google","other-cafe","yes","неизвестно"]]){
+  for(const [provider,place_id,value,expected]of [["osm","own-cafe","yes","есть, по данным источника"],["osm","own-cafe","no","нет, по данным источника"],["google","other-cafe","yes","неизвестно"]]){
     const own={...stop(),id:"own-cafe",requested_features:["wifi"],feature_evidence:[{property:"wifi",provider,place_id,value}]};const h=fixtureResult(result({alternatives:[option(45,{stops:[own]})]}));await h.submit();
     const details=h.elements["walk-stops"].children[0].children[0].children.find(el=>el.className==="stop-details");assert(details.textContent.includes("Wi-Fi: "+expected));
   }
@@ -545,8 +545,8 @@ test("Wi-Fi request shows only requested unknown facts and preserves unrelated k
     {property:"quiet",provider:"osm",place_id:"own-cafe",value:"no"},
     {property:"wheelchair",provider:"osm",place_id:"own-cafe",value:"unknown"}]};
   const h=fixtureResult(result({alternatives:[option(45,{stops:[own]})]}));await h.submit();
-  const content=h.elements["walk-stops"].textContent;assert(content.includes("Wi-Fi: неизвестно"));assert(content.includes("Розетки: указано в источнике"));
-  assert(content.includes("Тишина: в источнике указано отсутствие"));assert(!content.includes("Доступный вход:"));
+  const content=h.elements["walk-stops"].textContent;assert(content.includes("Wi-Fi: неизвестно"));assert(content.includes("Розетки: есть, по данным источника"));
+  assert(content.includes("Тишина: нет, по данным источника"));assert(!content.includes("Доступный вход:"));
 });
 test("unrequested unknown sockets and quiet do not clutter a Wi-Fi request",async()=>{
   const own={...stop(),id:"own-cafe",requested_features:["wifi"],feature_evidence:[
@@ -583,7 +583,7 @@ test("requested properties cannot make foreign evidence a known fact",async()=>{
   const own={...stop(),id:"own",requested_features:["wifi"],features:{wifi:"yes"},feature_evidence:[
     {property:"wifi",provider:"dgis",place_id:"own",value:"yes"},{property:"wifi",provider:"osm",place_id:"other",value:"yes"}]};
   const h=fixtureResult(result({alternatives:[option(45,{stops:[own]})]}));await h.submit();
-  assert(h.elements["walk-stops"].textContent.includes("Wi-Fi: неизвестно"));assert(!h.elements["walk-stops"].textContent.includes("Wi-Fi: указано в источнике"));
+  assert(h.elements["walk-stops"].textContent.includes("Wi-Fi: неизвестно"));assert(!h.elements["walk-stops"].textContent.includes("Wi-Fi: есть, по данным источника"));
 });
 test("malformed requested-property metadata fails closed",()=>{
   const h=harness();for(const requested_features of [null,"wifi",["wifi","wifi"],["opening_hours"],["wifi","socket","quiet","wheelchair","other"]]){

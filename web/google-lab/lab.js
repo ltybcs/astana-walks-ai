@@ -518,7 +518,7 @@ function selectOption(id) {
     if (typeof stop.why_text === "string" && stop.why_text.trim()) details.append(node("p", stop.why_text, "stop-why"));
     const facts = node("div", null, "stop-source-facts");
     const propertyLabels = {socket:"Розетки", wifi:"Wi-Fi", quiet:"Тишина", wheelchair:"Доступный вход"};
-    const values = {yes:"указано в источнике", no:"в источнике указано отсутствие", unknown:"неизвестно"};
+    const values = {yes:"есть, по данным источника", no:"нет, по данным источника", unknown:"неизвестно"};
     const requested = new Set([...(Array.isArray(stop.requested_features) ? stop.requested_features : []),
       ...(Array.isArray(stop.unconfirmed_amenities) ? stop.unconfirmed_amenities : [])]);
     for (const [key, label] of Object.entries(propertyLabels)) {
