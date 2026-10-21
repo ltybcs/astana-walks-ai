@@ -61,7 +61,7 @@ class UnifiedDGISTests(unittest.TestCase):
         self.assertEqual(params["q"], [CATEGORY_CATALOG["park"]["dgis_query"]])
         self.assertEqual(params["page"], ["1"])
         self.assertEqual(params["page_size"], ["10"])
-        self.assertEqual(params["fields"], ["items.point,items.rubrics,items.schedule,items.schedule_special"])
+        self.assertEqual(params["fields"], [module.SEARCH_FIELDS])
         self.assertEqual(set(params), {"q", "key", "point1", "point2", "page", "page_size", "fields"})
         west, north = map(float, params["point1"][0].split(","))
         east, south = map(float, params["point2"][0].split(","))
@@ -76,6 +76,30 @@ class UnifiedDGISTests(unittest.TestCase):
         self.assertEqual(result["search_scope"], {"radius_meters": 1000, "returned_count": 3, "filtered_count": 2})
         self.assertEqual(result["attribution"], legacy.ATTRIBUTION)
         self.assertEqual(self.transport.call_count, 1)
+
+    def test_unknown_convenience_pool_uses_same_page_and_preserves_own_features(self):
+        from app.semantic_intent import deterministic_plan
+        query = "Хочу кафе с розеткой и Wi-Fi"
+        plan = deterministic_plan(query)
+        items = [card(rubrics=[{"name": "Кофейни"}]),
+                 card(id="70000000000002", rubrics=[{"name": "Аптеки"}])]
+        self.transport.side_effect = lambda *a, **k: Response(json.dumps(envelope(items)).encode())
+        result = self.client.search(query, ORIGIN, 1000, intent_plan=plan, include_amenity_fallback=True)
+        self.assertEqual(result["places"], [])
+        self.assertEqual(len(result["fallback_places"]), 1)
+        record = result["fallback_places"][0]
+        self.assertEqual(record["category"], "cafe")
+        self.assertEqual(record["features"]["socket"], "unknown")
+        self.assertEqual(record["features"]["wifi"], "unknown")
+        self.assertEqual(self.transport.call_count, 1)
+        self.assertEqual(result["quota"]["used"], 1)
+
+    def test_fallback_option_flag_rejects_before_any_ledger_or_http(self):
+        for flag in (1, None, "yes", []):
+            with self.subTest(flag=flag), self.assertRaises(legacy.DGISLiveError):
+                self.client.search("кафе с розеткой", ORIGIN, 1000, include_amenity_fallback=flag)
+        self.transport.assert_not_called()
+        self.assertEqual(self.state()["attempts"], [])
 
     def test_empty_results_and_ten_card_page_do_not_trigger_another_request(self):
         for items in ([], [card(id=str(70000000000000+i), rubrics=[{"name": "Кофейни"}]) for i in range(15)]):

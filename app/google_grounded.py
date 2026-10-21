@@ -23,7 +23,7 @@ from urllib.request import Request, ProxyHandler, build_opener
 from .google_budget import GoogleError
 from .google_client import GoogleClient, json_bytes, strict_json, valid_place_id, maps_url
 from .llm import LLMConfig, NoRedirect
-from .activity_intent import parse_search_intent
+from .activity_intent import parse_search_intent, WIFI_PATTERN
 from .category_catalog import CATEGORY_CATALOG
 from .retrieval import detect_intent
 
@@ -35,6 +35,7 @@ SEARCH_AREAS = {**PUBLIC_NAMES, "mega": "EXPO / Nur Alem рядом с MEGA Silk
 CATEGORY_WORDS = {identifier: ("|".join(spec["aliases"]), spec["google_query"])
                   for identifier, spec in CATEGORY_CATALOG.items()}
 PREF_WORDS = {
+    "wifi": (WIFI_PATTERN, "Wi-Fi только при явном подтверждении источником, иначе неизвестно"),
     "quiet": (r"тих\w*|тишин\w*|спокойн\w*|quiet", "тихая обстановка только при подтверждении источником"),
     "socket": (r"розет\w*|socket\w*|заряд\w*", "розетка только при явном подтверждении, иначе неизвестно"),
     "accessible": (r"коляс\w*|доступн\w*|wheelchair|accessible", "доступ для коляски только при явном подтверждении, иначе неизвестно"),
@@ -92,7 +93,7 @@ def safe_intent(query, *, intent_plan=None):
     if intent_plan is not None:
         flags = detect_intent(query, intent_plan=intent_plan)
         categories = list(flags["preferred_categories"])
-        return {"categories": categories, "preferences": list(intent_plan.preferences),
+        return {"categories": categories, "preferences": list(intent_plan.global_preferences),
                 "open_goal": intent_plan.open_goal, "source_phrase": intent_plan.source_phrase,
                 "semantic_goal": deepcopy(intent_plan.sanitized_narration)}
     search = parse_search_intent(query)
@@ -254,7 +255,8 @@ def protected_claim_rejection(text):
     # never mined into a new fact database; uncertain/check advice is permitted.
     groups = [
         (r"открыт\w*|работает|работают|закрыт\w*|круглосуточ\w*|open now", "hours"),
-        (r"розет\w*|socket\w*|wifi|wi-fi|вай.?фай", "amenity"),
+        (r"розет\w*|socket\w*|" + WIFI_PATTERN
+         + r"|интернет(?:а|у|ом|е)?(?![\s\-‐‑–—]*клуб)|internet(?![\s\-]*(?:club|cafe))", "amenity"),
         (r"тих\w*|тишин\w*|бесшум\w*|quiet", "quiet"),
         (r"безопас\w*|доступен|доступн\w*|недоступн\w*|бесплатн\w*|accessible", "access_safety"),
         (r"скамей\w*|качел\w*|горк\w*|песочниц\w*|розет\w*|детск\w* площад\w*|туалет\w*|парковк\w*|меню|обслуживан\w*", "infrastructure"),

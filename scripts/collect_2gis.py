@@ -92,7 +92,7 @@ def opening_hours(item):
     if (all(hours == ["00:00–24:00"] for _, hours in values) and not item.get("schedule_special")
             and not conditional and schedule.get("is_24x7") is not False):
         return "24/7"
-    return "; ".join(f"{day} {', '.join(hours)}" for day, hours in values) + ("; есть особое расписание — проверьте карточку" if item.get("schedule_special") else "")
+    return "; ".join(f"{day} {', '.join(hours)}" for day, hours in values) + ("; есть особое расписание — проверьте карточку" if item.get("schedule_special") or conditional else "")
 
 
 def normalize_items(items, collected_at, bbox=DEFAULT_BBOX, *, allow_unmapped=False):

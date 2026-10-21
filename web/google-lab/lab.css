@@ -6,3 +6,9 @@
 
 /* Keep the primary screen focused on the route; disclosures remain accessible. */
 .intro{text-align:center;margin-inline:auto}.intro h1{font-size:clamp(1.45rem,3.5vw,2.3rem);line-height:1.25;letter-spacing:-.035em;margin:0 auto}.explanation-details .answer-surface{margin-top:8px}#google-original{margin-top:24px}#google-original h3{margin-bottom:12px}#usage-terms{margin-top:0}#usage-terms .consent-notice{margin:8px 0}#usage-terms .warnings{font-size:.8rem}.stop-content .stop-why{color:var(--ink);font-size:.88rem}
+
+/* Keep evidence compact; uncertainty stays beside the proposed visit. */
+.source-detail-section{margin-top:24px}.source-detail-section h3{margin-bottom:12px}
+.stop-details{margin-top:12px;padding-top:8px}.stop-details summary{font-size:.84rem}
+.amenity-fallback-note,.stop-content .stop-amenity-note{color:#604713;background:#fff7db;border-left:3px solid #c79a2c;padding:10px 12px;border-radius:4px;font-size:.9rem}
+.stop-content .stop-amenity-note{margin:10px 0}

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-21",
+  "source_commit": "2bdfb123944efdd920f9165fa79b037d14af4693",
+  "previous_source_commit": "c1f1a26116d8e22a34c77134a727a34e1274ed18",
+  "integration_pr": "https://github.com/ltybcs/astana-walks-ai/pull/27",
+  "checkpoint_tag": "checkpoint/before-audit-demo-2026-10-21",
+  "demo_url": "https://ltybcs.com/demo",
+  "public_origin": "https://journey-tank-arrive-overcome.trycloudflare.com",
+  "automated_checks": {
+    "python_methods": 673,
+    "passed": 671,
+    "windows_symlink_skips": 2,
+    "frontend_passed": 138,
+    "pwa_passed": 23
+  },
+  "rollback_helper": {
+    "sha256": "64cc576299f5388cddd1972a8985f8fcd7eddb94a04e24e339c57c785b86f91f",
+    "independent_review": "approved",
+    "mocked_checks_passed": 10,
+    "mock_scope": "AST-extracted original functions; mocked OS/HTTP; mirrored controller with static source alignment",
+    "actual_failure_injection": false,
+    "previous_staged_healthy": true,
+    "candidate_staged_healthy": true,
+    "stage_scope": "loopback8004 health/capability checks and exact served static bytes; no inference or provider search",
+    "storage": "ignored local operator files, not repository credentials"
+  },
+  "public_smoke": {
+    "case_id": "cafe_optional_socket_45",
+    "fixed_public_start": true,
+    "user_gps_used": false,
+    "route_built": true,
+    "roundtrip_verified": true,
+    "budget_minutes": 45,
+    "walk_minutes": 4,
+    "visit_minutes": 36,
+    "buffer_minutes": 5,
+    "unconfirmed_amenity_notice_visible": true,
+    "new_presence_wording_visible": true,
+    "unrequested_unknown_quiet_hidden": true,
+    "result_disclosures": 1,
+    "stop_disclosures": 1,
+    "map_loaded": true,
+    "model_status": "validated_structure_sources_and_known_claims",
+    "narration_attempts": 1,
+    "unverified_candidate_excluded": true,
+    "source_receipt": {
+      "osm": {
+        "status": "searched",
+        "candidate_count": 1,
+        "selected_count": 0,
+        "strict_candidate_count": 0,
+        "alternative_candidate_count": 1
+      },
+      "google": {
+        "status": "no_data",
+        "candidate_count": 0,
+        "selected_count": 0,
+        "strict_candidate_count": 0,
+        "alternative_candidate_count": 0
+      },
+      "dgis": {
+        "status": "searched",
+        "candidate_count": 10,
+        "selected_count": 1,
+        "strict_candidate_count": 0,
+        "alternative_candidate_count": 10
+      }
+    }
+  },
+  "unchanged_runtime": {
+    "original_model_port": 8081,
+    "original_model_pid": 31020,
+    "tunnel_pid": 27924,
+    "preview_port": 8003,
+    "primary_provider_ledgers_reused": true,
+    "keys_or_budget_reset": false
+  },
+  "evidence_limits": [
+    "No physical-phone test of this release.",
+    "Recovery failure branches use mocks/static review, not a deliberate public outage.",
+    "Provider opening/access facts remain source-reported, not checked on site.",
+    "No provider response, raw request or user coordinates stored in this receipt."
+  ]
+}

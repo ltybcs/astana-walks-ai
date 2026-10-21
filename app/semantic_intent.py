@@ -6,11 +6,11 @@ import hashlib
 import re
 import unicodedata
 
-from .activity_intent import parse_search_intent, _matches, _negated, _location_mention, _PRIORITY
+from .activity_intent import parse_search_intent, _matches, _negated, _location_mention, _PRIORITY, WIFI_PATTERN
 from .category_catalog import CATEGORY_CATALOG
 
 _FULFILMENTS = {"venue_visit", "generic_walk", "specific_activity"}
-_REQUIREMENTS = {"socket", "quiet", "accessible", "activity", "equipment", "inventory", "price"}
+_REQUIREMENTS = {"socket", "wifi", "quiet", "accessible", "activity", "equipment", "inventory", "price"}
 _FLAGS = {"child", "tourist"}
 _POLICIES = {"primary", "any", "walk_mix"}
 _KEYS = {"start_quote", "goals", "excluded", "goal_policy", "requirements", "context"}
@@ -328,6 +328,7 @@ _CONTEXT_WITNESSES = {
     "tourist": r"турист\w*|путешествен\w*|достопримеч\w*|архитект\w*|tourist\w*|travell?ers?|sightsee\w*",
 }
 _REQUIREMENT_WITNESSES = {
+    "wifi": WIFI_PATTERN,
     "socket": r"розет\w*|заряд\w*|sockets?|power\s+outlets?",
     "quiet": r"тих\w*|тишин\w*|спокойн\w*|quiet|silence|тыныш",
     "accessible": r"коляс\w*|безбарьер\w*|доступн\w*|wheelchair|accessible|арбамен",
@@ -423,6 +424,8 @@ def _goal_structure(query, goals, policy, legacy):
     has_or = any(re.search(r"\b(?:или|либо|or)\b", normalized[first[1]:second[0]])
                  for first, second in zip(sorted(positions), sorted(positions)[1:]))
     priority = bool(_PRIORITY.search(normalized))
+    if priority and policy != "primary":
+        raise IntentError("Явная основная цель должна сохранить приоритет.")
     if policy == "any" and (len(goals) < 2 or not has_or or priority):
         raise IntentError("Выбор 'или' не подтверждён сообщением.")
     # A semantically recognized alternative need not have a legacy alias.
@@ -440,7 +443,16 @@ def _goal_structure(query, goals, policy, legacy):
         expected = [category for category in known if category in model_known]
         nature_refinement = (known[0] == "walk" and goals[0].category_hint == "park"
                              and goals[0].fulfilment == "generic_walk" and _nature_goal_witness(goals[0].quote))
-        if (goals[0].category_hint != known[0] and not nature_refinement) or model_known != expected:
+        # The lexical parser deliberately removes generic walk beside a venue.
+        # A literal first walk OR that venue still is a real first alternative.
+        first_known = [begin for begin, end, category in _matches(normalized)
+                       if category == known[0] and not _negated(normalized, begin, end)
+                       and not _location_mention(normalized, begin)]
+        first_walk_choice = (policy == "any" and has_or and goals[0].category_hint == "walk"
+                             and goals[0].fulfilment == "generic_walk" and _broad_walk_witness(goals[0].quote)
+                             and first_known and positions[0][1] <= min(first_known)
+                             and positions[0][0] == min(begin for begin, _ in positions))
+        if (goals[0].category_hint != known[0] and not nature_refinement and not first_walk_choice) or model_known != expected:
             raise IntentError("Основная известная цель потеряна или переставлена.")
         if legacy["mode"] == "single_venue" and policy != "primary" and not (has_or and not priority):
             raise IntentError("Основная цель не может стать необязательным вариантом.")
@@ -449,8 +461,145 @@ def _goal_structure(query, goals, policy, legacy):
                and not _location_mention(normalized, start)]
         raw_or = any(re.search(r"\b(?:или|либо|or)\b", normalized[first[1]:second[0]])
                      for first, second in zip(raw, raw[1:]))
-        if raw_or and legacy["mode"] == "walk" and (policy != "any" or not set(known) <= set(model_known)):
+        if raw_or and not priority and legacy["mode"] == "walk" and (policy != "any" or not set(known) <= set(model_known)):
             raise IntentError("Явные варианты 'или' должны сохраниться.")
+
+
+_ALTERNATIVE = re.compile(r"(?<!\w)(?:или|либо|or)(?!\w)")
+_GLOBAL_CONDITION = re.compile(
+    r"(?<!\w)(?:везде|оба|обоих|все\s+(?:места|варианты)|всех\s+(?:мест|вариантов)|"
+    r"кажд\w*|люб\w*\s+(?:мест\w*|вариант\w*)|для\s+всех|"
+    r"every(?:where)?|both|all\s+(?:places|options)|any\s+(?:place|option))(?!\w)"
+)
+
+
+def _alternative_layout(query, goals, policy):
+    """Only disjoint, literal goal branches separated by explicit OR can localize."""
+    if policy != "any" or len(goals) < 2:
+        return ()
+    text = _norm(query)
+    ordered = sorted((*_quote_position(goal.quote, query)[1:], index)
+                     for index, goal in enumerate(goals))
+    separators = []
+    for first, second in zip(ordered, ordered[1:]):
+        if first[1] > second[0]:
+            return ()
+        gap = text[first[1]:second[0]]
+        choices = list(_ALTERNATIVE.finditer(gap))
+        if len(choices) != 1:
+            return ()
+        choice = choices[0]
+        if re.search(r"(?:\d+|час\w*|минут\w*)\s*$", gap[:choice.start()]):
+            return ()
+        separators.append((first[1] + choice.start(), first[1] + choice.end()))
+    result = []
+    for position, (begin, end, index) in enumerate(ordered):
+        left = separators[position - 1][1] if position else max(
+            (m.end() for m in re.finditer(r"[,;.!?\n]", text[:begin])), default=0)
+        if position < len(separators):
+            right = separators[position][0]
+        else:
+            following = re.search(r"[,;.!?\n]", text[end:])
+            right = end + following.start() if following else len(text)
+        result.append((index, left, right, begin, end))
+    return tuple(result)
+
+
+def _local_requirement_scope(query, goals, policy, begin, end):
+    """Prove grammatical attachment; model choice, type relevance and proximity are not proof."""
+    text = _norm(query)
+    for index, left, right, goal_begin, goal_end in _alternative_layout(query, goals, policy):
+        if not left <= begin < end <= right or _GLOBAL_CONDITION.search(text[left:right]):
+            continue
+        # Commas/independent clauses and another goal cannot lend their property.
+        if re.search(r"[,;.!?\n]", text[min(begin, goal_begin):max(end, goal_end)]):
+            continue
+        category = goals[index].category_hint
+        anchors = [(a, b) for a, b, identifier in _matches(text)
+                   if identifier == category and goal_begin <= a and b <= goal_end]
+        if len(anchors) != 1:
+            continue  # Unknown/overlapping nominal identity is conservatively global.
+        a, b = anchors[0]
+        if begin >= b:
+            link = text[b:begin]
+            if not re.match(r"^\s+(?:со?|with|для|having|equipped\s+with)\s+", link):
+                continue
+            for pattern in _REQUIREMENT_WITNESSES.values():
+                link = re.sub(r"(?<!\w)(?:" + pattern + r")(?!\w)", " ", link)
+            if not re.fullmatch(r"(?:\s|\b(?:с|со|with|для|having|equipped|и|или|and|or|"
+                                r"обязательно|обязательн\w*|только|must|only|доступ\w*|вход\w*)\b)*", link):
+                continue
+            return index
+        if end <= a and not text[end:a].strip():
+            # An immediately preceding adjective is local, not 'нужна розетка: кафе'.
+            if re.fullmatch(r"(?:тих\w*|спокойн\w*|quiet|accessible|безбарьер\w*)", text[begin:end]):
+                return index
+    return None
+
+
+def _condition_occurrences(query, key):
+    text = _norm(query)
+    return [match for match in re.finditer(r"(?<!\w)(?:" + _REQUIREMENT_WITNESSES[key] + r")(?!\w)", text)
+            if not _negated(text, match.start(), match.end())]
+
+
+def _requirement_scope(quote, key, query, goals, policy):
+    text, begin, end = _quote_position(quote, query)
+    witnesses = [match for match in _condition_occurrences(query, key)
+                 if begin <= match.start() and match.end() <= end]
+    if not witnesses:
+        return None
+    scopes = {_local_requirement_scope(query, goals, policy, match.start(), match.end()) for match in witnesses}
+    return next(iter(scopes)) if len(scopes) == 1 else None
+
+
+def _witness_quote(query, begin, end):
+    text = _norm(query)
+    for width in (0, 12, 28, 64, 130):
+        left, right = max(0, begin - width), min(len(text), end + width)
+        while left > 0 and text[left - 1].isalnum():
+            left -= 1
+        while right < len(text) and text[right].isalnum():
+            right += 1
+        quote = text[left:right].strip()
+        if len(quote) > 300:
+            continue
+        try:
+            _quote_position(quote, query)
+            return quote
+        except IntentError:
+            continue
+    raise IntentError("Условие сообщения неоднозначно.")
+
+
+def _preserve_activity_conditions(requirements, query, goals, policy):
+    # Additional services remain hard independently of the model's fulfilment label.
+    # This preserves an explicit request; it never supplies proof about a source.
+    for match in _condition_occurrences(query, "activity"):
+        scope = _local_requirement_scope(query, goals, policy, match.start(), match.end())
+        if scope is None:
+            # The automatic requirement for an already validated specific goal
+            # belongs to that goal even when primary ignores a secondary goal.
+            owners = [index for index, goal in enumerate(goals)
+                      if goal.fulfilment == "specific_activity"
+                      and _quote_position(goal.quote, query)[1] <= match.start()
+                      and match.end() <= _quote_position(goal.quote, query)[2]
+                      and not _GLOBAL_CONDITION.search(_norm(goal.quote))]
+            if len(owners) == 1:
+                scope = owners[0]
+        if not any(item.key == "activity" and item.required and item.goal_index == scope for item in requirements):
+            requirements.append(Requirement(_witness_quote(query, match.start(), match.end()), "activity", True, scope))
+
+
+def _preserve_hard_conditions(requirements, query, goals, policy, legacy):
+    """Every positive witness keeps its own scope; a local key cannot hide a global one."""
+    for key, flag in (("socket", "socket"), ("wifi", "wifi"), ("accessible", "accessible"), ("quiet", "strict_quiet")):
+        if not legacy[flag]:
+            continue
+        for match in _condition_occurrences(query, key):
+            scope = _local_requirement_scope(query, goals, policy, match.start(), match.end())
+            if not any(item.key == key and item.required and item.goal_index == scope for item in requirements):
+                requirements.append(Requirement(_witness_quote(query, match.start(), match.end()), key, True, scope))
 
 
 @dataclass(frozen=True)
@@ -472,6 +621,7 @@ class Requirement:
     quote: str
     key: str
     required: bool
+    goal_index: int | None = None
 
 
 @dataclass(frozen=True)
@@ -508,17 +658,17 @@ class IntentPlan:
 
     @property
     def open_goal(self):
-        active = self.goals[:1] if self.mode == "single_venue" else self.goals
+        active = self.goals[:1] if self.goal_policy == "primary" else self.goals
         return any(goal.category_hint is None for goal in active)
 
     @property
     def search_text(self):
-        active = self.goals[:1] if self.mode == "single_venue" else self.goals
+        active = self.goals[:1] if self.goal_policy == "primary" else self.goals
         return "; ".join(goal.search_text for goal in active)
 
     @property
     def source_phrase(self):
-        active = self.goals[:1] if self.mode == "single_venue" else self.goals
+        active = self.goals[:1] if self.goal_policy == "primary" else self.goals
         return "; ".join(CATEGORY_CATALOG[goal.category_hint]["dgis_query"]
                          if goal.category_hint in CATEGORY_CATALOG
                          and goal.fulfilment in {"venue_visit", "generic_walk"}
@@ -526,11 +676,27 @@ class IntentPlan:
 
     @property
     def preferences(self):
-        return tuple(dict.fromkeys(item.key for item in self.requirements if item.key in {"quiet", "socket", "accessible"}))
+        return tuple(dict.fromkeys(item.key for item in self.requirements if item.key in {"quiet", "socket", "wifi", "accessible"}))
 
     @property
     def required_keys(self):
         return tuple(dict.fromkeys(item.key for item in self.requirements if item.required))
+
+    @property
+    def global_preferences(self):
+        return tuple(dict.fromkeys(item.key for item in self.requirements
+                                   if item.goal_index is None and item.key in {"quiet", "socket", "wifi", "accessible"}))
+
+    @property
+    def global_required_keys(self):
+        return tuple(dict.fromkeys(item.key for item in self.requirements
+                                   if item.goal_index is None and item.required))
+
+    def effective_required_keys(self, goal_index):
+        if type(goal_index) is not int or not 0 <= goal_index < len(self.goals):
+            raise IntentError("Неизвестная ветка цели.")
+        return tuple(dict.fromkeys(item.key for item in self.requirements
+                                   if item.required and item.goal_index in {None, goal_index}))
 
     @property
     def search_intent(self):
@@ -545,22 +711,23 @@ class IntentPlan:
                            "category_hint": goal.category_hint, "fulfilment": goal.fulfilment}
                           for index, goal in enumerate(self.goals)],
                 "goal_policy": self.goal_policy,
-                "requirements": [{"key": item.key, "required": item.required} for item in self.requirements],
+                "requirements": [{"key": item.key, "required": item.required, "goal_index": item.goal_index} for item in self.requirements],
                 "context": list(dict.fromkeys(item.flag for item in self.context))}
 
     def retrieval_intent(self, time_of_day="day"):
         if time_of_day not in {"day", "evening", "night"}:
             raise IntentError("Некорректное время суток.")
         search = self.search_intent
-        requested = search["categories"][:1] if self.mode == "single_venue" else search["categories"]
-        required, preferences = set(self.required_keys), set(self.preferences)
+        active = self.goals[:1] if self.goal_policy == "primary" else self.goals
+        requested = list(dict.fromkeys(goal.category_hint for goal in active if goal.category_hint is not None))
+        required, preferences = set(self.global_required_keys), set(self.global_preferences)
         flags = {item.flag for item in self.context}
-        return {"coffee": "cafe" in requested, "socket": "socket" in required,
+        return {"coffee": "cafe" in requested, "socket": "socket" in required, "wifi": "wifi" in required,
                 "quiet": "quiet" in preferences, "strict_quiet": "quiet" in required,
                 "child": "child" in flags, "tourist": "tourist" in flags,
                 "architecture": "architecture" in requested, "night": time_of_day == "night",
                 "accessible": "accessible" in required,
-                "outdoor": any(goal.fulfilment == "generic_walk" for goal in self.goals)
+                "outdoor": any(goal.fulfilment == "generic_walk" for goal in active)
                            or any(value in {"walk", "park", "promenade"} for value in requested),
                 "preferred_categories": requested, "activity_mode": self.mode, "unsupported_activity": False,
                 "primary_category": self.canonical_primary, "requested_categories": search["categories"],
@@ -572,7 +739,7 @@ class IntentPlan:
                 "goals": [dict(quote=g.quote, search_text=g.search_text, category_hint=g.category_hint, fulfilment=g.fulfilment) for g in self.goals],
                 "excluded": [dict(quote=g.quote, category_hint=g.category_hint) for g in self.excluded],
                 "goal_policy": self.goal_policy,
-                "requirements": [dict(quote=r.quote, key=r.key, required=r.required) for r in self.requirements],
+                "requirements": [dict(quote=r.quote, key=r.key, required=r.required, goal_index=r.goal_index) for r in self.requirements],
                 "context": [dict(quote=c.quote, flag=c.flag) for c in self.context]}
 
 
@@ -629,7 +796,12 @@ def validate_intent(value, query):
         raise IntentError("Положительная и исключённая категории противоречат друг другу.")
     requirements = []
     for item in _records(value["requirements"], 0, 8):
-        item = _record(item, {"quote", "key", "required"})
+        if not isinstance(item, dict) or set(item) not in ({"quote", "key", "required"}, {"quote", "key", "required", "goal_index"}):
+            raise IntentError()
+        scoped_record = "goal_index" in item
+        index = item.get("goal_index")
+        if index is not None and (type(index) is not int or not 0 <= index < len(goals)):
+            raise IntentError("Неизвестная ветка условия.")
         if not isinstance(item["key"], str) or item["key"] not in _REQUIREMENTS or type(item["required"]) is not bool:
             raise IntentError()
         quote = _quote(item["quote"], query)
@@ -653,10 +825,16 @@ def validate_intent(value, query):
             if not (key == "activity" and any(goal.fulfilment == "specific_activity"
                     and (_norm(quote) in _norm(goal.quote) or _norm(goal.quote) in _norm(quote)) for goal in goals)):
                 continue  # Unrelated time/place/goal quotes cannot create a property.
-        requirements.append(Requirement(quote, key, item["required"]))
-    for goal in goals:
-        if goal.fulfilment == "specific_activity" and not any(item.key == "activity" and item.required for item in requirements):
-            requirements.append(Requirement(goal.quote, "activity", True))
+        proved = _requirement_scope(quote, key, query, goals, value["goal_policy"])
+        if index is not None and index != proved:
+            raise IntentError("Локальное условие не подтверждено своей альтернативой.")
+        if scoped_record and index is None:
+            index = proved
+        requirements.append(Requirement(quote, key, item["required"], index))
+    for goal_index, goal in enumerate(goals):
+        if goal.fulfilment == "specific_activity" and not any(
+                item.key == "activity" and item.required and item.goal_index in {None, goal_index} for item in requirements):
+            requirements.append(Requirement(goal.quote, "activity", True, goal_index))
     flags = []
     for item in _records(value["context"], 0, 4):
         item = _record(item, {"quote", "flag"})
@@ -669,17 +847,8 @@ def validate_intent(value, query):
     # This is interpretation of the request, never evidence about a venue.
     from .retrieval import detect_intent
     old_intent = detect_intent(query)
-    witnesses = {
-        "socket": r"розет\w*|заряд\w*|sockets?|power\s+outlets?",
-        "accessible": r"коляс\w*|безбарьер\w*|wheelchair|accessible|арбамен",
-        "quiet": r"тих\w*|quiet|тыныш",
-    }
-    for key, flag in (("socket", "socket"), ("accessible", "accessible"), ("quiet", "strict_quiet")):
-        if old_intent[flag] and not any(item.key == key and item.required for item in requirements):
-            found = next((match for match in re.finditer(witnesses[key], _norm(query))
-                          if not _negated(_norm(query), match.start(), match.end())), None)
-            if found:
-                requirements.append(Requirement(found[0], key, True))
+    _preserve_hard_conditions(requirements, query, goals, value["goal_policy"], old_intent)
+    _preserve_activity_conditions(requirements, query, goals, value["goal_policy"])
     for flag, pattern in (("child", r"ребен\w*|деть\w*|дети|детск\w*|семь[яеюи]\w*|семейн\w*|family|child\w*|kids|бала\w*"),
                           ("tourist", r"турист\w*|достопримеч\w*|архитект\w*|tourist\w*|sightsee\w*")):
         if old_intent[flag] and not any(item.flag == flag for item in flags):
@@ -711,7 +880,17 @@ def deterministic_plan(query):
     legacy = detect_intent(query)
     normalized = _norm(query)
     goals = []
-    for category in search["categories"]:
+    categories = list(search["categories"])
+    positive = [(begin, end, identifier) for begin, end, identifier in _matches(normalized)
+                if not _negated(normalized, begin, end) and not _location_mention(normalized, begin)]
+    if "walk" not in categories and not _PRIORITY.search(normalized):
+        alternatives = [item for item in positive if item[2] in set(categories) | {"walk"}]
+        if (any(identifier == "walk" and _broad_walk_witness(normalized[begin:end])
+                for begin, end, identifier in alternatives)
+                and len(alternatives) > 1 and all(_ALTERNATIVE.search(normalized[a[1]:b[0]])
+                    for a, b in zip(alternatives, alternatives[1:]))):
+            categories = list(dict.fromkeys(identifier for _, _, identifier in alternatives))
+    for category in categories:
         match = next(((begin, end) for begin, end, identifier in _matches(normalized)
                       if identifier == category and not _negated(normalized, begin, end)
                       and not _location_mention(normalized, begin)), None)
@@ -730,14 +909,20 @@ def deterministic_plan(query):
             goals.append(Goal(question or query, CATEGORY_CATALOG["walk"]["google_query"], "walk", "generic_walk"))
         else:
             raise IntentError("Цель не распознана автономным разбором.", code="unsupported_activity")
+    positions = sorted(_quote_position(goal.quote, query)[1:] for goal in goals)
+    explicit_or = len(positions) > 1 and all(_ALTERNATIVE.search(normalized[first[1]:second[0]])
+                                            for first, second in zip(positions, positions[1:]))
+    policy = ("primary" if _PRIORITY.search(normalized) else "any" if explicit_or else
+              "primary" if search["mode"] == "single_venue" else "walk_mix")
     requirements = []
-    patterns = {"socket": r"розет\w*|заряд\w*|sockets?|power\s+outlets?",
-                "quiet": r"тих\w*|тишин\w*|спокойн\w*|quiet|тыныш",
-                "accessible": r"коляс\w*|безбарьер\w*|wheelchair|accessible|арбамен"}
     for key in search["preferences"]:
-        found = re.search(patterns[key], query, re.I)
-        if found:
-            requirements.append(Requirement(found[0], key, key != "quiet" or legacy["strict_quiet"]))
+        for found in _condition_occurrences(query, key):
+            scope = _local_requirement_scope(query, goals, policy, found.start(), found.end())
+            if not any(item.key == key and item.goal_index == scope for item in requirements):
+                requirements.append(Requirement(_witness_quote(query, found.start(), found.end()), key,
+                                                key != "quiet" or legacy["strict_quiet"], scope))
+    _preserve_activity_conditions(requirements, query, goals, policy)
+    _preserve_hard_conditions(requirements, query, goals, policy, legacy)
     context = []
     for key, pattern in (("child", r"ребен\w*|ребён\w*|деть\w*|дети|детск\w*|семь[яеюи]\w*|family|child\w*|kids|бала\w*"),
                          ("tourist", r"турист\w*|достопримеч\w*|tourist\w*|sightsee\w*")):
@@ -745,7 +930,7 @@ def deterministic_plan(query):
         if legacy[key] and found:
             context.append(ContextFlag(found[0], key))
     excluded = tuple(ExcludedGoal(category, category) for category in search["excluded_categories"])
-    return IntentPlan(None, tuple(goals), excluded, "primary" if search["mode"] == "single_venue" else "walk_mix",
+    return IntentPlan(None, tuple(goals), excluded, policy,
                       tuple(requirements), tuple(context), "deterministic", hashlib.sha256(query.encode("utf-8")).hexdigest())
 
 
@@ -767,7 +952,8 @@ def extraction_request(query, model):
         "excluded": array(obj({"quote": string(300), "category_hint": category}), 5),
         "goal_policy": {"type": "string", "enum": sorted(_POLICIES)},
         "requirements": array(obj({"quote": string(300), "key": {"type": "string", "enum": sorted(_REQUIREMENTS)},
-                                    "required": {"type": "boolean"}}), 8),
+                                    "required": {"type": "boolean"},
+                                    "goal_index": {"anyOf": [{"type": "integer", "minimum": 0, "maximum": 2}, {"type": "null"}]}}), 8),
         "context": array(obj({"quote": string(300), "flag": {"type": "string", "enum": sorted(_FLAGS)}}), 4),
     })
     labels = {key: value["ru_label"] for key, value in CATEGORY_CATALOG.items()}
@@ -786,7 +972,11 @@ def extraction_request(query, model):
         "Запрос увидеть природу обычно относится к park, не выдумывай свойства парка. Например, зоопарк не доказывает контакт "
         "с определённым животным. Обязательные услуги, техника, наличие товара, цена получают required requirement. "
         "requirements и context заполняй ТОЛЬКО при явном условии в цитате: время и обычная цель не являются ими. "
-        "Без такого условия оба массива пусты. Пример: 'хочу поиграть в компьютерном клубе' -> "
+        "goal_index — нулевой индекс ТОЛЬКО своей альтернативы при явном 'или'; общие условия имеют null. "
+        "Например 'кафе с розеткой или парк': socket относится к цели 0; 'везде нужен доступ для коляски' — null. "
+        "Wi-Fi/вайфай/wireless internet означает requirement wifi; не выводи его из ноутбука или типа клуба. "
+        "Не переноси условия между вариантами. Для дополнительной услуги музея в 'площадка или музей с интерактивами' "
+        "activity относится к музею, не к площадке. Без такого условия оба массива пусты. Пример: 'хочу поиграть в компьютерном клубе' -> "
         "venue_visit, requirements=[], context=[]. 'Я турист с сыном, хочу клуб с RTX' -> "
         "context tourist/child по цитатам 'турист'/'сыном', equipment required по 'RTX'. "
         "Не добавляй ребёнка или туриста по игре, месту или длительности. "

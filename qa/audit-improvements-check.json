@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-21T00:32:17+00:00",
+  "branch": "codex/audit-improvements",
+  "release_scope": "isolated-development-only",
+  "stable_public_base": "c1f1a26116d8e22a34c77134a727a34e1274ed18",
+  "public_rollout": false,
+  "submitted_presentation_and_video_changed": false,
+  "offline": {
+    "methods": 637,
+    "passed": 635,
+    "skipped": 2,
+    "skip_scope": "Windows symlink privileges",
+    "frontend_cases": 120,
+    "frontend_passed": 120,
+    "pwa_cases": 23,
+    "pwa_passed": 23,
+    "real_external_calls": 0
+  },
+  "local_model_validation": {
+    "fixture_type": "synthetic venues and synthetic Google previews",
+    "revision": "v3",
+    "completed_cases": 10,
+    "inference_calls": 10,
+    "whole_answers_accepted": 7,
+    "whole_answers_rejected": 3,
+    "raw_responses_saved": false,
+    "rejections": {
+      "museum_no_event_or_interactive": "venue_description_unsupported_protected_event_or_roof",
+      "mixed_park_cafe": "venue_description_unsupported_comfort_claim",
+      "ready_variants_and_unfit": "unsupported_own_type_action"
+    },
+    "manual_review": "accepted responses checked for observed type, temporal, property and quality inventions",
+    "comparison_claim": false,
+    "external_place_provider_calls": 0
+  },
+  "rejected_revision_v2": {
+    "paired_cases": 10,
+    "completed_inference_calls": 20,
+    "same_guard_baseline_accepted": 4,
+    "same_guard_candidate_accepted": 3,
+    "adopted": false,
+    "reason": "manual review and acceptance showed no reliable improvement"
+  },
+  "live_preview": {
+    "scenario": "cafe with socket OR park at a fixed public landmark",
+    "completed_at": "2026-10-21T00:29:54+00:00",
+    "known_public_start": true,
+    "real_device_geolocation": false,
+    "all_three_sources_completed": true,
+    "source_receipt": {
+      "osm": {
+        "status": "searched",
+        "candidate_count": 1,
+        "selected_count": 1
+      },
+      "google": {
+        "status": "no_data",
+        "candidate_count": 0,
+        "selected_count": 0
+      },
+      "dgis": {
+        "status": "no_data",
+        "candidate_count": 0,
+        "selected_count": 0
+      }
+    },
+    "route_built": true,
+    "budget_minutes": 45,
+    "walking_minutes": 28,
+    "proposed_visit_minutes": 12,
+    "buffer_minutes": 5,
+    "return_walk_minutes_included": 15,
+    "map_visually_loaded": true,
+    "night_access_unknown_notice_visible": true,
+    "mode": "grounding-only",
+    "narration_status": "unsupported_quality_claim",
+    "accepted_live_model_description": false
+  },
+  "boundaries": [
+    "Missing socket, quietness, accessibility and service facts remain unknown.",
+    "No new live Google structured-property coverage or curated service catalogue claimed.",
+    "Weekly schedules support a conservative subset; exceptions stay unknown.",
+    "Strict confirmed-hours demands still require own-source 24/7.",
+    "Source-reported schedule coverage is not verified live access.",
+    "Synthetic tests and desktop preview do not certify physical-phone GPS or all user requests."
+  ],
+  "source_sha256": {
+    "app/unified_narration.py": "6c3e53e881fc2339cf9dfc421fa999aefd46502cfd75a300146bd080ae7d7f86",
+    "app/semantic_intent.py": "79f8c7d6450c817122f44566d6db04c50cb153158a86b3f9ddae88cf108c779e",
+    "app/retrieval.py": "2a8b1d42d79de48f5dbe8074e709a5474eb4bc54404ae87ce812d9c620a9707c",
+    "app/unified_walks.py": "521e6bfbdb0141db1a413dcd269bb1f8d70d67fbc41acea73fd15ca772f6c309",
+    "app/opening_hours.py": "d0f0be297768356f70ffc4ef2842ee40b2a23b066d7f24c98b533ee15f79754c",
+    "app/place_evidence.py": "940a2faf10b5772550586be9b60ed2cf7740eb8f1d68038aaf75e60391195a5a",
+    "app/google_grounded.py": "e75b799528dbaf5856f4623ee83b70d90a2d1520773c9ac43ff93c881ea61b04",
+    "app/unified_dgis.py": "f41a2537b1fa734bbd3bcd948df3e7ae92d15bbd64cde9b751f942cbb5ec9621",
+    "scripts/collect_2gis.py": "92b567fe0056bd02b9f780b458b3a67ecebcd67ac93d8ddd53debe19f368883c",
+    "web/google-lab/lab.js": "7f01e97bacabb4ad4d681a19b3511a16c90dc33766f9e012bca69a3b0fa70ab2",
+    "web/google-lab/sw.js": "65167c81ddedc62ee31352c79fa6aec8963de57650bda94263e3c5070c60bd3a"
+  }
+}
