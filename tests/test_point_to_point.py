@@ -23,12 +23,12 @@ class PointToPointTests(unittest.TestCase):
     def test_nearby_endpoints_are_not_silently_changed_into_a_circle(self):
         for query in ("Пешком от EXPO до Mega за час", "Walk from EXPO to the airport"):
             with self.subTest(query=query):
-                self.assert_code(query, [60], "unsupported_point_to_point")
+                self.assertEqual(validate_walking_request(query, [60])["route_kind"], "point_to_point")
 
     def test_largest_ready_budget_is_the_only_rejection_bound(self):
         query = "Хочу от Экспо до аэропорта"
         self.assert_code(query, [10], "route_does_not_fit")
-        self.assert_code(query, [10, 60], "unsupported_point_to_point")
+        self.assertEqual(validate_walking_request(query, [10, 60])["destination_id"], "airport")
 
     def test_airport_visit_and_temporal_before_flight_are_not_endpoint_pairs(self):
         for query in (
@@ -66,12 +66,18 @@ class PointToPointTests(unittest.TestCase):
 
     def test_prefixes_and_incomplete_pairs_do_not_become_public_endpoints(self):
         for query in (
-            "от Экспоцентра до аэропорта", "от Мегапарка до аэропорта",
-            "от Байтерековского до аэропорта", "от EXPO до аэропортового отеля",
             "от EXPO до", "от неизвестного отеля до Mega",
         ):
             with self.subTest(query=query):
-                self.assertIsNone(validate_walking_request(query, [10]))
+                self.assert_code(query, [10], "route_endpoints_unresolved")
+
+    def test_named_prefixes_require_source_resolution_instead_of_public_alias_guess(self):
+        for query in ("от Экспоцентра до аэропорта", "от Мегапарка до аэропорта",
+                      "от Байтерековского до аэропорта", "от EXPO до аэропортового отеля"):
+            route=validate_walking_request(query,[60])
+            spec=route['origin_spec'] if route['origin_spec']['kind']=='named' else route['destination_spec']
+            self.assertEqual(spec['kind'],'named')
+            self.assertIsNone(spec['public_id'])
 
     def test_multiple_positive_pairs_are_rejected_without_choosing_the_first(self):
         self.assert_code("От Экспо до Mega или от Байтерека до аэропорта", [10], "unsupported_point_to_point")
@@ -80,7 +86,7 @@ class PointToPointTests(unittest.TestCase):
         for name in ("Президентского парка", "аэропорта", "Центрального парка", "Абу Даби",
                      "Mega", "Байтерека", "набережной Есиля"):
             with self.subTest(name=name):
-                self.assert_code(f"От {name} до EXPO", [480], "unsupported_point_to_point")
+                self.assertEqual(validate_walking_request(f"От {name} до EXPO", [480])["destination_id"], "expo")
 
 
 if __name__ == "__main__":

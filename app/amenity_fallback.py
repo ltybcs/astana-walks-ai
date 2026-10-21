@@ -50,7 +50,7 @@ def _nonamenity_access(place, plan):
     return True
 
 
-def unconfirmed_amenities(place, original_plan):
+def unconfirmed_amenities(place, original_plan, *, goal_indices=None):
     """Return UNKNOWN required keys for one own matched branch, else None.
 
     A known negative in that branch is ineligible, even if another property is
@@ -60,9 +60,14 @@ def unconfirmed_amenities(place, original_plan):
     relaxed = relax_amenities(original_plan)
     if relaxed is None or not isinstance(place, dict) or not _nonamenity_access(place, original_plan):
         return None
-    if matched_goal_indices(place, original_plan):
+    active = set(range(len(original_plan.goals))) if goal_indices is None else set(goal_indices)
+    if not active or any(type(index) is not int or not 0 <= index < len(original_plan.goals) for index in active):
+        return None
+    if set(matched_goal_indices(place, original_plan)) & active:
         return None
     for index in matched_goal_indices(place, relaxed):
+        if index not in active:
+            continue
         required = set(original_plan.effective_required_keys(index))
         requested = [key for key in AMENITY_KEYS if key in required]
         states = {key: feature(place, key) for key in requested}

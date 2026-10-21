@@ -169,9 +169,18 @@ _NUMBERED_PLACE = re.compile(
 def _numbered_departure_spans(query):
     """A numbered departure name is a start role, never a guessed place ID."""
     candidates = []
-    for match in _DEPARTURE_QUESTION.finditer(query):
+    matches = [(match, False) for match in _DEPARTURE_QUESTION.finditer(query)]
+    # A numbered address may precede a closed sightseeing question. This is
+    # literal departure grammar, not a guessed address identity or geocoding.
+    for question in _GENERIC_QUESTION.finditer(query):
+        prefix = query[:question.start()]
+        departure = re.search(r"(?:^|[,;.!?\n])\s*(?:с|со|из|от)\s+(?P<place>[^,;.!?\n]{2,100}?)\s*$", prefix, re.I)
+        if departure is not None:
+            matches.append((departure, True))
+    for match, address_before_question in matches:
         name = match["place"].strip()
-        if not _NUMBERED_PLACE.fullmatch(name):
+        if not _NUMBERED_PLACE.fullmatch(name) and not (address_before_question
+                and re.fullmatch(_NUMBERED_PLACE.pattern, name, re.I)):
             continue
         # Existing hard-service/companion terms must not become place names.
         excluded = (r"ребен\w*|ребён\w*|деть\w*|дети|друз\w*|friend\w*|child\w*|"
@@ -180,7 +189,7 @@ def _numbered_departure_spans(query):
         if re.search(r"(?<!\w)(?:" + excluded + r")(?!\w)", name, re.I):
             continue
         normalized, begin, end = _quote_position(name, query)
-        _, question_begin, _ = _quote_position(match[0].strip(), query)
+        question_begin = match.start()
         if _negated(normalized, question_begin, end):
             continue
         candidates.append((begin, end, query[match.start("place"):match.end("place")].strip()))
@@ -206,6 +215,18 @@ def _start(value, query):
         raise IntentError("Отвергнутое место не может быть стартом.")
     departure_role = any(begin == first and _norm(value) == _norm(name)
                          for first, _, name in _numbered_departure_spans(query))
+    # Closed explicit public routes also establish their literal first point;
+    # this does not broaden bare companion 'с X' into a location cue.
+    route_role = False
+    try:
+        from .route_request import validate_walking_request
+        from .google_budget import GoogleError
+        route = validate_walking_request(query, [480])
+        route_role = bool(route and isinstance(route.get("origin_quote"), str)
+                          and _norm(value) == _norm(route["origin_quote"]))
+    except (GoogleError, ValueError):
+        pass
+    departure_role = departure_role or route_role
     # A destination after 'want to visit' is not the current position.
     if _DESTINATION.search(prefix) and not departure_role and not re.search(
         r"\b(?:я\s+(?:сейчас\s+)?(?:нахожусь|стою|сижу)|i\s+am|старт(?:ую)?)\b[^,;.!?]*$", prefix
@@ -253,6 +274,7 @@ def explicit_start_quote(query):
 
 _GENERIC_QUESTION = re.compile(
     r"(?<!\w)(?:что(?:\s+(?:интересного|необычного))?\s+(?:можно\s+)?(?:посмотреть|увидеть)|"
+    r"какие\s+(?:есть\s+)?(?:интересные|необычные)\s+места|"
     r"куда\s+(?:можно\s+)?(?:пойти|сходить)|где\s+(?:можно\s+)?(?:погулять|прогуляться))(?!\w)", re.I
 )
 _NEUTRAL_QUESTION_FRAME = re.compile(
@@ -263,6 +285,7 @@ _NEUTRAL_QUESTION_FRAME = re.compile(
 )
 _GENERIC_QUESTION_TAIL = re.compile(
     r"(?:в\s+астане|в\s+этом\s+городе|(?:рядом|поблизости|недалеко)(?:\s+со?\s+мной)?)?"
+    r"(?:\s*до\s+(?:\d+(?:[.,]\d+)?|одного|двух|трех|четырех)\s*(?:час(?:а|ов)?|минут(?:а|ы)?))?"
     r"\s*[.!?]*", re.I
 )
 
@@ -274,6 +297,18 @@ def _generic_question_goal(query):
         return None
     match = matches[0]
     prefix = query[:match.start()].strip(" \t\r\n,;.!?")
+    departures = _numbered_departure_spans(query)
+    if len(departures) == 1 and departures[0][1] <= match.start():
+        departure = re.search(r"(?<!\w)(?:с|со|из|от)\s+" + re.escape(departures[0][2]) + r"\s*$", prefix, re.I)
+        if departure:
+            prefix = prefix[:departure.start()].strip(" \t\r\n,;.!?")
+    named_start = explicit_start_quote(query)
+    if named_start:
+        position = re.search(r"(?:^|[,;.!?\n])\s*(?:я\s+)?(?:сейчас\s+)?"
+            r"(?:(?:нахожусь|стою|сижу|остановился)\s+)?"
+            r"(?:возле|около|рядом\s+с|у|в|на|near|at)\s+" + re.escape(named_start) + r"\s*$",prefix,re.I)
+        if position:
+            prefix=prefix[:position.start()].strip(" \t\r\n,;.!?")
     while prefix:
         frame = _NEUTRAL_QUESTION_FRAME.match(prefix)
         if frame is None:
@@ -291,11 +326,78 @@ def _generic_question_goal(query):
     return match[0]
 
 
+
+def _route_sightseeing_goal(query):
+    """A closed A-to-B sightseeing clause; every other word is accounted for.
+
+    This never rescues a venue/service/property clause or an unknown endpoint.
+    Canonical public pair validation still precedes all external work.
+    """
+    from .route_request import validate_walking_request, _FROM, _TO, _INTO
+    from .google_budget import GoogleError
+    try:
+        descriptor = validate_walking_request(query, [480])
+    except (GoogleError, ValueError):
+        return None
+    if not descriptor:
+        return None
+    question = re.compile(r"(?<!\w)что\s+(?:можно\s+)?(?:по\s+пути\s+)?(?:посмотреть|увидеть)(?!\w)", re.I)
+    goals = list(question.finditer(query))
+    if len(goals) != 1:
+        return None
+    normalized = _norm(query)
+    beginnings = list(_FROM.finditer(normalized))
+    if len(beginnings) != 1:
+        return None
+    beginning = beginnings[0]
+    connector = _TO.search(normalized, beginning.end())
+    if connector is None and beginning[0].strip() == "из":
+        connector = _INTO.search(normalized, beginning.end())
+    if connector is None:
+        return None
+    endpoint_end = connector.end() + len(descriptor["destination_quote"])
+    remainder = normalized[:beginning.start()] + ' ' + normalized[endpoint_end:]
+    remainder, count = question.subn(' ', remainder)
+    if count != 1:
+        return None
+    allowed = re.compile(r"(?:покажи|покажите|посоветуй|пожалуйста|я|хочу|бы|хотел|хотела|"
+        r"пройти|пройтись|пешком|пеший|маршрут|путь|по|пути|за|на|у|меня|есть|время|"
+        r"час(?:а|ов)?|минут(?:а|ы)?|один|два|две|три|четыре|пять|пару|полтора|"
+        r"\d+)")
+    words = re.findall(r"[\w]+", remainder)
+    return goals[0][0] if all(allowed.fullmatch(word) for word in words) else None
+
+
+
+
+def _interpretation_query(query):
+    # Retain name capitalization for the stronger identity-only mask. Its
+    # spaces keep quote offsets; original text remains every quote's proof.
+    from .place_exclusions import mask_place_exclusions
+    text = re.sub(r"\s+", " ", unicodedata.normalize("NFKC", query)).strip()
+    return mask_place_exclusions(text)
+
+
+def _interpretation_text(query):
+    return _interpretation_query(query).casefold().replace("ё", "е")
+
+
+def _intent_search(query):
+    search = parse_search_intent(_interpretation_text(query))
+    # A fully closed generic question accounts for its numbered start already.
+    # Category words inside that address are identity, not a requested venue.
+    if (not search["preferences"] and not search["excluded_categories"]
+            and (_generic_question_goal(_interpretation_query(query)) or _route_sightseeing_goal(_interpretation_query(query)))):
+        return {**search, "categories": ["walk"], "mode": "walk", "supported": True}
+    return search
+
+
 def _broad_walk_witness(quote):
     """Only broad outdoor/viewing language may remove venue-type requirements."""
     from .activity_intent import _GENERIC
     normalized = _norm(quote)
-    if _GENERIC.fullmatch(normalized) or _GENERIC_QUESTION.fullmatch(normalized):
+    if (_GENERIC.fullmatch(normalized) or _GENERIC_QUESTION.fullmatch(normalized)
+            or re.fullmatch(r"что\s+(?:можно\s+)?по\s+пути\s+(?:посмотреть|увидеть)", normalized)):
         return True
     # This is a safety witness for broadness, not a place/category alias table.
     allowed = re.compile(
@@ -419,7 +521,7 @@ def _ordinary_venue_purpose(quote, query, category, start):
     return bool(words) and all(re.fullmatch(common + "|" + purpose, word) for word in words)
 
 def _goal_structure(query, goals, policy, legacy):
-    normalized = _norm(query)
+    normalized = _interpretation_text(query)
     positions = [_quote_position(goal.quote, query)[1:] for goal in goals]
     has_or = any(re.search(r"\b(?:или|либо|or)\b", normalized[first[1]:second[0]])
                  for first, second in zip(sorted(positions), sorted(positions)[1:]))
@@ -756,6 +858,8 @@ def validate_intent(value, query):
         item = _record(item, {"quote", "search_text", "category_hint", "fulfilment"})
         quote = _quote(item["quote"], query)
         text, begin, end = _quote_position(quote, query)
+        if not _interpretation_text(query)[begin:end].strip():
+            raise IntentError("Исключённое по имени место не может быть положительной целью.")
         if _negated(text, begin, end) or re.match(r"^(?:не\s+(?:хочу|нужно|надо|в)|(?:don't|do not)\s+want)\b", _norm(quote)):
             raise IntentError("Отвергнутая цель не может быть положительной.")
         category = _category(item["category_hint"])
@@ -783,9 +887,12 @@ def validate_intent(value, query):
         source, begin, end = _quote_position(quote, query)
         if not (_negated(source, begin, end) or re.match(r"^(?:не|без|not|without)\b", _norm(quote))):
             raise IntentError("Исключение должно быть подтверждено отрицанием в сообщении.")
-        excluded.append(ExcludedGoal(quote, _category(item["category_hint"])))
+        category = _category(item["category_hint"])
+        if not _interpretation_text(query)[begin:end].strip():
+            category = None  # Named exclusions never exclude the entire type.
+        excluded.append(ExcludedGoal(quote, category))
     # A semantic interpretation must never erase a clear known exclusion.
-    legacy = parse_search_intent(query)
+    legacy = _intent_search(query)
     _goal_structure(query, goals, value["goal_policy"], legacy)
     for category in legacy["excluded_categories"]:
         if not any(item.category_hint == category for item in excluded):
@@ -871,14 +978,14 @@ def validate_intent(value, query):
 def deterministic_plan(query):
     """Fallback only to recognized positive goals; never invent a broad goal."""
     query = _query(query)
-    search = parse_search_intent(query)
-    question = _generic_question_goal(query) if not search["preferences"] and not search["excluded_categories"] else None
+    search = _intent_search(query)
+    question = (_generic_question_goal(_interpretation_query(query)) or _route_sightseeing_goal(_interpretation_query(query))) if not search["preferences"] and not search["excluded_categories"] else None
     if not search["supported"] and question is None:
         raise IntentError("Цель не распознана автономным разбором.", code="unsupported_activity")
     # Import lazily: retrieval consumers can import this module without a cycle.
     from .retrieval import detect_intent
     legacy = detect_intent(query)
-    normalized = _norm(query)
+    normalized = _interpretation_text(query)
     goals = []
     categories = list(search["categories"])
     positive = [(begin, end, identifier) for begin, end, identifier in _matches(normalized)

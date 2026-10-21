@@ -7,6 +7,7 @@ const state = {
 };
 let contextPreparationCapability = null;
 const PROVIDERS = {osm: "OpenStreetMap", google: "Google Maps", dgis: "2ГИС"};
+const PUBLIC_ORIGIN_IDS = new Set(["presidential_park", "airport", "central_park", "abu_dhabi", "mega", "baiterek", "river", "expo"]);
 const ORIGIN_SOURCES = {
   query_landmark: "из сообщения", query_catalog: "из сообщения",
   google_places_text_search: "найдено в Google Maps",
@@ -153,6 +154,93 @@ function startKnown(context) {
     && !context.is_city_sample && context.origin_source !== "city_sample"
     && context.origin_source !== "pending_geolocation");
 }
+function routeKind(context) {
+  if (!context || context.route_kind === undefined) return "round_trip";
+  return ["round_trip", "point_to_point"].includes(context.route_kind) ? context.route_kind : null;
+}
+function samePoint(first, second) {
+  return Boolean(first && second && coordinate(first.lat, first.lon) && coordinate(second.lat, second.lon)
+    && first.lat.toFixed(7) === second.lat.toFixed(7) && first.lon.toFixed(7) === second.lon.toFixed(7));
+}
+function orderedGroupsKnown(groups) {
+  return Array.isArray(groups) && groups.length === 2 && groups.every(group => Array.isArray(group)
+    && group.length > 0 && group.length <= 3 && group.every(index => Number.isInteger(index) && index >= 0 && index <= 2))
+    && new Set(groups.flat()).size === groups.flat().length;
+}
+function orderedStopsKnown(context, plan, stops) {
+  return orderedGroupsKnown(context.ordered_goal_groups) && plan.ordered_goals_covered === true
+    && stops.length === 2 && stops.every((stop, index) => stop && Array.isArray(stop.matched_goal_indices)
+      && stop.matched_goal_indices.every(value => Number.isInteger(value) && value >= 0 && value <= 2)
+      && stop.matched_goal_indices.some(value => context.ordered_goal_groups[index].includes(value)))
+    && stops[0].stop_id !== stops[1].stop_id;
+}
+function endpointIdentityKnown(context, role) {
+  const source = context[role + "_source"], id = context[role + "_id"];
+  if (["query_landmark", "explicit_landmark"].includes(source)) return PUBLIC_ORIGIN_IDS.has(id);
+  if (source === "google_places_text_search") return id === null
+    && typeof context[role + "_place_id"] === "string" && /^[A-Za-z0-9_-]{1,512}$/.test(context[role + "_place_id"])
+    && Boolean(safeUrl(context[role + "_reference"], "google"));
+  return role === "origin" && ["browser_geolocation", "explicit_coordinates"].includes(source) && id === null;
+}
+function extraBudgetsKnown(context) {
+  if (context.budget_mode === undefined || context.budget_mode === "total") return true;
+  return context.budget_mode === "extra" && Array.isArray(context.extra_budget_options)
+    && Array.isArray(context.budget_options) && context.budget_options.length > 0 && context.budget_options.length <= 3
+    && context.extra_budget_options.length === context.budget_options.length
+    && context.extra_budget_options.every((extra, index) => Number.isInteger(extra) && extra >= 0 && extra <= 480
+      && Number.isInteger(context.budget_options[index]) && context.budget_options[index] >= 10
+      && context.budget_options[index] <= 480 && context.budget_options[index] === context.direct_walk_minutes + extra);
+}
+function routeContextKnown(context) {
+  if (!startKnown(context) || !routeKind(context)
+      || context.budget_mode !== undefined && !["total", "extra"].includes(context.budget_mode)
+      || context.ordered_goal_groups !== undefined && !orderedGroupsKnown(context.ordered_goal_groups)) return false;
+  if (routeKind(context) !== "point_to_point") return context.destination === undefined && context.budget_mode !== "extra";
+  const end = context.destination;
+  return Boolean(end && coordinate(end.lat, end.lon) && end.lat >= 51.00 && end.lat <= 51.32
+    && end.lon >= 71.20 && end.lon <= 71.70 && typeof end.label === "string" && end.label.trim() && end.label.length <= 300
+    && !samePoint(context.origin, end) && endpointIdentityKnown(context, "origin") && endpointIdentityKnown(context, "destination")
+    && !(["query_landmark", "explicit_landmark"].includes(context.origin_source)
+      && ["query_landmark", "explicit_landmark"].includes(context.destination_source) && context.origin_id === context.destination_id)
+    && !(context.origin_source === "google_places_text_search" && context.destination_source === "google_places_text_search"
+      && context.origin_place_id === context.destination_place_id)
+    && finite(context.direct_walk_minutes) && context.direct_walk_minutes >= 0 && extraBudgetsKnown(context));
+}
+function sameRouteEndpoints(first, second) {
+  if (!routeContextKnown(first) || !routeContextKnown(second) || routeKind(first) !== routeKind(second)) return false;
+  if (routeKind(first) !== "point_to_point") return true; // Preserve legacy circular option compatibility.
+  return samePoint(first.origin, second.origin) && first.origin.label === second.origin.label
+    && first.origin_id === second.origin_id && first.origin_source === second.origin_source
+    && samePoint(first.destination, second.destination) && first.destination.label === second.destination.label
+    && first.destination_id === second.destination_id && first.destination_source === second.destination_source
+    && first.destination_reference === second.destination_reference && first.direct_walk_minutes === second.direct_walk_minutes
+    && first.origin_place_id === second.origin_place_id && first.destination_place_id === second.destination_place_id
+    && (first.budget_mode || "total") === (second.budget_mode || "total")
+    && (first.budget_mode !== "extra" || JSON.stringify(first.extra_budget_options) === JSON.stringify(second.extra_budget_options)
+      && JSON.stringify(first.budget_options) === JSON.stringify(second.budget_options))
+    && JSON.stringify(first.ordered_goal_groups) === JSON.stringify(second.ordered_goal_groups);
+}
+function pointToPointPlanKnown(plan, context, stops, budget = plan && plan.budget_minutes) {
+  if (!routeContextKnown(context) || routeKind(context) !== "point_to_point" || !plan
+      || plan.route_kind !== "point_to_point" || plan.verified !== true || plan.reaches_destination !== true
+      || plan.returns_to_origin !== false || !samePoint(plan.destination, context.destination)
+      || plan.destination.label !== context.destination.label || !Array.isArray(stops) || stops.length > 2
+      || stops.length === 2 && !orderedStopsKnown(context, plan, stops)
+      || !finite(plan.walk_minutes) || plan.walk_minutes < 0 || !finite(plan.final_walk_minutes)
+      || !finite(plan.visit_minutes) || plan.visit_minutes < 0 || plan.buffer_minutes !== 5
+      || !Number.isInteger(budget) || budget < 10 || budget > 480 || plan.budget_minutes !== budget
+      || context.direct_walk_minutes + 5 > budget || plan.total_minutes > budget
+      || !finite(plan.total_minutes) || Math.abs(plan.total_minutes - plan.walk_minutes - plan.visit_minutes - plan.buffer_minutes) >= .000001
+      || plan.final_walk_minutes < 0 || plan.final_walk_minutes > plan.walk_minutes
+      || (stops.length === 0 && (plan.visit_minutes !== 0 || plan.walk_minutes !== context.direct_walk_minutes))
+      || !Array.isArray(plan.legs) || plan.legs.length !== stops.length + 1
+      || (stops.length === 0 ? plan.direct_only !== true : plan.direct_only === true)) return false;
+  const refs = ["origin", ...stops.map(stop => stop && stop.stop_id), "destination"];
+  return plan.legs.every((leg, index) => leg && leg.from_ref === refs[index] && leg.to_ref === refs[index + 1]
+      && finite(leg.minutes) && leg.minutes >= 0)
+    && Math.abs(plan.legs.reduce((sum, leg) => sum + leg.minutes, 0) - plan.walk_minutes) < .000001
+    && plan.legs[plan.legs.length - 1].minutes === plan.final_walk_minutes;
+}
 function preparationToken(probe) {
   if (!probe || typeof probe.preparation_token !== "string" || !probe.preparation_token.trim()) {
     throw new Error("Подготовка запроса не подтверждена. Поиск не запущен.");
@@ -238,8 +326,10 @@ function validateAmenityFallback(option) {
   }
   if (fallback && fallback.unconfirmed.some(key => !observed.has(key))) throw new Error("Примечание не связано с выбранными местами.");
 }
-function validateResult(data) {
-  if (!data || !["llm-grounded-unified", "grounding-only"].includes(data.mode) || !startKnown(data.resolved_context)) throw new Error("Ответ не соответствует протоколу подбора.");
+function validateResult(data, preparedContext = null) {
+  if (!data || !["llm-grounded-unified", "grounding-only"].includes(data.mode) || !routeContextKnown(data.resolved_context)) throw new Error("Ответ не соответствует протоколу подбора.");
+  if (preparedContext && (routeKind(preparedContext) === "point_to_point" || routeKind(data.resolved_context) === "point_to_point")
+      && !sameRouteEndpoints(preparedContext, data.resolved_context)) throw new Error("Конечные точки маршрута изменились после подготовки.");
   if (!data.grounding || typeof data.grounding.summary !== "string" || !Array.isArray(data.grounding.sources)) throw new Error("В ответе отсутствуют источники Google.");
   if (data.answer !== null && (!data.answer || typeof data.answer.text !== "string" || !data.answer.text.trim())) throw new Error("В ответе отсутствует полный текст.");
   if (data.mode === "llm-grounded-unified" && !data.answer) throw new Error("Режим ответа не подтверждён.");
@@ -265,11 +355,19 @@ function validateResult(data) {
   for (const option of data.alternatives) {
     if (!option || typeof option.id !== "string" || !option.id || ids.has(option.id) || !Number.isInteger(option.budget_minutes) || option.budget_minutes < 10 || option.budget_minutes > 480 || !Array.isArray(option.stops) || option.stops.length > 3 || typeof option.route_built !== "boolean") throw new Error("Некорректный вариант прогулки.");
     ids.add(option.id);
+    const pointToPoint = routeKind(data.resolved_context) === "point_to_point";
+    if ((pointToPoint || option.resolved_context && routeKind(option.resolved_context) === "point_to_point")
+        && !sameRouteEndpoints(data.resolved_context, option.resolved_context)) throw new Error("Вариант не соответствует конечным точкам маршрута.");
+    if (option.route_kind !== undefined && option.route_kind !== routeKind(data.resolved_context)) throw new Error("Некорректный тип маршрута.");
+    if (data.resolved_context.budget_mode === "extra" && extraMinutes(data.resolved_context, option.budget_minutes) === null) throw new Error("Вариант не соответствует дополнительному времени.");
     validateAmenityFallback(option);
     if (option.stops.some(stop => stop && data.source_receipt[stop.provider] && data.source_receipt[stop.provider].status === "unavailable")) throw new Error("Место получено из недоступного источника.");
     if (option.route_built) {
       const plan = option.plan;
-      if (option.budget_status !== "fits" || !plan || plan.verified !== true || plan.returns_to_origin !== true || !finite(plan.total_minutes) || plan.total_minutes < 0 || plan.total_minutes > option.budget_minutes || !option.stops.length) throw new Error("Маршрут не подтверждён в пределах времени.");
+      if (option.budget_status !== "fits" || !plan || plan.verified !== true || !finite(plan.total_minutes)
+          || plan.total_minutes < 0 || plan.total_minutes > option.budget_minutes
+          || (pointToPoint ? !pointToPointPlanKnown(plan, data.resolved_context, option.stops, option.budget_minutes)
+            : plan.returns_to_origin !== true || !option.stops.length || plan.route_kind === "point_to_point")) throw new Error("Маршрут не подтверждён в пределах времени.");
       for (const stop of option.stops) if (!stop || !["osm", "google", "dgis"].includes(stop.provider) || typeof stop.name !== "string" || !coordinate(stop.lat, stop.lon)) throw new Error("Некорректная остановка маршрута.");
     }
   }
@@ -279,7 +377,9 @@ function validateResult(data) {
 function contextText(context) {
   const time = {day: "день", evening: "вечер", night: "ночь"}[context.time_of_day] || "текущее время";
   const source = ORIGIN_SOURCES[context.origin_source] || "подтверждённый старт";
-  return "Старт: " + context.origin.label + " · " + source + " · " + time;
+  return "Старт: " + context.origin.label
+    + (routeKind(context) === "point_to_point" ? " · Финиш: " + context.destination.label : "")
+    + " · " + source + " · " + time;
 }
 function renderGoogleSources(hostId, sources) {
   const host = $(hostId);
@@ -335,6 +435,24 @@ function renderOtherSources(sources, receipts) {
     host.append(list);
   }
 }
+function extraMinutes(context, budget) {
+  if (context && context.budget_mode === "extra" && extraBudgetsKnown(context)) {
+    const index = context.budget_options.indexOf(budget);
+    return index < 0 ? null : context.extra_budget_options[index];
+  }
+  return null;
+}
+function variantLabel(context, budget) {
+  const extra = extraMinutes(context, budget);
+  return extra === null ? budget + " мин" : "+" + extra + " мин к дороге · всего " + budget + " мин";
+}
+function renderEndpointAttributions(host, values) {
+  if (!Array.isArray(values)) return;
+  values.slice(0, 8).forEach(value => {
+    if (!value || typeof value.provider !== "string" || !value.provider.trim() || value.provider.length > 300) return;
+    host.append(node("span", " · "), link(value.provider, value.providerUri, "origin-attribution"));
+  });
+}
 function renderResult(data) {
   state.result = data;
   const incomplete = ["osm", "dgis"].some(provider => data.source_receipt[provider].status === "unavailable");
@@ -346,11 +464,11 @@ function renderResult(data) {
       && safeUrl(data.resolved_context.origin_reference, "google")) {
     $("walk-context").append(node("span", " · "), link("Источник старта ↗", data.resolved_context.origin_reference, "google"));
   }
-  const attributions = data.resolved_context.origin_attributions;
-  if (Array.isArray(attributions)) attributions.slice(0, 8).forEach(value => {
-    if (!value || typeof value.provider !== "string" || !value.provider.trim() || value.provider.length > 300) return;
-    $("walk-context").append(node("span", " · "), link(value.provider, value.providerUri, "origin-attribution"));
-  });
+  if (routeKind(data.resolved_context) === "point_to_point" && safeUrl(data.resolved_context.destination_reference, "google")) {
+    $("walk-context").append(node("span", " · "), link("Источник финиша ↗", data.resolved_context.destination_reference, "google"));
+  }
+  renderEndpointAttributions($("walk-context"), data.resolved_context.origin_attributions);
+  if (routeKind(data.resolved_context) === "point_to_point") renderEndpointAttributions($("walk-context"), data.resolved_context.destination_attributions);
   renderReceipts(data.source_receipt);
   $("answer-label").textContent = data.answer ? "Ответ помощника" : "Полный ответ Google · без генерации модели";
   $("walk-answer").textContent = data.answer ? data.answer.text : data.grounding.summary;
@@ -368,7 +486,7 @@ function renderResult(data) {
   const variants = $("walk-variants");
   variants.replaceChildren();
   data.alternatives.forEach(option => {
-    const button = node("button", option.budget_minutes + " мин");
+    const button = node("button", variantLabel(data.resolved_context, option.budget_minutes));
     button.type = "button";
     button.dataset.optionId = option.id;
     button.setAttribute("aria-pressed", "false");
@@ -388,34 +506,63 @@ function renderRouteAttributions(attributions) {
     else if (value && typeof value.title === "string") host.append(link(value.title, value.url, "google"));
   });
 }
-function directionsUrl(context, stops) {
-  if (!startKnown(context) || !stops.length || stops.length > 3) return null;
+function directionsUrl(context, stops, plan = null) {
+  if (!routeContextKnown(context) || !Array.isArray(stops) || stops.length > 3) return null;
+  const pointToPoint = routeKind(context) === "point_to_point";
+  if (pointToPoint ? !pointToPointPlanKnown(plan, context, stops) : !stops.length) return null;
+  if (stops.some(stop => !stop || !coordinate(stop.lat, stop.lon))) return null;
   const origin = context.origin.lat + "," + context.origin.lon;
+  const end = pointToPoint ? context.destination : context.origin;
   const url = new URL("https://www.google.com/maps/dir/");
   url.searchParams.set("api", "1");
   url.searchParams.set("origin", origin);
-  url.searchParams.set("destination", origin);
+  url.searchParams.set("destination", end.lat + "," + end.lon);
   url.searchParams.set("travelmode", "walking");
-  url.searchParams.set("waypoints", stops.map(stop => stop.lat + "," + stop.lon).join("|"));
+  if (stops.length) url.searchParams.set("waypoints", stops.map(stop => stop.lat + "," + stop.lon).join("|"));
   return url.href;
 }
-function validateMapUrl(value) {
+function mapPointMatches(value, point) {
+  if (typeof value !== "string" || !/^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/.test(value)) return false;
+  const [lat, lon] = value.split(",").map(Number);
+  return samePoint({lat, lon}, point);
+}
+function validateMapUrl(value, context = null, option = null) {
   if (typeof value !== "string") return null;
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.hostname !== "www.google.com" || url.port || url.username || url.password || url.pathname !== "/maps/embed/v1/directions" || url.hash) return null;
     const allowed = new Set(["key", "origin", "destination", "waypoints", "mode", "language", "region", "avoid", "units"]);
     for (const key of url.searchParams.keys()) if (!allowed.has(key) || url.searchParams.getAll(key).length !== 1) return null;
-    if (!url.searchParams.get("key") || !url.searchParams.get("origin") || url.searchParams.get("origin") !== url.searchParams.get("destination") || url.searchParams.get("mode") !== "walking") return null;
-    const stops = (url.searchParams.get("waypoints") || "").split("|").filter(Boolean);
-    return stops.length >= 1 && stops.length <= 3 ? url.href : null;
+    if (!url.searchParams.get("key") || !url.searchParams.get("origin") || !url.searchParams.get("destination") || url.searchParams.get("mode") !== "walking") return null;
+    const waypoints = url.searchParams.get("waypoints");
+    const stops = waypoints === null ? [] : waypoints.split("|");
+    if (stops.some(stop => !stop) || stops.length > 3) return null;
+    const pointToPoint = context && routeKind(context) === "point_to_point";
+    if (pointToPoint) {
+      if (!option || !option.route_built || !pointToPointPlanKnown(option.plan, context, option.stops, option.budget_minutes)
+          || !mapPointMatches(url.searchParams.get("origin"), context.origin)
+          || !mapPointMatches(url.searchParams.get("destination"), context.destination)
+          || stops.length !== option.stops.length) return null;
+    } else {
+      if (context && (!routeContextKnown(context) || !mapPointMatches(url.searchParams.get("origin"), context.origin))) return null;
+      if (url.searchParams.get("origin") !== url.searchParams.get("destination") || !stops.length) return null;
+    }
+    if (option && (stops.length !== option.stops.length || stops.some((value, index) => {
+      const stop = option.stops[index];
+      return stop.provider === "google" && typeof stop.id === "string"
+        ? value !== "place_id:" + stop.id : !mapPointMatches(value, stop);
+    }))) return null;
+    return url.href;
   } catch (_) { return null; }
 }
 async function loadRouteMap(option, context) {
   clearMap();
   if (!option.route_built) return;
   show("route-map-section", true);
-  const external = directionsUrl(context, option.stops);
+  const pointToPoint = routeKind(context) === "point_to_point";
+  $("route-map-title").textContent = pointToPoint ? "Пеший маршрут до " + context.destination.label : "Пеший маршрут с возвращением";
+  $("route-external").textContent = pointToPoint ? "Открыть маршрут до финиша в Google Maps ↗" : "Открыть пеший маршрут в Google Maps ↗";
+  const external = directionsUrl(context, option.stops, option.plan);
   if (external) { $("route-external").href = external; show("route-external", true); }
   if (typeof option.map_ticket !== "string" || !option.map_ticket) {
     $("route-map-status").textContent = "Карта маршрута пока недоступна. План и ссылка на Google Maps остаются доступны.";
@@ -431,10 +578,10 @@ async function loadRouteMap(option, context) {
   try {
     const data = await post("/api/unified/map", {ticket: option.map_ticket}, controller.signal);
     if (!active()) return;
-    const url = validateMapUrl(data.url);
+    const url = validateMapUrl(data.url, context, option);
     if (!url || !finite(data.expires_in) || data.expires_in <= 0 || data.expires_in > 600) throw new Error("Неподтверждённый адрес карты.");
     const iframe = node("iframe");
-    iframe.title = "Пеший маршрут Google Maps с возвращением";
+    iframe.title = pointToPoint ? "Пеший маршрут Google Maps до " + context.destination.label : "Пеший маршрут Google Maps с возвращением";
     iframe.setAttribute("referrerpolicy", "origin");
     iframe.setAttribute("allowfullscreen", "");
     iframe.addEventListener("load", () => {
@@ -474,9 +621,20 @@ function selectOption(id) {
   $("walk-budget").textContent = option.route_built
     ? plan.total_minutes + " из " + option.budget_minutes + " мин · пешком " + plan.walk_minutes + " · остановки " + plan.visit_minutes + " · запас " + plan.buffer_minutes
     : "На " + option.budget_minutes + " мин подтверждённый маршрут не построен.";
+  const context = option.resolved_context || state.result.resolved_context;
+  const pointToPoint = routeKind(context) === "point_to_point";
+  const extra = extraMinutes(context, option.budget_minutes);
+  if (extra !== null) $("walk-budget").append(node("span", " · дополнительно к дороге " + extra + " мин"));
   $("walk-route-note").textContent = option.route_built
-    ? "Возвращение к старту включено: " + plan.return_walk_minutes + " мин. Пеший путь рассчитан Google; время посещения и запас предложены приложением."
+    ? pointToPoint ? (plan.direct_only
+      ? "Прямой пеший маршрут до " + context.destination.label + ": " + plan.final_walk_minutes + " мин. Подходящая остановка в пределах времени не подтверждена; показан только путь до финиша. Запас предложен приложением."
+      : "Финиш: " + context.destination.label + ". Последний пеший участок: " + plan.final_walk_minutes + " мин. Пеший путь рассчитан Google; время посещения и запас предложены приложением.")
+    : "Возвращение к старту включено: " + plan.return_walk_minutes + " мин. Пеший путь рассчитан Google; время посещения и запас предложены приложением."
+    : pointToPoint ? "Путь до финиша в пределах выбранного времени не подтверждён. Готовый маршрут не построен."
     : "Подходящих остановок или подтверждённого времени недостаточно. Это результат проверки источников, а не готовая рекомендация.";
+  if (!pointToPoint && typeof option.route_note === "string" && option.route_note.trim() && option.route_note.length <= 600) {
+    $("walk-route-note").append(node("span", " " + option.route_note));
+  }
   const fallback = option.route_built && option.amenity_fallback && option.amenity_fallback.applied === true
     ? option.amenity_fallback : null;
   $("amenity-fallback-note").textContent = fallback ? fallback.notice : "";
@@ -589,12 +747,14 @@ async function submitWalk(event) {
       if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
       if (preparationEnabled) payload.preparation_token = preparationToken(probe);
     }
-    if (probe.needs_geolocation || !startKnown(probe.resolved_context)) throw startError();
-    $("walk-status").textContent = "Проверяем OSM, Google и 2ГИС. Затем рассчитаем возвращение и подготовим один ответ…";
+    if (probe.needs_geolocation || !routeContextKnown(probe.resolved_context)) throw startError();
+    $("walk-status").textContent = routeKind(probe.resolved_context) === "point_to_point"
+      ? "Проверяем OSM, Google и 2ГИС. Подберём остановку по пути до финиша…"
+      : "Проверяем OSM, Google и 2ГИС. Затем рассчитаем возвращение и подготовим один ответ…";
     const data = await post("/api/unified/recommend", {...payload, consent: true}, controller.signal);
     if (!current(id, sig)) return;
     if (controller.signal.aborted) { const error = new Error("Подбор отменён."); error.name = "AbortError"; throw error; }
-    renderResult(validateResult(data));
+    renderResult(validateResult(data, probe.resolved_context));
     $("walk-status").textContent = "Подбор завершён. Варианты времени переключаются без нового поиска.";
     $("walk-result-title").focus({preventScroll: true});
     $("walk-result-title").scrollIntoView({block: "start", behavior: "auto"});

@@ -591,6 +591,245 @@ test("malformed requested-property metadata fails closed",()=>{
   }
 });
 
+
+function p2pContext(extra={}) {
+  return context({route_kind:"point_to_point",destination:{lat:51.1283,lon:71.4305,label:"Байтерек"},
+    destination_id:"baiterek",destination_source:"query_landmark",destination_reference:"https://www.google.com/maps/place/baiterek",
+    direct_walk_minutes:20,...extra});
+}
+function p2pOption(minutes=45,direct=false,extra={}) {
+  const ctx=p2pContext({minutes});const stops=direct?[]:[stop()];const legs=direct
+    ?[{from_ref:"origin",to_ref:"destination",minutes:20,attribution:{title:"Google Maps",url:"https://www.google.com/maps/"}}]
+    :[{from_ref:"origin",to_ref:"osm:0",minutes:11},{from_ref:"osm:0",to_ref:"destination",minutes:11}];
+  return option(minutes,{resolved_context:ctx,stops,plan:{...option(minutes).plan,route_kind:"point_to_point",destination:copy(ctx.destination),
+    reaches_destination:true,returns_to_origin:false,direct_only:direct,final_walk_minutes:legs[legs.length-1].minutes,
+    walk_minutes:direct?20:22,visit_minutes:direct?0:15,total_minutes:direct?25:42,legs},...extra});
+}
+function p2pResult(alternatives=[p2pOption()]) {
+  const direct=alternatives.every(opt=>opt.stops.length===0);
+  const value=result({resolved_context:p2pContext(),alternatives,default_option_id:alternatives[0].id,
+    ...(direct?{mode:"grounding-only",answer:null}:{})});
+  if(direct)for(const receipt of Object.values(value.source_receipt))receipt.selected_count=0;
+  return value;
+}
+function p2pMapReply(opt=p2pOption()) {
+  const ctx=opt.resolved_context,url=new URL("https://www.google.com/maps/embed/v1/directions");
+  url.searchParams.set("key","PUBLIC_RESTRICTED_FIXTURE");url.searchParams.set("origin",ctx.origin.lat.toFixed(7)+","+ctx.origin.lon.toFixed(7));
+  url.searchParams.set("destination",ctx.destination.lat.toFixed(7)+","+ctx.destination.lon.toFixed(7));url.searchParams.set("mode","walking");
+  if(opt.stops.length)url.searchParams.set("waypoints",opt.stops.map(stop=>stop.provider==="google"?"place_id:"+stop.id:stop.lat.toFixed(7)+","+stop.lon.toFixed(7)).join("|"));
+  return {url:url.href,expires_in:600};
+}
+function p2pHarness(data=p2pResult(),mapOverride=null) {
+  return harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:copy(data.resolved_context)}
+    :req.url==="/api/unified/recommend"?data:mapOverride||p2pMapReply(data.alternatives.find(opt=>opt.map_ticket===req.body.ticket)))});
+}
+test("point-to-point result displays destination and final leg without roundtrip wording",async()=>{
+  const data=p2pResult();const original=copy(data);const h=p2pHarness(data);await h.submit("От Mega до Байтерека за 45 минут, хочу прогулку");await flush();
+  assert(!h.elements["walk-result"].hidden);assert(h.elements["walk-context"].textContent.includes("Финиш: Байтерек"));
+  assert(h.elements["walk-route-note"].textContent.includes("Последний пеший участок: 11 мин"));assert(!h.elements["walk-route-note"].textContent.includes("Возвращение"));
+  assert.equal(h.elements["route-map-title"].textContent,"Пеший маршрут до Байтерек");assert(!h.elements["route-external"].textContent.includes("возвращ"));
+  assert.equal(h.elements["route-map-host"].children.length,1);assert(h.frame().title.includes("Байтерек"));assert(!h.frame().title.includes("возвращ"));
+  const url=new URL(h.frame().src);assert.notEqual(url.searchParams.get("origin"),url.searchParams.get("destination"));
+  assert.equal(h.elements["google-original-text"].textContent,original.grounding.summary);assert.deepEqual(copy(h.run("state.result")),original);
+});
+test("verified direct-only result is a useful route with no invented venue recommendation",async()=>{
+  const opt=p2pOption(45,true),data=p2pResult([opt]);const h=p2pHarness(data);await h.submit();await flush();
+  assert(!h.elements["walk-result"].hidden);assert.equal(h.elements["walk-stops"].children.length,0);assert(h.elements["walk-budget"].textContent.includes("25 из 45 мин"));
+  const note=h.elements["walk-route-note"];assert(!note.hidden);assert(note.textContent.includes("Прямой пеший маршрут"));assert(note.textContent.includes("Подходящая остановка"));
+  assert(!note.textContent.includes("возвращ"));assert(!note.textContent.includes("не построен"));assert.equal(h.elements["walk-mode"].textContent,"Без ответа модели");
+  const url=new URL(h.frame().src);assert(!url.searchParams.has("waypoints"));assert.notEqual(url.searchParams.get("origin"),url.searchParams.get("destination"));
+  const external=new URL(h.elements["route-external"].href);assert(!external.searchParams.has("waypoints"));assert.notEqual(external.searchParams.get("origin"),external.searchParams.get("destination"));
+});
+test("point-to-point external route keeps ordered stop and exact destination",()=>{
+  const opt=p2pOption(),h=harness(),url=new URL(h.run("directionsUrl("+JSON.stringify(opt.resolved_context)+","+JSON.stringify(opt.stops)+","+JSON.stringify(opt.plan)+")"));
+  assert.equal(url.searchParams.get("origin"),"51.0892,71.4074");assert.equal(url.searchParams.get("destination"),"51.1283,71.4305");
+  assert.equal(url.searchParams.get("waypoints"),"51.09,71.41");assert.equal(url.searchParams.get("travelmode"),"walking");
+  assert.equal(h.run("directionsUrl("+JSON.stringify(p2pContext())+",[])"),null);
+});
+test("point-to-point validation rejects changed or unproved endpoint metadata",()=>{
+  const h=harness();const mutations=[
+    data=>{delete data.resolved_context.destination;},data=>{data.resolved_context.destination=data.resolved_context.origin;},
+    data=>{data.resolved_context.destination.lat=52;},data=>{data.resolved_context.destination_source="browser_geolocation";},
+    data=>{data.resolved_context.destination_id=data.resolved_context.origin_id;},data=>{data.resolved_context.direct_walk_minutes=null;},
+    data=>{data.resolved_context.route_kind="driving";},data=>{delete data.alternatives[0].resolved_context;},
+    data=>{data.alternatives[0].resolved_context.destination.lon=71.5;},data=>{data.alternatives[0].resolved_context.destination.label="Другой финиш";},
+    data=>{data.alternatives[0].resolved_context.route_kind="round_trip";},data=>{data.alternatives[0].route_kind="round_trip";},
+  ];for(const mutate of mutations){const data=p2pResult();mutate(data);assert.throws(()=>h.run("validateResult("+JSON.stringify(data)+")"));}
+});
+test("point-to-point validation verifies destination-reaching chain and budget arithmetic",()=>{
+  const h=harness();const mutations=[
+    plan=>{plan.returns_to_origin=true;},plan=>{plan.reaches_destination=false;},plan=>{plan.route_kind="round_trip";},
+    plan=>{plan.destination.lon=71.5;},plan=>{plan.destination.label="Другой финиш";},plan=>{plan.final_walk_minutes=12;},
+    plan=>{plan.final_walk_minutes=-1;},plan=>{plan.legs[1].to_ref="origin";},plan=>{plan.legs[0].from_ref="destination";},
+    plan=>{plan.legs.reverse();},plan=>{plan.legs[1].minutes=null;},plan=>{plan.legs.pop();},
+    plan=>{plan.walk_minutes=21;},plan=>{plan.visit_minutes=100;},plan=>{plan.direct_only=true;}
+  ];for(const mutate of mutations){const data=p2pResult();mutate(data.alternatives[0].plan);assert.throws(()=>h.run("validateResult("+JSON.stringify(data)+")"));}
+});
+test("zero-stop routes require a distinct verified direct-only destination",()=>{
+  const h=harness();for(const mutate of [
+    opt=>{opt.plan.direct_only=false;},opt=>{opt.plan.verified=false;},opt=>{opt.plan.visit_minutes=1;opt.plan.total_minutes++;},
+    opt=>{opt.plan.walk_minutes=19;opt.plan.final_walk_minutes=19;opt.plan.legs[0].minutes=19;opt.plan.total_minutes=24;},
+    opt=>{opt.plan.legs[0].to_ref="origin";},opt=>{opt.resolved_context.destination=copy(opt.resolved_context.origin);}
+  ]){const opt=p2pOption(45,true);mutate(opt);assert.throws(()=>h.run("validateResult("+JSON.stringify(p2pResult([opt]))+")"));}
+  assert.throws(()=>h.run("validateResult("+JSON.stringify(result({alternatives:[option(45,{stops:[]})]}))+")"));
+});
+test("point-to-point prepared endpoints cannot be replaced with a circular or different endpoint response",()=>{
+  const h=harness();const prepared=p2pContext();const data=p2pResult();assert(h.run("validateResult("+JSON.stringify(data)+","+JSON.stringify(prepared)+")"));
+  prepared.destination.lon=71.5;assert.throws(()=>h.run("validateResult("+JSON.stringify(data)+","+JSON.stringify(prepared)+")"));
+  assert.throws(()=>h.run("validateResult("+JSON.stringify(data)+","+JSON.stringify(context())+")"));
+  assert.throws(()=>h.run("validateResult("+JSON.stringify(result())+","+JSON.stringify(p2pContext())+")"));
+});
+test("invalid destination context prevents source and map requests",async()=>{
+  const ctx=p2pContext({destination:null});const h=harness({fetch:(req,r)=>r({resolved_context:ctx})});await h.submit("От Mega до неизвестного финиша");
+  assert.equal(h.calls("/api/unified/recommend").length,0);assert.equal(h.calls("/api/unified/map").length,0);assert.equal(h.geo.length,0);assert(h.elements["walk-result"].hidden);
+});
+test("point-to-point map URL must match verified endpoints and own stop identity",()=>{
+  const h=harness(),opt=p2pOption(),good=p2pMapReply(opt).url;
+  const validate=url=>h.run("validateMapUrl("+JSON.stringify(url)+","+JSON.stringify(opt.resolved_context)+","+JSON.stringify(opt)+")");assert(validate(good));
+  for(const patch of [url=>url.searchParams.set("destination",url.searchParams.get("origin")),url=>url.searchParams.set("origin","51.2,71.4"),
+    url=>url.searchParams.set("destination","51.2,71.4"),url=>url.searchParams.delete("waypoints"),
+    url=>url.searchParams.set("waypoints","51.2,71.4"),url=>url.searchParams.set("mode","driving")]){
+    const url=new URL(good);patch(url);assert.equal(validate(url.href),null);
+  }
+  assert.equal(h.run("validateMapUrl("+JSON.stringify(good)+")"),null);
+});
+test("direct-only map URL permits omitted waypoint only for the verified direct option",()=>{
+  const h=harness(),opt=p2pOption(45,true),good=p2pMapReply(opt).url;
+  const validate=(url,option=opt)=>h.run("validateMapUrl("+JSON.stringify(url)+","+JSON.stringify(option.resolved_context)+","+JSON.stringify(option)+")");
+  assert(validate(good));const bad=copy(opt);bad.plan.direct_only=false;assert.equal(validate(good,bad),null);
+  const extra=new URL(good);extra.searchParams.set("waypoints","");assert.equal(validate(extra.href),null);
+  const extraStop=new URL(good);extraStop.searchParams.set("waypoints","51.09,71.41");assert.equal(validate(extraStop.href),null);
+  assert.equal(validate(good,p2pOption()),null);
+});
+test("point-to-point Google waypoint keeps its exact place ID",async()=>{
+  const opt=p2pOption();opt.stops=[{...stop("google"),id:"Google_mock"}];opt.plan.legs[0].to_ref=opt.stops[0].stop_id;opt.plan.legs[1].from_ref=opt.stops[0].stop_id;
+  const h=p2pHarness(p2pResult([opt]));await h.submit();await flush();assert(h.frame());assert.equal(new URL(h.frame().src).searchParams.get("waypoints"),"place_id:Google_mock");
+  const wrong=p2pMapReply(opt);wrong.url=wrong.url.replace("Google_mock","Google_other");assert.equal(h.run("validateMapUrl("+JSON.stringify(wrong.url)+","+JSON.stringify(opt.resolved_context)+","+JSON.stringify(opt)+")"),null);
+});
+test("direct-only and stopped time variants switch one map locally and preserve full source answer",async()=>{
+  const first=p2pOption(45,true),second=p2pOption(60),data=p2pResult([first,second]);const original=copy(data);const h=p2pHarness(data);await h.submit();await flush();
+  assert.equal(h.elements["walk-stops"].children.length,0);assert(h.elements["walk-route-note"].textContent.includes("Прямой"));
+  await h.elements["walk-variants"].children[1].emit("click");await flush();assert.equal(h.elements["walk-stops"].children.length,1);
+  assert(h.elements["walk-route-note"].textContent.includes("Последний пеший участок"));assert(!h.elements["walk-route-note"].textContent.includes("Возвращение"));
+  assert.equal(h.elements["route-map-host"].children.length,1);assert.equal(h.calls("/api/unified/recommend").length,1);assert.equal(h.calls("/api/unified/map").length,2);
+  assert.equal(h.elements["google-original-text"].textContent,original.grounding.summary);assert.deepEqual(copy(h.run("state.result")),original);
+  await h.edit("Новый запрос");assert.equal(h.frame(),undefined);assert(!h.elements["route-external"].href);assert.equal(h.run("state.result"),null);
+});
+test("point-to-point stop preserves visible unconfirmed convenience and compact source evidence",async()=>{
+  const opt=p2pOption();Object.assign(opt,{amenity_fallback:{applied:true,unconfirmed:["socket"],notice:amenityNotice}});
+  Object.assign(opt.stops[0],{id:"own-cafe",requested_features:["socket"],unconfirmed_amenities:["socket"],amenity_note:amenityStopNote,why_text:"Подходит по типу; путь до финиша проверен."});
+  const data=p2pResult([opt]),h=p2pHarness(data);await h.submit();await flush();
+  assert(!h.elements["amenity-fallback-note"].hidden);const content=h.elements["walk-stops"].children[0].children[0];assert(content.children.some(el=>el.className==="stop-amenity-note"));
+  assert.equal(content.children.filter(el=>el.tagName==="DETAILS").length,1);assert(content.textContent.includes("Розетки: неизвестно"));assert(!content.textContent.includes("Тишина:"));
+  assert.equal(h.elements["google-original-text"].textContent,data.grounding.summary);assert.equal(h.elements["google-original-sources"].children.length,data.grounding.sources.length+1);
+});
+test("late point-to-point map cannot restore a cleared destination after editing",async()=>{
+  const deferredMap=deferred(),data=p2pResult();const h=harness({fetch:(req,r)=>req.url==="/api/unified/map"?deferredMap.promise:r(req.url==="/api/context"?{resolved_context:data.resolved_context}:data)});
+  await h.submit();await h.edit("Другое пожелание");deferredMap.resolve(h.respond(p2pMapReply()));await flush();assert.equal(h.frame(),undefined);assert(h.elements["route-map-section"].hidden);assert.equal(h.elements["walk-context"].textContent,"");
+});
+
+
+test("point-to-point reserve is exactly five and every option fits the prepared direct baseline",()=>{
+  const h=harness();
+  for(const reserve of [0,1,2,3,4,6]){
+    const data=p2pResult();const plan=data.alternatives[0].plan;plan.buffer_minutes=reserve;plan.total_minutes=plan.walk_minutes+plan.visit_minutes+reserve;
+    assert.throws(()=>h.run("validateResult("+JSON.stringify(data)+")"));
+  }
+  const infeasible=p2pResult();infeasible.resolved_context.direct_walk_minutes=42;infeasible.alternatives[0].resolved_context.direct_walk_minutes=42;
+  assert.throws(()=>h.run("validateResult("+JSON.stringify(infeasible)+")"));
+  const mismatch=p2pResult();mismatch.alternatives[0].plan.budget_minutes=60;assert.throws(()=>h.run("validateResult("+JSON.stringify(mismatch)+")"));
+  const stale=p2pResult();stale.alternatives[0].resolved_context.direct_walk_minutes=19;assert.throws(()=>h.run("validateResult("+JSON.stringify(stale)+")"));
+});
+
+
+function confirmedEndpointContext(extra={}) {
+  return p2pContext({origin_id:null,origin_source:"google_places_text_search",origin_place_id:"Google_origin_fixture",
+    origin_reference:"https://www.google.com/maps/place/origin-fixture",destination_id:null,
+    destination_source:"google_places_text_search",destination_place_id:"Google_destination_fixture",
+    destination_reference:"https://www.google.com/maps/place/destination-fixture",...extra});
+}
+function withRouteContext(data,ctx) {
+  data.resolved_context=copy(ctx);for(const opt of data.alternatives){opt.resolved_context={...copy(ctx),minutes:opt.budget_minutes};opt.plan.destination=copy(ctx.destination);}return data;
+}
+test("confirmed Google endpoints retain exact coordinates and safe source attribution",async()=>{
+  const ctx=confirmedEndpointContext({destination_attributions:[{provider:"Destination data owner",providerUri:"https://data.example/source"},{provider:"Unsafe link stays text",providerUri:"javascript:alert(1)"}]});
+  const data=withRouteContext(p2pResult(),ctx),h=p2pHarness(data);await h.submit();await flush();assert(h.frame());
+  assert(h.elements["walk-context"].textContent.includes("Destination data owner"));assert(h.elements["walk-context"].textContent.includes("Источник финиша"));
+  assert(h.elements["walk-context"].children.some(el=>el.tagName==="A"&&el.href==="https://data.example/source"));
+  assert(!h.elements["walk-context"].children.some(el=>el.tagName==="A"&&String(el.href).startsWith("javascript:")));
+  const url=new URL(h.frame().src);assert.equal(url.searchParams.get("destination"),"51.1283000,71.4305000");assert(!url.searchParams.get("destination").includes("place_id"));
+});
+test("GPS origin is accepted only with a separately confirmed destination",async()=>{
+  const ctx=confirmedEndpointContext({origin_id:null,origin_source:"browser_geolocation",origin_place_id:undefined,origin_reference:undefined});
+  const h=p2pHarness(withRouteContext(p2pResult([p2pOption(45,true)]),ctx));await h.submit();await flush();assert(h.frame());
+  const bad=copy(ctx);bad.destination_source="browser_geolocation";assert.equal(h.run("routeContextKnown("+JSON.stringify(bad)+")"),false);
+});
+test("Google endpoint proof cannot be missing, swapped, guessed or replaced with unsafe URI",()=>{
+  const h=harness();for(const patch of [{destination_place_id:undefined},{destination_place_id:"../private"},{destination_id:"guessed"},
+    {destination_reference:"https://example.com/place"},{destination_reference:"javascript:bad"},
+    {origin_place_id:"Google_destination_fixture"},{destination_source:"explicit_coordinates"}]){
+    const ctx=confirmedEndpointContext(patch);assert.equal(h.run("routeContextKnown("+JSON.stringify(ctx)+")"),false);
+  }
+  const data=withRouteContext(p2pResult(),confirmedEndpointContext());data.alternatives[0].resolved_context.destination_place_id="Google_other_fixture";
+  assert.throws(()=>h.run("validateResult("+JSON.stringify(data)+")"));
+});
+test("extra-time variants display additional minutes while keeping verified total budget",async()=>{
+  const ctx=confirmedEndpointContext({budget_mode:"extra",extra_budget_options:[30,60],budget_options:[50,80],minutes:50});
+  const data=withRouteContext(p2pResult([p2pOption(50),p2pOption(80)]),ctx),h=p2pHarness(data);await h.submit();await flush();
+  assert.equal(h.elements["walk-variants"].children[0].textContent,"+30 мин к дороге · всего 50 мин");
+  assert.equal(h.elements["walk-variants"].children[1].textContent,"+60 мин к дороге · всего 80 мин");
+  assert(h.elements["walk-budget"].textContent.includes("42 из 50 мин"));assert(h.elements["walk-budget"].textContent.includes("дополнительно к дороге 30 мин"));
+  await h.elements["walk-variants"].children[1].emit("click");await flush();assert(h.elements["walk-budget"].textContent.includes("42 из 80 мин"));
+  assert(h.elements["walk-budget"].textContent.includes("дополнительно к дороге 60 мин"));assert(!h.elements["walk-budget"].textContent.includes("к дороге 30 мин"));
+  assert.equal(h.calls("/api/unified/recommend").length,1);await h.edit("Другое сообщение");assert.equal(h.elements["walk-budget"].textContent,"");
+});
+test("extra-time pairing and option totals fail closed without silent cap or reinterpretation",()=>{
+  const h=harness(),good=confirmedEndpointContext({budget_mode:"extra",extra_budget_options:[30],budget_options:[50],minutes:50});
+  for(const patch of [{extra_budget_options:[31]},{extra_budget_options:[]},{extra_budget_options:[-1]},
+    {budget_options:[500],extra_budget_options:[480]},{budget_options:[50,80]}, {budget_mode:"something"}]){
+    assert.equal(h.run("routeContextKnown("+JSON.stringify({...good,...patch})+")"),false);
+  }
+  const data=withRouteContext(p2pResult(),good);assert.throws(()=>h.run("validateResult("+JSON.stringify(data)+")"));
+});
+function orderedP2PResult(){
+  const opt=p2pOption(60);opt.resolved_context.ordered_goal_groups=[[0],[1,2]];
+  opt.stops=[{...stop(),matched_goal_indices:[0]},{...stop("dgis",1),matched_goal_indices:[2]}];
+  opt.plan.ordered_goals_covered=true;opt.plan.walk_minutes=25;opt.plan.visit_minutes=20;opt.plan.total_minutes=50;opt.plan.final_walk_minutes=10;
+  opt.plan.legs=[{from_ref:"origin",to_ref:"osm:0",minutes:5},{from_ref:"osm:0",to_ref:"dgis:1",minutes:10},{from_ref:"dgis:1",to_ref:"destination",minutes:10}];
+  return withRouteContext(p2pResult([opt]),opt.resolved_context);
+}
+test("two-stop P2P is allowed only for complete witnessed stage coverage in correct order",async()=>{
+  const data=orderedP2PResult(),h=p2pHarness(data);await h.submit();await flush();assert(h.frame());assert.equal(h.elements["walk-stops"].children.length,2);
+  assert.equal(new URL(h.frame().src).searchParams.get("waypoints").split("|").length,2);
+  for(const mutate of [value=>{delete value.resolved_context.ordered_goal_groups;delete value.alternatives[0].resolved_context.ordered_goal_groups;},
+    value=>{value.alternatives[0].plan.ordered_goals_covered=false;},value=>{value.alternatives[0].stops[1].matched_goal_indices=[0];},
+    value=>{value.resolved_context.ordered_goal_groups=[[0],[0]];value.alternatives[0].resolved_context.ordered_goal_groups=[[0],[0]];},
+    value=>{value.alternatives[0].stops[0].matched_goal_indices=[true];}]){
+    const bad=orderedP2PResult();mutate(bad);assert.throws(()=>h.run("validateResult("+JSON.stringify(bad)+")"));
+  }
+});
+test("bounded repeated-route notice is visible plain text and clears across ready variants",async()=>{
+  const note='<b>Другого полного маршрута не подтверждено.</b>';
+  const data=result({alternatives:[option(45,{route_note:note}),option(60)]}),h=fixtureResult(data);await h.submit();assert(h.elements["walk-route-note"].textContent.includes(note));
+  assert(!h.elements["walk-route-note"].children.some(el=>el.tagName==="B"));await h.elements["walk-variants"].children[1].emit("click");await flush();assert(!h.elements["walk-route-note"].textContent.includes(note));
+  const badData=result({alternatives:[option(45,{route_note:"x".repeat(601)})]}),bad=fixtureResult(badData);await bad.submit();assert(!bad.elements["walk-route-note"].textContent.includes("x".repeat(601)));
+});
+
+
+test("explicit coordinate origin remains truthful and uses the finite city gate",async()=>{
+  const ctx=confirmedEndpointContext({origin_source:"explicit_coordinates",origin_id:null,origin_place_id:undefined,origin_reference:undefined});
+  const h=p2pHarness(withRouteContext(p2pResult(),ctx));await h.submit();await flush();assert(h.frame());
+  assert(h.elements["walk-context"].textContent.includes("из сообщения"));assert(!h.elements["walk-context"].textContent.includes("геопозиция браузера"));
+  const bad=copy(ctx);bad.origin.lat=52;assert.equal(h.run("routeContextKnown("+JSON.stringify(bad)+")"),false);
+});
+test("explicit public endpoints require canonical IDs and cannot substitute a named or GPS destination",async()=>{
+  const ctx=p2pContext({origin_source:"explicit_landmark",destination_source:"explicit_landmark"});
+  const h=p2pHarness(withRouteContext(p2pResult(),ctx));await h.submit();await flush();assert(h.frame());
+  for(const patch of [{destination_id:"invented"},{destination_id:null},{destination_source:"explicit_coordinates"}]){
+    assert.equal(h.run("routeContextKnown("+JSON.stringify({...ctx,...patch})+")"),false);
+  }
+});
+
 (async()=>{
   let passed=0;
   for(const item of cases){try{await item.fn();passed++;}catch(error){console.error("FAIL "+item.name+"\n"+error.stack);process.exitCode=1;}}
