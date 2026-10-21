@@ -126,9 +126,46 @@ test("every Google source preview stays adjacent to whole answer inside one disc
 test("Google source references preserve zero index and exact source ID",async()=>{const data=result();data.grounding.sources=Array.from({length:5},(_,index)=>({source_id:"g"+index,id:"places/"+index,title:"Google title "+index,url:"https://www.google.com/maps/place/"+index}));data.answer.text="Смотрите источник [g2], исходная ссылка [2].";const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();assert(h.elements["google-sources"].children[3].textContent.includes("[2] / g2"));assert.equal(h.elements["walk-answer"].textContent,data.answer.text);});
 test("one disclosure exposes whole original Google summary and all original previews",async()=>{const h=harness();await h.submit();assert.equal(h.elements["google-original-text"].textContent,result().grounding.summary);assert.equal(h.elements["google-original"].hidden,false);assert.equal(h.elements["google-original-sources"].children.length,3);const explanation=html.match(/<details[^>]*id="walk-explanation"[^>]*>([\s\S]*?)<\/details>/);assert(explanation);assert(!/<details\b/.test(explanation[1]));assert(/<section[^>]*id="google-original"/.test(explanation[1]));});
 test("OSM and 2GIS evidence preserves exact citation IDs",async()=>{const h=harness();await h.submit();assert(h.elements["other-sources"].textContent.includes("[o0]"));assert(h.elements["other-sources"].textContent.includes("[d0]"));});
-test("all three source receipts expose actual counts",async()=>{const h=harness();await h.submit();const text=h.elements["source-receipts"].textContent;assert(text.includes("OpenStreetMap"));assert(text.includes("2ГИС"));assert(text.includes("Найдено: 3"));});
+test("all three source receipts expose actual counts",async()=>{const h=harness();await h.submit();const text=h.elements["source-receipts"].textContent;assert(text.includes("OpenStreetMap"));assert(text.includes("2ГИС"));assert(text.includes("Подходит: 3"));});
 test("successful empty source is labelled no data",async()=>{const data=result();data.source_receipt.dgis={status:"no_data",candidate_count:0,selected_count:0};const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();assert(h.elements["source-receipts"].textContent.includes("Подходящих данных нет"));});
 test("missing provider receipt rejects apparent combined success",async()=>{const data=result();delete data.source_receipt.dgis;const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:data)});await h.submit();assert(h.elements["walk-result"].hidden);assert(h.elements["walk-error"].textContent.includes("трёх источников"));assert.equal(h.calls("/api/unified/map").length,0);});
+test("unavailable optional source is distinct from empty and keeps partial result",async()=>{
+  const data=result({search_complete:false});data.sources.dgis=[];
+  data.source_receipt.dgis={status:"unavailable",candidate_count:null,selected_count:0,attempted:true,error_code:"provider_unavailable"};
+  data.answer.source_ids=["g0","o0"];
+  const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});
+  await h.submit();assert(!h.elements["walk-result"].hidden);assert.equal(h.elements["walk-mode"].textContent,"ИИ · неполный поиск");
+  assert(h.elements["source-receipts"].textContent.includes("Источник не ответил"));
+  assert(!h.elements["source-receipts"].textContent.includes("null"));assert(h.elements["other-sources"].textContent.includes("его данные не использованы"));
+  assert.equal(h.elements["google-original-text"].textContent,data.grounding.summary);
+  for(const mutate of [d=>d.search_complete=true,d=>d.source_receipt.dgis.candidate_count=0,
+    d=>d.source_receipt.dgis.error_code="PRIVATE_BODY",d=>d.sources.dgis=[stop("dgis")],
+    d=>d.alternatives[0].stops=[stop("dgis")],d=>d.source_receipt.google={...d.source_receipt.dgis}]){
+    const bad=copy(data);mutate(bad);assert.throws(()=>h.run("validateResult("+JSON.stringify(bad)+")"));
+  }
+});
+test("own place facts stay collapsed, ignore other IDs and never promise route access",async()=>{
+  const own={...stop(),id:"own",features:{wheelchair:"yes"},opening_hours:"<b>Mo-Fr 09:00-18:00</b>",source_observed_at:"2026-10-20T12:00:00Z",
+    opening_status:{status:"open",source:"source-reported"},feature_evidence:[
+      {property:"socket",value:"yes",provider:"osm",place_id:"other"},
+      {property:"quiet",value:"yes",provider:"dgis",place_id:"own"},
+      {property:"wheelchair",value:"yes",provider:"osm",place_id:"own"}]};
+  const data=result({alternatives:[option(45,{stops:[own]})]});
+  const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});
+  await h.submit();const content=h.elements["walk-stops"].children[0].children[0];
+  const facts=content.children.find(el=>el.className==="stop-source-facts");assert(facts);assert(!facts.open);
+  assert(facts.textContent.includes("Розетки: неизвестно"));assert(facts.textContent.includes("Тишина: неизвестно"));
+  assert(facts.textContent.includes("Доступный вход: указано в источнике"));assert(facts.textContent.includes("2026-10-20"));
+  assert(facts.textContent.includes("не подтверждают доступность всего маршрута"));assert(facts.textContent.includes("Фактический доступ не проверен"));
+  assert(facts.textContent.includes(own.opening_hours));assert(!facts.children.some(el=>el.tagName==="B"));
+});
+test("source timeout retains the partial response instead of rejecting the protocol",async()=>{
+  const data=result({search_complete:false});data.sources.dgis=[];data.answer.source_ids=["g0","o0"];
+  data.source_receipt.dgis={status:"unavailable",candidate_count:null,selected_count:0,attempted:true,error_code:"source_timeout"};
+  const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});
+  await h.submit();assert(!h.elements["walk-result"].hidden);assert.equal(h.elements["walk-mode"].textContent,"ИИ · неполный поиск");
+  assert(h.elements["source-receipts"].textContent.includes("Источник не ответил"));assert(h.elements["walk-error"].hidden);
+});
 test("provider error has no synthesized or hidden fallback result",async()=>{const h=harness({fetch:(req,r)=>req.url==="/api/context"?r({resolved_context:context()}):r({error:"2ГИС недоступен.",code:"dgis_unavailable"},false,503)});await h.submit();assert(h.elements["walk-result"].hidden);assert(h.elements["walk-error"].textContent.includes("2ГИС"));assert.equal(h.requests.length,2);});
 test("grounding-only mode shows full summary without fake AI label",async()=>{const data=result({mode:"grounding-only",answer:null});const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();assert.equal(h.elements["walk-answer"].textContent,data.grounding.summary);assert.equal(h.elements["walk-mode"].textContent,"Без ответа модели");assert(h.elements["google-original"].hidden);});
 test("unverified or unfit option does not render a route map",async()=>{const data=result({alternatives:[option(45,{route_built:false,budget_status:"unverified",map_ticket:null,stops:[]})]});const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:data)});await h.submit();assert.equal(h.calls("/api/unified/map").length,0);assert(h.elements["route-map-section"].hidden);assert(h.elements["walk-budget"].textContent.includes("не построен"));});

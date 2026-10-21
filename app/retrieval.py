@@ -13,6 +13,7 @@ import json
 import math
 from pathlib import Path
 import re
+import time
 from typing import Any
 from itertools import permutations
 from urllib.parse import urlparse
@@ -115,7 +116,7 @@ def requires_confirmed_hours(query: str) -> bool:
 
 
 def night_hours_eligible(place: dict, *, night: bool, allow_unknown_outdoor_hours: bool = False,
-                         require_confirmed_hours: bool = False) -> bool:
+                         require_confirmed_hours: bool = False, schedule_when=None) -> bool:
     """Return availability eligibility, never an assertion of live access.
 
     Unknown park/promenade hours can be an explicitly opted-in conditional idea.
@@ -134,6 +135,13 @@ def night_hours_eligible(place: dict, *, night: bool, allow_unknown_outdoor_hour
     hours = place.get("opening_hours")
     if require_confirmed_hours:
         return hours == "24/7"
+    if schedule_when is not None:
+        from .opening_hours import evaluate_schedule
+        status = evaluate_schedule(hours, schedule_when)["status"]
+        if status == "closed":
+            return False
+        if status == "open":
+            return True
     if not night or hours == "24/7":
         return True
     return (allow_unknown_outdoor_hours and place.get("category") in {"park", "promenade"}
@@ -184,7 +192,7 @@ def _planned_intent(plan, time_of_day="day"):
         raise ValueError("Expected one validated IntentPlan")
     intent = plan.retrieval_intent(time_of_day)
     intent.update({"open_goal": plan.open_goal, "source_phrase": plan.search_text,
-                   "required_keys": list(plan.required_keys),
+                   "required_keys": list(plan.global_required_keys),
                    "semantic_goal": deepcopy(plan.sanitized_narration)})
     return intent
 
@@ -219,6 +227,19 @@ def _labels_match(left, right):
     return True
 
 
+def _planned_architecture_evidence(place, actual):
+    """A planned architectural branch needs own structure/type, not a museum's mere existence."""
+    if actual.intersection({"monument", "architecture"}):
+        return True
+    tags = place.get("source_tags", {})
+    if not isinstance(tags, dict):
+        return False
+    if tags.get("historic") in {"monument", "memorial", "castle", "building"}:
+        return True
+    return any(isinstance(tags.get(key), str) and tags[key].strip().casefold() not in
+               {"", "no", "unknown", "none"} for key in ("building:architecture", "architectural_style"))
+
+
 def source_goal_evidence(place, plan_or_intent):
     """Return bool: structured source evidence satisfies the plan's venue goal.
 
@@ -229,21 +250,45 @@ def source_goal_evidence(place, plan_or_intent):
     if not isinstance(place, dict):
         return False
     intent = plan_or_intent if isinstance(plan_or_intent, dict) else _planned_intent(plan_or_intent)
-    required = set(intent.get("required_keys", ()))
-    if required & {"activity", "equipment", "inventory", "price"}:
-        return False  # No affirmative structured proof for these is imported.
-    for key, source_key in (("socket", "socket"), ("quiet", "quiet"), ("accessible", "wheelchair")):
-        hard = key in required or key == "socket" and intent.get("socket") or key == "accessible" and intent.get("accessible") or key == "quiet" and intent.get("strict_quiet")
-        if hard and feature(place, source_key) != "yes":
-            return False
+    global_required = set(intent.get("required_keys", ()))
+    for key, flag in (("socket", "socket"), ("accessible", "accessible"), ("quiet", "strict_quiet")):
+        if intent.get(flag):
+            global_required.add(key)
+
+    def conditions(keys):
+        if keys & {"activity", "equipment", "inventory", "price"}:
+            return False  # No affirmative structured service proof is imported.
+        return all(feature(place, field) == "yes" for key, field in
+                   (("socket", "socket"), ("quiet", "quiet"), ("accessible", "wheelchair")) if key in keys)
+
+    if not conditions(global_required):
+        return False
     semantic = intent.get("semantic_goal")
     if not isinstance(semantic, dict):
         return True  # Legacy eligibility remains owned by its existing filters.
     goals = semantic.get("goals", [])
-    if not isinstance(goals, list) or not goals:
+    if not isinstance(goals, list) or not 1 <= len(goals) <= 3:
         return False
-    if intent.get("activity_mode") == "single_venue":
-        goals = goals[:1]
+    policy = semantic.get("goal_policy")
+    if policy not in {"primary", "any", "walk_mix"}:
+        return False
+    branch_required = [set(global_required) for _ in goals]
+    records = semantic.get("requirements", [])
+    if not isinstance(records, list):
+        return False
+    for item in records:
+        if (not isinstance(item, dict) or not isinstance(item.get("key"), str) or item.get("key") not in
+                {"socket", "quiet", "accessible", "activity", "equipment", "inventory", "price"}
+                or type(item.get("required")) is not bool):
+            return False
+        index = item.get("goal_index")
+        if index is not None and (type(index) is not int or not 0 <= index < len(goals)):
+            return False
+        if item["required"]:
+            for position, required in enumerate(branch_required):
+                if index is None or position == index:
+                    required.add(item["key"])
+    active = range(1) if policy == "primary" else range(len(goals))
     actual = {place.get("category")}
     for field in ("source_categories", "source_types"):
         values = place.get(field, [])
@@ -262,17 +307,38 @@ def source_goal_evidence(place, plan_or_intent):
     if isinstance(tags, dict):
         labels.update(_source_label(tags.get(key)) for key in ("amenity", "leisure", "tourism", "shop", "sport"))
     labels.discard(())
-    for goal in goals:
+    for index in active:
+        goal = goals[index]
         if not isinstance(goal, dict):
             continue
+        # Extra activity never follows from type, even in legacy sanitized plans.
+        if goal.get("fulfilment") == "specific_activity" or not conditions(branch_required[index]):
+            continue
         category = goal.get("category_hint")
-        if goal.get("fulfilment") == "generic_walk" and category in {None, "walk"}:
-            return True
-        if category in CATEGORY_CATALOG:
+        if category is not None and (not isinstance(category, str) or category not in CATEGORY_CATALOG):
+            continue
+        if category == "walk" or goal.get("fulfilment") == "generic_walk" and category is None:
+            allowed = set(CATEGORY_CATALOG["walk"]["source_categories"])
+            if intent.get("tourist"):
+                allowed = allowed - {"playground"} | {"museum"}
+            if actual.intersection(allowed):
+                return True
+            # Upstream Google validation permits an untyped, located preview
+            # ONLY for a broad walk. This preserves that path without making
+            # an untyped result evidence of any venue/service/outdoor property.
+            if (place.get("provider") == "google" and place.get("category") == "unknown"
+                    and isinstance(place.get("id"), str) and place.get("stop_id") == "google:" + place["id"]
+                    and isinstance(place.get("source_id"), str) and re.fullmatch(r"g\d+", place["source_id"])
+                    and not intent.get("child") and not intent.get("night")
+                    and not intent.get("require_confirmed_hours") and not intent.get("excluded_categories")):
+                return True
+        elif category == "architecture":
+            if (actual.intersection(CATEGORY_CATALOG[category]["source_categories"])
+                    and _planned_architecture_evidence(place, actual)):
+                return True
+        elif category in CATEGORY_CATALOG:
             if actual.intersection(CATEGORY_CATALOG[category]["source_categories"]):
                 return True
-        elif goal.get("fulfilment") == "generic_walk":
-            return True  # Existing geography/access/night/context filters follow.
         elif any(_labels_match(_source_label(goal.get("text")), label) for label in labels):
             return True
     return False
@@ -425,7 +491,13 @@ class Retriever:
             score += idf * frequency * 2.5 / normalizer
         return score
 
-    def retrieve(self, query: str, origin: dict, minutes: int, time_of_day: str = "day", *, intent_plan=None, allow_unknown_outdoor_hours: bool = False) -> dict:
+    def retrieve(self, query: str, origin: dict, minutes: int, time_of_day: str = "day", *, intent_plan=None, allow_unknown_outdoor_hours: bool = False, schedule_when=None, deadline=None) -> dict:
+        if deadline is not None and (type(deadline) not in (int, float) or not math.isfinite(deadline)):
+            raise ValueError("Invalid retrieval deadline")
+        def check_deadline():
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimeoutError("Source retrieval deadline exceeded")
+        check_deadline()
         intent = detect_intent(query, time_of_day, intent_plan=intent_plan)
         candidates = []
         filtered = Counter()
@@ -439,7 +511,9 @@ class Retriever:
             if preferred and intent["architecture"] else preferred)
         outdoor_categories = {"park", "playground", "promenade", "monument", "attraction", "viewpoint", "theatre"}
         tourist_categories = (outdoor_categories - {"playground"}) | {"museum"}
+        check_deadline()
         for index, poi in enumerate(self.places):
+            check_deadline()
             category = poi["category"]
             if intent["unsupported_activity"]:
                 filtered["unsupported_activity"] += 1
@@ -453,10 +527,10 @@ class Retriever:
             if category in excluded:
                 filtered["excluded_category"] += 1
                 continue
-            if allowed_requested and category not in allowed_requested:
+            if intent_plan is None and allowed_requested and category not in allowed_requested:
                 filtered["category"] += 1
                 continue
-            if not preferred and intent["outdoor"] and not intent["tourist"] and category not in outdoor_categories:
+            if intent_plan is None and not preferred and intent["outdoor"] and not intent["tourist"] and category not in outdoor_categories:
                 filtered["outdoor"] += 1
                 continue
             if poi.get("source_tags", {}).get("access") in {"no", "private"}:
@@ -475,12 +549,12 @@ class Retriever:
                 continue
             if not night_hours_eligible(poi, night=intent["night"],
                     allow_unknown_outdoor_hours=allow_unknown_outdoor_hours,
-                    require_confirmed_hours=intent["require_confirmed_hours"]):
+                    require_confirmed_hours=intent["require_confirmed_hours"], schedule_when=schedule_when):
                 filtered["night" if intent["night"] else "required_hours"] += 1
                 continue
-            if intent["tourist"] and not preferred and category not in tourist_categories:
+            if intent_plan is None and intent["tourist"] and not preferred and category not in tourist_categories:
                 continue
-            if intent["architecture"] and category not in explicit_sources and not architecture_evidence(poi):
+            if intent_plan is None and intent["architecture"] and category not in explicit_sources and not architecture_evidence(poi):
                 filtered["architecture_evidence"] += 1
                 continue
             visit = int(poi.get("visit_minutes") or DEFAULT_VISIT.get(category, 20))
@@ -507,7 +581,9 @@ class Retriever:
         if candidates and not relevant_intent and not any(item["lexical_score"] > 0 for item in candidates):
             filtered["no_text_match"] = len(candidates)
             candidates = []
+        check_deadline()
         candidates.sort(key=lambda item: (-item["score"], item["poi"]["id"]))
+        check_deadline()
         # Fair ranking: no paid/sponsor/rating fields. Diversity prevents a dense
         # chain of identical POI dominating a broad walk. Hard filters stay hard.
         selected = []
@@ -515,11 +591,14 @@ class Retriever:
         last = origin
         remaining = list(candidates)
         while remaining and len(selected) < 3:
+            check_deadline()
             def diversity_score(item):
+                check_deadline()
                 same_category = sum(other["poi"]["category"] == item["poi"]["category"] for other in selected)
                 penalty = 1 if len(allowed_requested) == 1 else 1 + 0.8 * same_category
                 return item["score"] / penalty
             remaining.sort(key=lambda item: (-diversity_score(item), item["poi"]["id"]))
+            check_deadline()
             candidate = remaining.pop(0)
             poi = candidate["poi"]
             if any(tokens(poi["name"]) == tokens(item["poi"]["name"]) and distance_m(poi, item["poi"]) < 80 for item in selected):
@@ -535,6 +614,7 @@ class Retriever:
         # Optimize stop order exactly for this tiny itinerary (at most 3! = 6).
         if len(selected) > 1:
             def route_cost(order):
+                check_deadline()
                 route = [origin] + [item["poi"] for item in order] + [origin]
                 return sum(walk_minutes(a, b) for a, b in zip(route, route[1:]))
             selected = list(min(permutations(selected), key=route_cost))
@@ -556,4 +636,5 @@ class Retriever:
             "returns_to_origin": True,
             "method": "haversine × 1.3; 75 м/мин; без дорожного графа",
         }
+        check_deadline()
         return {"selected": selected, "intent": intent, "filtered": dict(filtered), "plan": plan, "retrieved_count": len(candidates), "ranking_policy": "bounded BM25 + walking distance + request context; diversity; alias/proximity deduplication 80m; no paid boosts"}

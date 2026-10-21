@@ -25,7 +25,7 @@ from scripts.collect_2gis import CollectionError, normalize_items, response_item
 CATEGORY_QUERIES = {name: spec["dgis_query"] for name, spec in CATEGORY_CATALOG.items()}
 # Official Places fields; no extra request, all returned data remains in RAM.
 # https://docs.2gis.com/api/search/places/reference/3.0/items
-SEARCH_FIELDS = FIELDS + ",items.schedule,items.schedule_special"
+SEARCH_FIELDS = FIELDS + ",items.schedule,items.schedule_special,items.attribute_groups,items.flags,items.dates.deleted_at,items.dates.updated_at"
 
 
 def _invalid():

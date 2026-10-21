@@ -1,5 +1,5 @@
 "use strict";
-const SHELL_CACHE = "astana-walks-shell-v7-semantic";
+const SHELL_CACHE = "astana-walks-shell-v8-audit-development";
 const SHELL_PATHS = new Set([
   "/", "/lab.js", "/lab.css", "/pwa.js", "/manifest.webmanifest", "/favicon.svg",
   "/icons/icon-192.png", "/icons/icon-512.png", "/icons/maskable-512.png", "/icons/apple-touch-icon.png"

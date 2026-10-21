@@ -71,7 +71,7 @@ class UnifiedTests(unittest.TestCase):
         def local(*_, **_kwargs):
             barrier.wait(timeout=3)
             return osm_value
-        def live(*_):
+        def live(*_, **_kwargs):
             barrier.wait(timeout=3)
             return dgis_value
         self.osm.retrieve.side_effect, self.dgis.search.side_effect = local, live
@@ -168,21 +168,28 @@ class UnifiedTests(unittest.TestCase):
         self.narrator.assert_not_called()
         self.assertEqual(self.google.search_count, 0)
 
-    def test_unconfigured_or_exhausted_provider_blocks_search_and_model(self):
-        self.dgis.status.return_value = {"available": False}
-        with self.assertRaises(GoogleError):
-            self.service.recommend(self.form)
-        self.osm.retrieve.assert_not_called()
-        self.narrator.assert_not_called()
-        self.assertEqual(self.google.search_count, 0)
+    def test_unavailable_optional_provider_is_skipped_without_claiming_empty_search(self):
+        self.dgis.status.return_value = {"available": False, "code": "quota_exhausted"}
+        result = self.service.recommend(self.form)
+        self.dgis.search.assert_not_called()
+        self.assertFalse(result["search_complete"])
+        self.assertEqual(result["source_receipt"]["dgis"], {"status": "unavailable", "candidate_count": None,
+            "selected_count": 0, "attempted": False, "error_code": "quota_exhausted"})
+        self.assertEqual(result["diagnostics"]["searches"], {"osm": 1, "google": 1, "dgis": 0})
+        self.assertEqual(self.narrator.call_count, 1)
 
-    def test_provider_failure_creates_no_misleading_two_source_model_answer(self):
+    def test_provider_failure_uses_only_verified_remaining_sources_with_honest_receipt(self):
         self.dgis.search.side_effect = RuntimeError("PRIVATE_PROVIDER_BODY")
-        with self.assertRaises(GoogleError) as error:
-            self.service.recommend(self.form)
-        self.assertEqual(error.exception.code, "unified_provider_unavailable")
-        self.assertNotIn("PRIVATE", str(error.exception))
-        self.narrator.assert_not_called()
+        result = self.service.recommend(self.form)
+        self.assertEqual(result["source_receipt"]["dgis"]["status"], "unavailable")
+        self.assertIsNone(result["source_receipt"]["dgis"]["candidate_count"])
+        self.assertTrue(result["source_receipt"]["dgis"]["attempted"])
+        self.assertFalse(result["search_complete"])
+        self.assertNotIn("PRIVATE_PROVIDER_BODY", repr(result))
+        self.assertEqual(result["sources"]["dgis"], [])
+        self.assertTrue(all(stop["provider"] != "dgis" for option in result["alternatives"] for stop in option["stops"]))
+        self.assertEqual(self.narrator.call_count, 1)
+        self.assertEqual(result["grounding"]["summary"], "Полный синтетический ответ Google [0].")
 
     def test_failed_directed_legs_do_not_create_map_or_call_model(self):
         self.google.fail_leg = True

@@ -209,13 +209,26 @@ function validateResult(data) {
   if (!data.sources || !Array.isArray(data.sources.osm) || !Array.isArray(data.sources.dgis)) throw new Error("В ответе отсутствует происхождение мест.");
   for (const provider of ["osm", "google", "dgis"]) {
     const receipt = data.source_receipt && data.source_receipt[provider];
-    if (!receipt || !["searched", "no_data"].includes(receipt.status) || !Number.isInteger(receipt.candidate_count) || receipt.candidate_count < 0 || !Number.isInteger(receipt.selected_count) || receipt.selected_count < 0 || (receipt.status === "no_data" && (receipt.candidate_count !== 0 || receipt.selected_count !== 0))) throw new Error("Не подтверждён результат проверки всех трёх источников.");
+    const unavailable = receipt && receipt.status === "unavailable";
+    const validFailure = unavailable && provider !== "google" && receipt.candidate_count === null
+      && receipt.selected_count === 0 && typeof receipt.attempted === "boolean"
+      && ["not_configured", "quota_exhausted", "provider_unavailable", "provider_invalid_response", "source_timeout"].includes(receipt.error_code)
+      && data.sources[provider].length === 0;
+    const validCompleted = receipt && ["searched", "no_data"].includes(receipt.status)
+      && Number.isInteger(receipt.candidate_count) && receipt.candidate_count >= 0
+      && Number.isInteger(receipt.selected_count) && receipt.selected_count >= 0
+      && receipt.selected_count <= receipt.candidate_count
+      && (receipt.status !== "no_data" || (receipt.candidate_count === 0 && receipt.selected_count === 0));
+    if (!validFailure && !validCompleted) throw new Error("Не подтверждён результат проверки всех трёх источников.");
   }
+  const incomplete = ["osm", "dgis"].some(provider => data.source_receipt[provider].status === "unavailable");
+  if (data.search_complete !== undefined && (typeof data.search_complete !== "boolean" || data.search_complete === incomplete)) throw new Error("Некорректный статус полноты поиска.");
   if (!Array.isArray(data.alternatives) || !data.alternatives.length || data.alternatives.length > 3) throw new Error("Отсутствуют готовые варианты прогулки.");
   const ids = new Set();
   for (const option of data.alternatives) {
     if (!option || typeof option.id !== "string" || !option.id || ids.has(option.id) || !Number.isInteger(option.budget_minutes) || option.budget_minutes < 10 || option.budget_minutes > 480 || !Array.isArray(option.stops) || option.stops.length > 3 || typeof option.route_built !== "boolean") throw new Error("Некорректный вариант прогулки.");
     ids.add(option.id);
+    if (option.stops.some(stop => stop && data.source_receipt[stop.provider] && data.source_receipt[stop.provider].status === "unavailable")) throw new Error("Место получено из недоступного источника.");
     if (option.route_built) {
       const plan = option.plan;
       if (option.budget_status !== "fits" || !plan || plan.verified !== true || plan.returns_to_origin !== true || !finite(plan.total_minutes) || plan.total_minutes < 0 || plan.total_minutes > option.budget_minutes || !option.stops.length) throw new Error("Маршрут не подтверждён в пределах времени.");
@@ -256,11 +269,11 @@ function renderReceipts(receipts) {
     const receipt = receipts[provider];
     const item = node("div", null, "source-receipt");
     item.append(node("strong", PROVIDERS[provider]));
-    item.append(node("span", receipt.status === "no_data" ? "Подходящих данных нет" : "Найдено: " + receipt.candidate_count + " · в плане: " + receipt.selected_count));
+    item.append(node("span", receipt.status === "unavailable" ? (receipt.attempted ? "Источник не ответил" : "Источник недоступен") : receipt.status === "no_data" ? "Подходящих данных нет" : "Подходит: " + receipt.candidate_count + " · в плане: " + receipt.selected_count));
     host.append(item);
   }
 }
-function renderOtherSources(sources) {
+function renderOtherSources(sources, receipts) {
   const host = $("other-sources");
   host.replaceChildren();
   for (const provider of ["osm", "dgis"]) {
@@ -273,13 +286,16 @@ function renderOtherSources(sources) {
       if (source.category) item.append(node("span", " · " + source.category));
       list.append(item);
     });
-    if (!sources[provider].length) list.append(node("li", "Подходящих данных нет."));
+    if (!sources[provider].length) list.append(node("li", receipts[provider].status === "unavailable" ? "Источник недоступен; его данные не использованы." : "Подходящих данных нет."));
     host.append(list);
   }
 }
 function renderResult(data) {
   state.result = data;
-  $("walk-mode").textContent = data.mode === "llm-grounded-unified" ? "ИИ · три источника проверены" : "Без ответа модели";
+  const incomplete = ["osm", "dgis"].some(provider => data.source_receipt[provider].status === "unavailable");
+  $("walk-mode").textContent = data.mode === "llm-grounded-unified"
+    ? (incomplete ? "ИИ · неполный поиск" : "ИИ · три источника проверены")
+    : (incomplete ? "Неполный поиск · без ответа модели" : "Без ответа модели");
   $("walk-context").textContent = contextText(data.resolved_context);
   if (data.resolved_context.origin_source === "google_places_text_search"
       && safeUrl(data.resolved_context.origin_reference, "google")) {
@@ -303,7 +319,7 @@ function renderResult(data) {
                  ...(Array.isArray(data.resolved_context.assumptions) ? data.resolved_context.assumptions : [])];
   [...new Set(notes.filter(value => typeof value === "string"))].forEach(value => warnings.append(node("li", value)));
   show("walk-warnings", warnings.children.length > 0);
-  renderOtherSources(data.sources);
+  renderOtherSources(data.sources, data.source_receipt);
   const variants = $("walk-variants");
   variants.replaceChildren();
   data.alternatives.forEach(option => {
@@ -450,6 +466,25 @@ function selectOption(id) {
       why.append(node("summary", "Почему выбрано"), node("p", stop.why_text, "stop-why"));
       content.append(why);
     }
+    const facts = node("details", null, "stop-source-facts");
+    facts.append(node("summary", "Данные места"));
+    const propertyLabels = {socket:"Розетки", quiet:"Тишина", wheelchair:"Доступный вход"};
+    const values = {yes:"указано в источнике", no:"в источнике указано отсутствие", unknown:"неизвестно"};
+    for (const [key, label] of Object.entries(propertyLabels)) {
+      const evidence = Array.isArray(stop.feature_evidence) && stop.feature_evidence.find(item => item
+        && item.property === key && item.provider === stop.provider && item.place_id === stop.id
+        && ["yes", "no", "unknown"].includes(item.value));
+      facts.append(node("p", label + ": " + (evidence ? values[evidence.value] : "неизвестно")));
+    }
+    if (typeof stop.opening_hours === "string" && stop.opening_hours.length <= 512 && stop.opening_hours.trim()) facts.append(node("p", "Расписание источника: " + stop.opening_hours));
+    if (stop.opening_status && stop.opening_status.source === "source-reported") {
+      const notes = {open:"Указанное расписание покрывает предложенное посещение. Фактический доступ не проверен.",
+        unknown:"Расписание на время посещения не подтверждено."};
+      if (notes[stop.opening_status.status]) facts.append(node("p", notes[stop.opening_status.status]));
+    }
+    if (typeof stop.source_observed_at === "string" && /^\d{4}-\d{2}-\d{2}T/.test(stop.source_observed_at)) facts.append(node("p", "Данные получены: " + stop.source_observed_at.slice(0,10) + ". Актуальность на месте не проверена."));
+    if (stop.features && stop.features.wheelchair === "yes") facts.append(node("p", "Сведения о входе не подтверждают доступность всего маршрута."));
+    content.append(facts);
     content.append(node("p", PROVIDERS[stop.provider] + (finite(stop.visit_minutes) ? " · посещение " + stop.visit_minutes + " мин" : "")));
     content.append(link("Источник места ↗", stop.source_url, stop.provider));
     item.append(content);

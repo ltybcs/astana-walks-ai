@@ -61,7 +61,7 @@ class UnifiedDGISTests(unittest.TestCase):
         self.assertEqual(params["q"], [CATEGORY_CATALOG["park"]["dgis_query"]])
         self.assertEqual(params["page"], ["1"])
         self.assertEqual(params["page_size"], ["10"])
-        self.assertEqual(params["fields"], ["items.point,items.rubrics,items.schedule,items.schedule_special"])
+        self.assertEqual(params["fields"], [module.SEARCH_FIELDS])
         self.assertEqual(set(params), {"q", "key", "point1", "point2", "page", "page_size", "fields"})
         west, north = map(float, params["point1"][0].split(","))
         east, south = map(float, params["point2"][0].split(","))

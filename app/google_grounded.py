@@ -92,7 +92,7 @@ def safe_intent(query, *, intent_plan=None):
     if intent_plan is not None:
         flags = detect_intent(query, intent_plan=intent_plan)
         categories = list(flags["preferred_categories"])
-        return {"categories": categories, "preferences": list(intent_plan.preferences),
+        return {"categories": categories, "preferences": list(intent_plan.global_preferences),
                 "open_goal": intent_plan.open_goal, "source_phrase": intent_plan.source_phrase,
                 "semantic_goal": deepcopy(intent_plan.sanitized_narration)}
     search = parse_search_intent(query)
