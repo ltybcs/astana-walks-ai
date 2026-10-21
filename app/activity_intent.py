@@ -26,7 +26,10 @@ _CATEGORY_PATTERNS = {
     identifier: re.compile(r"(?<!\w)(?:" + "|".join(spec["aliases"]) + r")(?!\w)")
     for identifier, spec in CATEGORY_CATALOG.items()
 }
+# Explicit amenity wording only; plain 'internet club' remains a venue type.
+WIFI_PATTERN = r"wi[\s\-‐‑–—]?fi|вай[\s\-‐‑–—]?фа(?:й|я|ю|е|ем)|беспроводн\w*\s+интернет\w*|wireless\s+internet"
 _PREFERENCES = {
+    "wifi": WIFI_PATTERN,
     "quiet": r"тих\w*|тишин\w*|спокойн\w*|quiet|тыныш",
     "socket": r"розет\w*|заряд\w*|sockets?|power\s+outlets?",
     "accessible": r"коляс\w*|безбарьер\w*|wheelchair|accessible|арбамен",
@@ -74,17 +77,17 @@ def _clause_prefix(query, start):
 
 
 def _negated(query, start, end):
-    prefix = _clause_prefix(query, start)
-    suffix = query[end:end + 40]
+    prefix = _clause_prefix(query, start).replace("’", "'")
+    suffix = query[end:end + 40].replace("’", "'")
     if re.search(r"(?:\bне\s+только|\bnot\s+only)\s+(?:\w+\s+){0,3}$", prefix):
         return False
     negative = re.search(
         r"(?:\bне|\bни|\bбез|\bне\s+(?:хочу|нуж\w*|надо|интерес\w*|обязательн\w*)|"
-        r"\b(?:do\s+not|don't)\s+want|\bno|\bnot|\bwithout)"
+        r"\b(?:do\s+not|don't)\s+(?:want|need)|\bno|\bnot|\bwithout)"
         r"\s+(?:(?:в|на|a|an|the)\s+)?(?:\w+\s+){0,5}$", prefix
     )
     return bool(negative or re.match(
-        r"\s+(?:не\s+(?:нуж\w*|хочу|надо|интерес\w*|требу\w*|обязательн\w*)|"
+        r"\s+(?:не\s+(?:нуж\w*|хочу|надо|интерес\w*|требу\w*|обязательн\w*)|необязател\w*|"
         r"(?:is|are)\s+not\s+(?:wanted|needed|required))\b", suffix
     ))
 

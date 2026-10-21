@@ -21,7 +21,7 @@ from .google_grounded import (
 
 _PROVIDERS = {"osm", "dgis", "google"}
 _CATEGORIES = CATEGORY_IDS
-_PREFERENCES = {"quiet", "socket", "accessible"}
+_PREFERENCES = {"quiet", "socket", "wifi", "accessible"}
 _PLAN_FIELDS = ("budget_minutes", "total_minutes", "walk_minutes", "visit_minutes",
                 "buffer_minutes", "return_walk_minutes", "verified", "returns_to_origin")
 _NUMERIC_WORDS = (
@@ -61,7 +61,7 @@ def _stop_facts(stops):
             raise ValueError("Invalid features")
         fact["features"] = {}
         for key, value in features.items():
-            if key not in {"socket", "quiet", "wheelchair"}:
+            if key not in {"socket", "wifi", "quiet", "wheelchair"}:
                 continue
             key = _text(key, 80)
             if not isinstance(value, (str, bool)) or isinstance(value, str) and len(value) > 256:

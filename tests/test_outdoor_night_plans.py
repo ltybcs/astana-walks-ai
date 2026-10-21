@@ -78,7 +78,7 @@ class OutdoorNightPlansTests(unittest.TestCase):
         self.assertEqual([s['id'] for s in result['alternatives'][0]['stops']], ['2gis:green'])
         self.assertIn('не подтверждены', result['alternatives'][0]['stops'][0]['availability_note'])
 
-    def test_unknown_hours_cafe_and_required_socket_are_not_rescued_as_outdoor_plans(self):
+    def test_unknown_indoor_night_hours_stay_hard_but_outdoor_socket_is_labelled(self):
         origin = PUBLIC_ORIGINS['expo']
         cafe = poi('osm:node/2', 'Синтетическая кофейня', origin['lat']+.002, origin['lon'], 'cafe')
         for query, places in [('Хочу кофе около Экспо на час', [cafe]),
@@ -86,9 +86,18 @@ class OutdoorNightPlansTests(unittest.TestCase):
             with self.subTest(query=query):
                 service, google, narrator = self.build(places=places)
                 result = service.recommend(self.form(query=query))
-                self.assertFalse(any(o['route_built'] for o in result['alternatives']))
-                self.assertEqual(google.legs, [])
-                narrator.assert_not_called()
+                if places is not None:
+                    self.assertFalse(any(o['route_built'] for o in result['alternatives']))
+                    self.assertEqual(google.legs, [])
+                    narrator.assert_not_called()
+                else:
+                    option = result['alternatives'][0]
+                    self.assertTrue(option['route_built'])
+                    self.assertEqual(option['amenity_fallback']['unconfirmed'], ['socket'])
+                    for stop in option['stops']:
+                        self.assertNotEqual(stop['features'].get('socket'), 'yes')
+                        self.assertIn('не подтверждены', stop['availability_note'])
+                        self.assertIn('Не подтверждены', stop['amenity_note'])
 
     def test_explicit_24x7_requirement_stays_hard_in_day_and_night(self):
         for period in ('day', 'night'):

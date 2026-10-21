@@ -6,11 +6,11 @@ import hashlib
 import re
 import unicodedata
 
-from .activity_intent import parse_search_intent, _matches, _negated, _location_mention, _PRIORITY
+from .activity_intent import parse_search_intent, _matches, _negated, _location_mention, _PRIORITY, WIFI_PATTERN
 from .category_catalog import CATEGORY_CATALOG
 
 _FULFILMENTS = {"venue_visit", "generic_walk", "specific_activity"}
-_REQUIREMENTS = {"socket", "quiet", "accessible", "activity", "equipment", "inventory", "price"}
+_REQUIREMENTS = {"socket", "wifi", "quiet", "accessible", "activity", "equipment", "inventory", "price"}
 _FLAGS = {"child", "tourist"}
 _POLICIES = {"primary", "any", "walk_mix"}
 _KEYS = {"start_quote", "goals", "excluded", "goal_policy", "requirements", "context"}
@@ -328,6 +328,7 @@ _CONTEXT_WITNESSES = {
     "tourist": r"турист\w*|путешествен\w*|достопримеч\w*|архитект\w*|tourist\w*|travell?ers?|sightsee\w*",
 }
 _REQUIREMENT_WITNESSES = {
+    "wifi": WIFI_PATTERN,
     "socket": r"розет\w*|заряд\w*|sockets?|power\s+outlets?",
     "quiet": r"тих\w*|тишин\w*|спокойн\w*|quiet|silence|тыныш",
     "accessible": r"коляс\w*|безбарьер\w*|доступн\w*|wheelchair|accessible|арбамен",
@@ -592,7 +593,7 @@ def _preserve_activity_conditions(requirements, query, goals, policy):
 
 def _preserve_hard_conditions(requirements, query, goals, policy, legacy):
     """Every positive witness keeps its own scope; a local key cannot hide a global one."""
-    for key, flag in (("socket", "socket"), ("accessible", "accessible"), ("quiet", "strict_quiet")):
+    for key, flag in (("socket", "socket"), ("wifi", "wifi"), ("accessible", "accessible"), ("quiet", "strict_quiet")):
         if not legacy[flag]:
             continue
         for match in _condition_occurrences(query, key):
@@ -675,7 +676,7 @@ class IntentPlan:
 
     @property
     def preferences(self):
-        return tuple(dict.fromkeys(item.key for item in self.requirements if item.key in {"quiet", "socket", "accessible"}))
+        return tuple(dict.fromkeys(item.key for item in self.requirements if item.key in {"quiet", "socket", "wifi", "accessible"}))
 
     @property
     def required_keys(self):
@@ -684,7 +685,7 @@ class IntentPlan:
     @property
     def global_preferences(self):
         return tuple(dict.fromkeys(item.key for item in self.requirements
-                                   if item.goal_index is None and item.key in {"quiet", "socket", "accessible"}))
+                                   if item.goal_index is None and item.key in {"quiet", "socket", "wifi", "accessible"}))
 
     @property
     def global_required_keys(self):
@@ -721,7 +722,7 @@ class IntentPlan:
         requested = list(dict.fromkeys(goal.category_hint for goal in active if goal.category_hint is not None))
         required, preferences = set(self.global_required_keys), set(self.global_preferences)
         flags = {item.flag for item in self.context}
-        return {"coffee": "cafe" in requested, "socket": "socket" in required,
+        return {"coffee": "cafe" in requested, "socket": "socket" in required, "wifi": "wifi" in required,
                 "quiet": "quiet" in preferences, "strict_quiet": "quiet" in required,
                 "child": "child" in flags, "tourist": "tourist" in flags,
                 "architecture": "architecture" in requested, "night": time_of_day == "night",
@@ -973,6 +974,7 @@ def extraction_request(query, model):
         "requirements и context заполняй ТОЛЬКО при явном условии в цитате: время и обычная цель не являются ими. "
         "goal_index — нулевой индекс ТОЛЬКО своей альтернативы при явном 'или'; общие условия имеют null. "
         "Например 'кафе с розеткой или парк': socket относится к цели 0; 'везде нужен доступ для коляски' — null. "
+        "Wi-Fi/вайфай/wireless internet означает requirement wifi; не выводи его из ноутбука или типа клуба. "
         "Не переноси условия между вариантами. Для дополнительной услуги музея в 'площадка или музей с интерактивами' "
         "activity относится к музею, не к площадке. Без такого условия оба массива пусты. Пример: 'хочу поиграть в компьютерном клубе' -> "
         "venue_visit, requirements=[], context=[]. 'Я турист с сыном, хочу клуб с RTX' -> "

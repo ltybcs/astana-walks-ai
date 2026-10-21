@@ -138,18 +138,27 @@ class CategoryUnifiedTests(unittest.TestCase):
 
     def test_unknown_hard_properties_and_night_hours_are_not_inferred_from_the_request(self):
         origin = PUBLIC_ORIGINS["baiterek"]
-        for extra in ("с розеткой", "для коляски", "только тихий", "ночью"):
+        for extra in ("с розеткой", "с Wi-Fi", "для коляски", "только тихий", "ночью"):
             for confirmed in (False, True):
                 with self.subTest(extra=extra, confirmed=confirmed):
-                    features = {"socket": "yes", "wheelchair": "yes", "quiet": "yes"} if confirmed else {}
+                    features = {"socket": "yes", "wifi": "yes", "wheelchair": "yes", "quiet": "yes"} if confirmed else {}
                     target = fixture(origin, "bowling", features=features,
                                      opening_hours="24/7" if confirmed else None)
                     service, google, _, narrator = make_service(origin, [target])
                     result = service.recommend({"query": "Хочу боулинг " + extra + " возле Байтерека на 120 минут",
                                                 "client_context": CLIENT, "consent": True})
-                    self.assertEqual(bool(result["alternatives"][0]["stops"]), confirmed)
-                    self.assertEqual(narrator.call_count, int(confirmed))
-                    self.assertEqual(len(google.legs), 2 if confirmed else 0)
+                    relaxable = extra in {"с розеткой", "с Wi-Fi", "только тихий"}
+                    ready = confirmed or relaxable
+                    option = result["alternatives"][0]
+                    self.assertEqual(bool(option["stops"]), ready)
+                    self.assertEqual(narrator.call_count, int(ready))
+                    self.assertEqual(len(google.legs), 2 if ready else 0)
+                    if ready and not confirmed:
+                        key = {"с розеткой": "socket", "с Wi-Fi": "wifi", "только тихий": "quiet"}[extra]
+                        self.assertEqual(option["amenity_fallback"]["unconfirmed"], [key])
+                        self.assertEqual(option["stops"][0]["features"].get(key, "unknown"), "unknown")
+                    else:
+                        self.assertNotIn("amenity_fallback", option)
 
     def test_projected_cafe_cannot_hide_adult_source_types_in_a_family_request(self):
         origin = PUBLIC_ORIGINS["baiterek"]

@@ -12,7 +12,7 @@ import re
 from types import MappingProxyType
 from urllib.parse import parse_qsl, urlsplit
 
-_PROPERTIES = ("socket", "quiet", "wheelchair")
+_PROPERTIES = ("socket", "wifi", "quiet", "wheelchair")
 _PROVIDERS = frozenset({"osm", "dgis", "google"})
 _HOSTS = {
     "osm": frozenset({"openstreetmap.org", "www.openstreetmap.org"}),

@@ -23,14 +23,14 @@ class PlaceEvidenceTests(unittest.TestCase):
         for provider in URLS:
             with self.subTest(provider=provider):
                 self.assertEqual(project(provider=provider), {
-                    "features": {"socket": "unknown", "quiet": "unknown", "wheelchair": "unknown"},
+                    "features": {"socket": "unknown", "wifi": "unknown", "quiet": "unknown", "wheelchair": "unknown"},
                     "evidence": []})
 
     def test_existing_normalized_features_keep_yes_no_unknown_and_honest_path(self):
         for provider in ("osm", "dgis"):
             with self.subTest(provider=provider):
                 result = project({"id": "123", "features": {"socket": "yes", "quiet": "no", "wheelchair": "unknown"}}, provider)
-                self.assertEqual(result["features"], {"socket": "yes", "quiet": "no", "wheelchair": "unknown"})
+                self.assertEqual(result["features"], {"socket": "yes", "wifi": "unknown", "quiet": "no", "wheelchair": "unknown"})
                 for item in result["evidence"]:
                     self.assertEqual(set(item), {"property", "value", "provider", "place_id", "field_path", "source_url", "observed_at"})
                     self.assertEqual(item["provider"], provider)
@@ -41,7 +41,7 @@ class PlaceEvidenceTests(unittest.TestCase):
 
     def test_boolean_false_is_negative_not_unknown_or_truthy_string(self):
         self.assertEqual(project({"id": "123", "features": {"socket": True, "quiet": False}})["features"],
-                         {"socket": "yes", "quiet": "no", "wheelchair": "unknown"})
+                         {"socket": "yes", "wifi": "unknown", "quiet": "no", "wheelchair": "unknown"})
         result = project({"id": "123", "accessibilityOptions": {"wheelchairAccessibleEntrance": False}}, "google")
         self.assertEqual(result["features"]["wheelchair"], "no")
         self.assertEqual(result["evidence"][0]["value"], "no")
@@ -50,7 +50,7 @@ class PlaceEvidenceTests(unittest.TestCase):
         result = project({"id": "123", "accessibilityOptions": {"wheelchairAccessibleEntrance": True,
             "wheelchairAccessibleParking": False, "wheelchairAccessibleRestroom": False,
             "wheelchairAccessibleSeating": False}}, "google")
-        self.assertEqual(result["features"], {"socket": "unknown", "quiet": "unknown", "wheelchair": "yes"})
+        self.assertEqual(result["features"], {"socket": "unknown", "wifi": "unknown", "quiet": "unknown", "wheelchair": "yes"})
         self.assertEqual(result["evidence"][0]["field_path"], "accessibilityOptions.wheelchairAccessibleEntrance")
         self.assertNotIn("route", json.dumps(result))
         parking_only = project({"id": "123", "accessibilityOptions": {"wheelchairAccessibleParking": True}}, "google")

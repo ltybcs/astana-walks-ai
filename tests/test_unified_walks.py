@@ -128,8 +128,11 @@ class UnifiedTests(unittest.TestCase):
                 self.osm.retrieve.return_value = {"selected": [{"poi": deepcopy(place)} for place in places]}
                 result = self.service.recommend({**self.form, "minutes": 120,
                     "query": query + (" нужна розетка" if needs_socket else "")})
-                eligible = has_club and not needs_socket
+                eligible = has_club  # Unknown socket now offers a visibly conditional alternative.
                 self.assertEqual(result["source_receipt"]["osm"]["candidate_count"], int(eligible))
+                if eligible and needs_socket:
+                    self.assertEqual(result["alternatives"][0]["amenity_fallback"]["unconfirmed"], ["socket"])
+                    self.assertEqual(result["alternatives"][0]["stops"][0]["features"].get("socket", "unknown"), "unknown")
                 self.assertEqual(result["source_receipt"]["dgis"]["candidate_count"], 0)
                 self.assertEqual(result["source_receipt"]["google"]["candidate_count"], 0)
                 self.assertEqual([stop["id"] for stop in result["alternatives"][0]["stops"]],

@@ -15,12 +15,14 @@ from time import monotonic
 
 from .google_budget import GoogleError
 from .google_grounded import prepare, route_minutes, validate_grounding, WALK_WARNING
-from .retrieval import architecture_evidence, detect_intent, distance_m, feature, source_goal_evidence, night_hours_eligible
+from .retrieval import architecture_evidence, detect_intent, distance_m, feature, source_goal_evidence, matched_goal_indices, night_hours_eligible
 from .unified_narration import narrate
 from .place_evidence import normalize_place_evidence, PlaceEvidenceError
 from .opening_hours import evaluate_schedule
 from .category_catalog import CATEGORY_CATALOG
 from .activity_intent import parse_search_intent
+from .amenity_fallback import AMENITY_KEYS, relax_amenities, unconfirmed_amenities
+from .semantic_intent import deterministic_plan, IntentError
 
 
 def _point(place):
@@ -60,8 +62,8 @@ def _eligible(place, intent, intent_plan=None, *, schedule_when=None):
         return False
     if place.get("source_tags", {}).get("access") in {"private", "no"}:
         return False
-    for wanted, key in (("socket", "socket"), ("accessible", "wheelchair"), ("strict_quiet", "quiet")):
-        if intent[wanted] and feature(place, key) != "yes":
+    for wanted, key in (("socket", "socket"), ("wifi", "wifi"), ("accessible", "wheelchair"), ("strict_quiet", "quiet")):
+        if intent.get(wanted) and feature(place, key) != "yes":
             return False
     if not night_hours_eligible(place, night=intent["night"], allow_unknown_outdoor_hours=True,
                                 require_confirmed_hours=intent.get("require_confirmed_hours", False),
@@ -140,7 +142,7 @@ def _stop_reason(stop, option, intent):
         parts = ["Подходит по типу: " + label + ", по данным " + provider + "."]
     else:
         parts = ["Google Maps предложил это место рядом с вашим стартом."]
-    for wanted, key, fact in (("socket","socket","розетки"), ("accessible","wheelchair","доступный вход"),
+    for wanted, key, fact in (("socket","socket","розетки"), ("wifi","wifi","Wi-Fi"), ("accessible","wheelchair","доступный вход"),
                                ("strict_quiet","quiet","тишина")):
         if intent.get(wanted) and feature(stop,key) == "yes":
             parts.append("В источнике подтверждены: " + fact + ".")
@@ -150,6 +152,35 @@ def _stop_reason(stop, option, intent):
     if option.get("route_built") and plan.get("verified") and plan.get("returns_to_origin"):
         parts.append("Пеший путь с возвращением проверен; план укладывается в " + str(option["budget_minutes"]) + " мин.")
     return " ".join(parts)
+
+
+_AMENITY_LABELS = {"socket": "розетки", "wifi": "Wi-Fi", "quiet": "тишина"}
+
+
+def _amenity_note(keys):
+    labels = ", ".join(_AMENITY_LABELS[key] for key in keys)
+    return "Не подтверждены: " + labels + ". Они могут быть на месте; уточните перед посещением."
+
+
+def _amenity_notice(keys):
+    labels = ", ".join(_AMENITY_LABELS[key] for key in keys)
+    return ("Не удалось подобрать маршрут с подтверждением всех запрошенных удобств. "
+            + "В этом варианте не подтверждены: " + labels
+            + ". Вот места, подходящие по остальным условиям. Наличие удобств уточните перед посещением.")
+
+
+def _requested_features(stop, original_plan, intent):
+    """Own goal-scoped request projection; it grants no property evidence."""
+    mapping = {"socket": "socket", "wifi": "wifi", "quiet": "quiet", "accessible": "wheelchair"}
+    if original_plan is not None:
+        active = matched_goal_indices(stop, relax_amenities(original_plan) or original_plan)
+        keys = {item.key for item in original_plan.requirements
+                if item.goal_index is None or item.goal_index in active}
+    else:
+        keys = {key for key, flags in {"socket": ("socket",), "wifi": ("wifi",),
+                "quiet": ("quiet", "strict_quiet"), "accessible": ("accessible",)}.items()
+                if any(intent.get(flag) for flag in flags)}
+    return [value for key, value in mapping.items() if key in keys]
 
 
 def _source_description(stop):
@@ -186,7 +217,13 @@ def _stop(place, provider, source_id):
             evidence = projection["evidence"]
         except PlaceEvidenceError:
             stamp = None  # No fabricated provenance for legacy/invalid metadata.
-    return {"feature_evidence": evidence, "source_observed_at": stamp,"stop_id": provider + ":" + place["id"], "id": place["id"], "source_id": source_id,
+    tags = place.get("source_tags", {})
+    # Only bounded own type/access proof survives the public stop projection.
+    # Do not forward addresses, full source tags or arbitrary provider bodies.
+    type_tags = {key: value for key, value in tags.items()
+                 if key in {"historic", "building:architecture", "architectural_style", "amenity", "leisure", "tourism", "shop", "sport", "access"}
+                 and isinstance(value, str) and 1 <= len(value) <= 200} if isinstance(tags, dict) else {}
+    return {"source_tags": type_tags, "feature_evidence": evidence, "source_observed_at": stamp,"stop_id": provider + ":" + place["id"], "id": place["id"], "source_id": source_id,
             "provider": provider, **{key: deepcopy(place.get(key)) for key in
             ("name", "category", "description", "features", "opening_hours", "source_url", "lat", "lon",
              "source_categories", "source_rubrics", "source_types", "source_type")}}
@@ -266,6 +303,15 @@ class UnifiedWalks:
         structured_intent = intent.get("search_intent") or parse_search_intent(query)
         context["search_intent"] = deepcopy(structured_intent)
         schedule_when = _current_schedule_when(context, query, self.clock)
+        # Legacy callers receive the same bounded, deterministic interpretation;
+        # this is never another model extraction or a changed original plan.
+        try:
+            original_plan = intent_plan or deterministic_plan(query)
+            alternate_plan = relax_amenities(original_plan)
+        except IntentError:
+            original_plan, alternate_plan = None, None
+        alternate_intent = (detect_intent(query, resolved["time_of_day"], intent_plan=alternate_plan)
+                            if alternate_plan is not None else None)
         phase_started = monotonic()
         google_seconds = min(60, prepared.deadline - phase_started - 3) if prepared else 60
         source_deadline = min(phase_started + 30, prepared.deadline - 3) if prepared else phase_started + 30
@@ -279,12 +325,20 @@ class UnifiedWalks:
                 raise TimeoutError("Source phase deadline")
             attempts[provider] = 1
             return operation(*args, **kwargs)
-        local_future = executor.submit(source_call, "osm", self.osm.retrieve, query, origin, max(budgets), resolved["time_of_day"],
-                                       allow_unknown_outdoor_hours=True, schedule_when=schedule_when,
-                                       deadline=source_deadline, **adapter_options)
+        def local_search():
+            options = dict(allow_unknown_outdoor_hours=True, schedule_when=schedule_when, deadline=source_deadline)
+            value = self.osm.retrieve(query, origin, max(budgets), resolved["time_of_day"], **options, **adapter_options)
+            if alternate_plan is not None:
+                # Same loaded finite corpus, with the same absolute deadline.
+                # No HTTP, extra extraction, source search or response storage.
+                alternate = self.osm.retrieve(query, origin, max(budgets), resolved["time_of_day"],
+                                              **options, intent_plan=alternate_plan)
+                value = {**value, "fallback_selected": alternate["selected"]}
+            return value
+        local_future = executor.submit(source_call, "osm", local_search)
+        dgis_options = {"include_amenity_fallback": True} if alternate_plan is not None else {}
         dgis_future = (executor.submit(source_call, "dgis", self.dgis.search, query, origin, radius,
-                                       deadline=source_deadline, **adapter_options)
-                       if dgis_unavailable is None else None)
+                                       deadline=source_deadline, **adapter_options, **dgis_options) if dgis_unavailable is None else None)
         failures = {"dgis": dgis_unavailable} if dgis_unavailable else {}
         try:
             with self.google.workflow(google_seconds) if hasattr(self.google, "workflow") else nullcontext():
@@ -297,7 +351,12 @@ class UnifiedWalks:
                         if (not isinstance(value, dict) or not isinstance(value.get(key), list)
                                 or len(value[key]) > 5000 or any(not isinstance(item, dict) for item in value[key])):
                             raise ValueError("Invalid optional source shape")
-                        if provider == "osm" and any(not isinstance(item.get("poi"), dict) for item in value[key]):
+                        fallback_key = "fallback_selected" if provider == "osm" else "fallback_places"
+                        fallback = value.get(fallback_key, [])
+                        if (not isinstance(fallback, list) or len(fallback) > 5000
+                                or any(not isinstance(item, dict) for item in fallback)):
+                            raise ValueError("Invalid alternate source shape")
+                        if provider == "osm" and any(not isinstance(item.get("poi"), dict) for item in value[key] + fallback):
                             raise ValueError("Invalid local source shape")
                         return value
                     except TimeoutError:
@@ -310,26 +369,39 @@ class UnifiedWalks:
                 local = optional_result(local_future, "osm", "selected")
                 live = optional_result(dgis_future, "dgis", "places")
                 candidates = {"osm": [], "google": [], "dgis": []}
-                for provider, records in (("osm", [item["poi"] for item in local["selected"]]),
-                                           ("dgis", live["places"])):
+                alternate_candidates = {"osm": [], "google": [], "dgis": []}
+                # Source IDs bind once to the strict+alternate source snapshot.
+                # Conflicting duplicate identities reject the entire provider.
+                for provider, records in (("osm", [item["poi"] for item in local["selected"] + local.get("fallback_selected", [])]),
+                                           ("dgis", live["places"] + live.get("fallback_places", []))):
                     try:
-                        own_candidates = []
-                        for index, poi in enumerate(records):
-                            # The entire malformed source snapshot is discarded;
-                            # no partially decoded source becomes a recommendation.
+                        own_candidates, own_alternates, identities = [], [], {}
+                        for poi in records:
                             if (not isinstance(poi.get("id"), str) or not poi["id"]
                                     or not isinstance(poi.get("name"), str) or not poi["name"]
                                     or any(type(poi.get(key)) not in {int, float} or not math.isfinite(poi[key])
                                            for key in ("lat", "lon"))):
                                 raise ValueError("Invalid optional place")
-                            if distance_m(origin, poi) <= radius and _eligible(poi, intent, intent_plan, schedule_when=schedule_when):
-                                own_candidates.append(_stop(poi, provider, ("o" if provider == "osm" else "d") + str(index)))
-                        candidates[provider] = own_candidates
+                            if poi["id"] in identities:
+                                if identities[poi["id"]] != poi:
+                                    raise ValueError("Conflicting source identity")
+                                continue
+                            index = len(identities)
+                            identities[poi["id"]] = poi
+                            if distance_m(origin, poi) > radius:
+                                continue
+                            stop = _stop(poi, provider, ("o" if provider == "osm" else "d") + str(index))
+                            if _eligible(poi, intent, intent_plan, schedule_when=schedule_when):
+                                own_candidates.append(stop)
+                            elif (alternate_plan is not None and unconfirmed_amenities(poi, original_plan)
+                                  and _eligible(poi, alternate_intent, alternate_plan, schedule_when=schedule_when)):
+                                own_alternates.append(stop)
+                        candidates[provider], alternate_candidates[provider] = own_candidates, own_alternates
                     except Exception:
                         failures[provider] = "provider_invalid_response"
                 # Google summary remains whole. Only structured source metadata
                 # may identify candidate places; never mine its prose for facts.
-                hard_unknown = (intent["socket"] or intent["accessible"] or intent["strict_quiet"]
+                hard_unknown = (intent["socket"] or intent.get("wifi") or intent["accessible"] or intent["strict_quiet"]
                                 or intent["night"] or intent.get("require_confirmed_hours", False))
                 # Query text is not venue-type evidence. Only a broad walk or
                 # architectural overview can use untyped Google stops; explicit
@@ -353,7 +425,31 @@ class UnifiedWalks:
                                "source_url": source["url"], **point}
                         candidates["google"].append(_stop(poi, "google", source["source_id"]))
                 selected = self._select(candidates, origin, intent)
-                alternatives = self._plans(selected, budgets, context, origin, schedule_when=schedule_when)
+                route_memo = {}
+                alternatives = self._plans(selected, budgets, context, origin, schedule_when=schedule_when, route_memo=route_memo)
+                missing_budgets = [option["budget_minutes"] for option in alternatives if not option["route_built"]]
+                if alternate_plan is not None and missing_budgets and any(alternate_candidates.values()):
+                    alternate_selected = self._select(alternate_candidates, origin, alternate_intent)
+                    fallback_options = self._plans(alternate_selected, missing_budgets, context, origin,
+                                                   schedule_when=schedule_when, route_memo=route_memo)
+                    replacements = {}
+                    for option in fallback_options:
+                        if not option["route_built"]:
+                            continue
+                        keys = set()
+                        for stop in option["stops"]:
+                            unknown = unconfirmed_amenities(stop, original_plan)
+                            if not unknown:
+                                break  # Fail closed if source evidence changed.
+                            stop["unconfirmed_amenities"] = list(unknown)
+                            stop["amenity_note"] = _amenity_note(unknown)
+                            keys.update(unknown)
+                        else:
+                            unknown = [key for key in AMENITY_KEYS if key in keys]
+                            option["amenity_fallback"] = {"applied": True, "unconfirmed": unknown,
+                                "notice": _amenity_notice(unknown)}
+                            replacements[option["id"]] = option
+                    alternatives = [replacements.get(option["id"], option) for option in alternatives]
         finally:
             # Drain the finite local scan and deadline-bound network adapter.
             # A Python thread timeout is not cancellation; never detach retries
@@ -364,6 +460,7 @@ class UnifiedWalks:
                 if (intent["night"] and stop.get("category") in {"park", "promenade"}
                         and stop.get("opening_hours") in (None, "")):
                     stop["availability_note"] = "Ночной доступ и освещение не подтверждены; проверьте перед выходом."
+                stop["requested_features"] = _requested_features(stop, original_plan, intent)
                 stop["why_text"] = _stop_reason(stop, option, intent)
         selected_union = []
         seen = set()
@@ -376,6 +473,7 @@ class UnifiedWalks:
                     seen.add(stop["stop_id"])
         context["source_availability"] = {provider: "unavailable" if provider in failures else "completed"
                                           for provider in ("osm", "google", "dgis")}
+        narration_plan = (alternate_plan if any(option.get("amenity_fallback") for option in alternatives) else intent_plan)
         answer, llm_status, llm_attempts = None, "no_verified_plan", 0
         if selected_union:
             if self.gateway and not self._custom_narrator:
@@ -383,7 +481,7 @@ class UnifiedWalks:
                     deadline = prepared.deadline if prepared else monotonic() + 120
                     with self.gateway.session(deadline - 2, seconds=120):
                         answer, llm_status = self.narrator(grounding, selected_union, alternatives, context, safe_intent,
-                            self.llm_config, intent_plan=intent_plan, http_open=self.gateway.open)
+                            self.llm_config, intent_plan=narration_plan, http_open=self.gateway.open)
                 except Exception:
                     answer, llm_status = None, "local_model_unavailable_or_invalid"
             else:
@@ -417,9 +515,13 @@ class UnifiedWalks:
                 receipt[provider] = {"status": "unavailable", "candidate_count": None, "selected_count": 0,
                                      "attempted": bool(attempts[provider]), "error_code": failures[provider]}
             else:
-                receipt[provider] = {"status": "searched" if candidates[provider] else "no_data",
-                                     "candidate_count": len(candidates[provider]),
+                total = len(candidates[provider]) + len(alternate_candidates[provider])
+                receipt[provider] = {"status": "searched" if total else "no_data",
+                                     "candidate_count": total,
                                      "selected_count": sum(stop["provider"] == provider for stop in selected_union)}
+                if alternate_plan is not None:
+                    receipt[provider].update(strict_candidate_count=len(candidates[provider]),
+                                              alternative_candidate_count=len(alternate_candidates[provider]))
         warnings = list(context["assumptions"]) + list(live.get("warnings", []))
         if failures:
             warnings.append("Поиск выполнен не полностью: " + ", ".join(
@@ -443,7 +545,7 @@ class UnifiedWalks:
             warnings.append("Единый текст ИИ не подтверждён. Показаны план и полный исходный ответ Google с источниками.")
         return {"mode": "llm-grounded-unified" if answer else "grounding-only", "resolved_context": context,
                 "answer": answer, "grounding": grounding,
-                "sources": {provider: [_evidence(stop) for stop in candidates[provider]] for provider in ("osm", "dgis")},
+                "sources": {provider: [_evidence(stop) for stop in candidates[provider] + alternate_candidates[provider]] for provider in ("osm", "dgis")},
                 "source_receipt": receipt, "search_complete": not failures, "alternatives": alternatives,
                 "default_option_id": next((option["id"] for option in alternatives if option["budget_status"] == "fits"), alternatives[0]["id"]),
                 "warnings": warnings, "diagnostics": {"llm_attempts": llm_attempts, "llm_status": llm_status,
@@ -488,8 +590,8 @@ class UnifiedWalks:
             last = chosen
         return ordered
 
-    def _plans(self, selected, budgets, context, origin, *, schedule_when=None):
-        memo = {}
+    def _plans(self, selected, budgets, context, origin, *, schedule_when=None, route_memo=None):
+        memo = route_memo if route_memo is not None else {}
         # Planner and Embed share this validated coordinate start. Public
         # landmark names can resolve to a different place and must not reroute it.
         anchor = {"latLng": {"latitude": origin["lat"], "longitude": origin["lon"]}}

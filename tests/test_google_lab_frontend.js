@@ -145,7 +145,7 @@ test("unavailable optional source is distinct from empty and keeps partial resul
   }
 });
 test("own place facts stay collapsed, ignore other IDs and never promise route access",async()=>{
-  const own={...stop(),id:"own",features:{wheelchair:"yes"},opening_hours:"<b>Mo-Fr 09:00-18:00</b>",source_observed_at:"2026-10-20T12:00:00Z",
+  const own={...stop(),id:"own",requested_features:["socket","quiet"],features:{wheelchair:"yes"},opening_hours:"<b>Mo-Fr 09:00-18:00</b>",source_observed_at:"2026-10-20T12:00:00Z",
     opening_status:{status:"open",source:"source-reported"},feature_evidence:[
       {property:"socket",value:"yes",provider:"osm",place_id:"other"},
       {property:"quiet",value:"yes",provider:"dgis",place_id:"own"},
@@ -153,7 +153,7 @@ test("own place facts stay collapsed, ignore other IDs and never promise route a
   const data=result({alternatives:[option(45,{stops:[own]})]});
   const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});
   await h.submit();const content=h.elements["walk-stops"].children[0].children[0];
-  const facts=content.children.find(el=>el.className==="stop-source-facts");assert(facts);assert(!facts.open);
+  const details=content.children.find(el=>el.className==="stop-details");assert(details);assert(!details.open);const facts=details.children.find(el=>el.className==="stop-source-facts");assert(facts);assert.equal(facts.tagName,"DIV");assert.equal(content.children.filter(el=>el.tagName==="DETAILS").length,1);
   assert(facts.textContent.includes("Розетки: неизвестно"));assert(facts.textContent.includes("Тишина: неизвестно"));
   assert(facts.textContent.includes("Доступный вход: указано в источнике"));assert(facts.textContent.includes("2026-10-20"));
   assert(facts.textContent.includes("не подтверждают доступность всего маршрута"));assert(facts.textContent.includes("Фактический доступ не проверен"));
@@ -221,9 +221,9 @@ test("main form stays compact while detailed rules are available in the footer",
 test("route and map precede one directly expandable explanation",()=>{const details=html.indexOf('id="walk-explanation"');assert(html.indexOf('id="walk-stops"')<details);assert(html.indexOf('id="route-map-section"')<details);assert.equal((html.match(/id="walk-explanation"/g)||[]).length,1);const content=html.match(/<details[^>]*id="walk-explanation"[^>]*>([\s\S]*?)<\/details>/)[1];assert(content.indexOf('id="walk-answer"')<content.indexOf('id="google-sources"'));assert(content.indexOf('id="google-sources"')<content.indexOf('id="google-original-text"'));assert(content.indexOf('id="google-original-text"')<content.indexOf('id="google-original-sources"'));assert(!/<details\b/.test(content));});
 test("source assumptions and warnings are preserved in terms without crowding context",async()=>{const assumption="Текущее время определено автоматически.";const data=result({resolved_context:context({assumptions:[assumption]}),warnings:[assumption,"Часы не подтверждены."]});const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();assert(!h.elements["walk-context"].textContent.includes(assumption));assert(h.elements["walk-warnings"].textContent.includes(assumption));assert(h.elements["walk-warnings"].textContent.includes("Часы не подтверждены."));assert.equal(h.elements["walk-warnings"].children.filter(item=>item.textContent===assumption).length,1);assert(html.slice(html.indexOf('id="usage-terms"')).includes('id="walk-warnings"'));});
 test("stop why text is displayed exactly as plain text rather than interpreted markup",async()=>{const why="<img src=x onerror=alert(1)> Категория подтверждена источником.";const data=result({alternatives:[option(45,{stops:[{...stop(),why_text:why}]})]});const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();const descend=el=>[el,...el.children.flatMap(descend)];const reasons=descend(h.elements["walk-stops"]).filter(el=>el.className==="stop-why");assert.equal(reasons.length,1);assert.equal(reasons[0].textContent,why);assert.equal(reasons[0].children.length,0);assert(!descend(h.elements["walk-stops"]).some(el=>el.tagName==="IMG"));});
-test("missing or invalid stop why text does not invent an explanation",async()=>{for(const why of [undefined,null,{},42,""]){const data=result({alternatives:[option(45,{stops:[{...stop(),why_text:why}]})]});const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();assert(!h.elements["walk-stops"].textContent.includes("Почему выбрано"));assert(!h.elements["walk-stops"].textContent.includes("[object Object]"));assert(!h.elements["walk-result"].hidden);}});
+test("missing or invalid stop why text does not invent an explanation",async()=>{for(const why of [undefined,null,{},42,""]){const data=result({alternatives:[option(45,{stops:[{...stop(),why_text:why}]})]});const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();assert(!h.elements["walk-stops"].children[0].children[0].children.find(el=>el.className==="stop-details")?.children.some(el=>el.className==="stop-why"));assert(!h.elements["walk-stops"].textContent.includes("[object Object]"));assert(!h.elements["walk-result"].hidden);}});
 test("ready variant changes its reason without repeating search or model request",async()=>{const first="Первая проверенная причина.",second="Причина другого готового варианта.";const data=result({alternatives:[option(45,{stops:[{...stop(),why_text:first}]}),option(60,{stops:[{...stop("dgis"),why_text:second}]})]});const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();assert(h.elements["walk-stops"].textContent.includes(first));await h.elements["walk-variants"].children[1].emit("click");await flush();assert(h.elements["walk-stops"].textContent.includes(second));assert(!h.elements["walk-stops"].textContent.includes(first));assert.equal(h.calls("/api/unified/recommend").length,1);assert.equal(h.calls("/api/context").length,1);});
-test("editing clears reasons, closes response disclosures and hides old warnings",async()=>{const data=result({alternatives:[option(45,{stops:[{...stop(),why_text:"Причина прошлого результата."}]})]});const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();h.elements["walk-explanation"].open=true;h.elements["source-receipt-details"].open=true;await h.edit("Новый запрос");assert.equal(h.elements["walk-explanation"].open,false);assert.equal(h.elements["source-receipt-details"].open,false);assert.equal(h.elements["walk-stops"].textContent,"");assert.equal(h.elements["walk-warnings"].textContent,"");assert(h.elements["walk-warnings"].hidden);assert.equal(h.elements["google-original-text"].textContent,"");});
+test("editing clears reasons, closes response disclosures and hides old warnings",async()=>{const data=result({alternatives:[option(45,{stops:[{...stop(),why_text:"Причина прошлого результата."}]})]});const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();h.elements["walk-explanation"].open=true;await h.edit("Новый запрос");assert.equal(h.elements["walk-explanation"].open,false);assert.equal(h.elements["walk-stops"].textContent,"");assert.equal(h.elements["walk-warnings"].textContent,"");assert(h.elements["walk-warnings"].hidden);assert.equal(h.elements["google-original-text"].textContent,"");});
 
 test("native GPS unavailable has a distinct reason and performs no source search",async()=>{const h=harness({fetch:(req,r)=>r({needs_geolocation:true}),geo:(ok,bad)=>bad({code:2})});await h.submit("Хочу прогулку");assert(h.elements["walk-error"].textContent.includes("Браузер не смог определить местоположение."));assert(h.elements["walk-error"].textContent.includes("Подбор мест и расчёт маршрута не выполнены."));assert.equal(h.requests.length,1);assert.equal(h.calls("/api/unified/recommend").length,0);assert.equal(h.calls("/api/unified/map").length,0);assert(!h.elements["walk-submit"].disabled);});
 test("specific static server start errors remain plain text and never start provider search",async()=>{for(const message of ["Геопозиция находится вне Астаны.","Адрес старта не найден.","<b>Неизвестный адрес</b>"]){const h=harness({fetch:(req,r)=>r({code:"known_start_required",error:message},false,422)});await h.submit("Синтетический неизвестный старт");assert.equal(h.elements["walk-error"].textContent,message+" Подбор мест и расчёт маршрута не выполнены.");assert.equal(h.elements["walk-error"].children.length,0);assert.equal(h.requests.length,1);assert.equal(h.calls("/api/unified/recommend").length,0);assert.equal(h.geo.length,0);}});
@@ -303,7 +303,7 @@ test("unagreed geocoded or guessed origin source cannot reach activity search",a
 });
 test("selected stop description is prominent plain text and technical why is closed below it",async()=>{
   const description="<img src=x onerror=alert(1)> Игровая пауза после проверки условий.";const why="Подходит по типу; пеший бюджет проверен.";const data=result({alternatives:[option(45,{stops:[{...stop(),user_description:description,why_text:why}]})]});
-  const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();const content=h.elements["walk-stops"].children[0].children[0];const p=content.children.find(el=>el.className==="stop-description"),details=content.children.find(el=>el.tagName==="DETAILS");assert(p);assert.equal(p.textContent,description);assert.equal(p.children.length,0);assert(details);assert.notEqual(details.open,true);assert.equal(details.children[0].tagName,"SUMMARY");assert.equal(details.children[0].textContent,"Почему выбрано");assert.equal(details.children[1].textContent,why);assert(content.children.indexOf(p)<content.children.indexOf(details));assert.equal(h.elements["walk-answer"].textContent,data.answer.text);
+  const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();const content=h.elements["walk-stops"].children[0].children[0];const p=content.children.find(el=>el.className==="stop-description"),details=content.children.find(el=>el.tagName==="DETAILS");assert(p);assert.equal(p.textContent,description);assert.equal(p.children.length,0);assert(details);assert.notEqual(details.open,true);assert.equal(details.children[0].tagName,"SUMMARY");assert.equal(details.children[0].textContent,"Почему выбрано и данные места");assert.equal(details.children[1].textContent,why);assert(content.children.indexOf(p)<content.children.indexOf(details));assert.equal(h.elements["walk-answer"].textContent,data.answer.text);
 });
 test("missing invalid or oversized selected description never falls back to other-place Google prose",async()=>{
   for(const user_description of [undefined,null,{},42,""," ","x".repeat(601)]){const data=result({answer:{text:"Global text about another venue.",source_ids:["g0"],stop_ids:["osm:0"]},alternatives:[option(45,{stops:[{...stop(),description:"Source text must not be an automatic fallback.",user_description}]})]});
@@ -354,7 +354,7 @@ test("selected description origin is labelled honestly without changing whole an
     const description="<b>Предложенная пауза</b> после проверки условий.";const why="Проверенный собственный тип.";
     const data=result({alternatives:[option(45,{stops:[{...stop(),user_description:description,description_origin,why_text:why}]})]});
     const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();
-    const content=h.elements["walk-stops"].children[0].children[0],origin=content.children.find(el=>el.className==="stop-description-origin"),text=content.children.find(el=>el.className==="stop-description"),whyDetails=content.children.find(el=>el.className==="stop-why-details");
+    const content=h.elements["walk-stops"].children[0].children[0],origin=content.children.find(el=>el.className==="stop-description-origin"),text=content.children.find(el=>el.className==="stop-description"),whyDetails=content.children.find(el=>el.className==="stop-details");
     assert.equal(origin.tagName,"P");assert.equal(origin.textContent,label);assert.equal(origin.children.length,0);assert.equal(text.textContent,description);assert.equal(text.children.length,0);assert.notEqual(whyDetails.open,true);
     assert.equal(h.elements["walk-answer"].textContent,data.answer.text);assert.equal(h.elements["google-original-text"].textContent,data.grounding.summary);assert.equal(h.elements["google-sources"].children.length,data.grounding.sources.length+1);
   }
@@ -385,7 +385,7 @@ test("night availability note stays visible beside accepted model or template de
     const user_description=description_origin?"Предложенная прогулка у выбранного места.":undefined;
     const data=result({alternatives:[option(45,{stops:[{...stop(),user_description,description_origin,availability_note:note,why_text:"Техническая причина выбора."}]})]});
     const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();
-    const content=h.elements["walk-stops"].children[0].children[0],p=content.children.find(el=>el.className==="stop-availability-note"),why=content.children.find(el=>el.className==="stop-why-details");
+    const content=h.elements["walk-stops"].children[0].children[0],p=content.children.find(el=>el.className==="stop-availability-note"),why=content.children.find(el=>el.className==="stop-details");
     assert(p);assert.equal(p.tagName,"P");assert.equal(p.textContent,note);assert.equal(p.hidden,false);assert.equal(p.parentNode,content);assert.equal(p.children.length,0);assert.notEqual(why.open,true);assert(content.children.indexOf(p)<content.children.indexOf(why));
     assert.equal(h.elements["walk-mode"].textContent,"ИИ · три источника проверены");assert.equal(h.elements["walk-answer"].textContent,data.answer.text);assert.equal(h.elements["google-sources"].children.length,data.grounding.sources.length+1);
   }
@@ -445,6 +445,149 @@ test("malformed or missing composite suffix never receives an AI description lab
   for(const [user_description,availability_note] of [["Описание без суффикса приложения.",note],["Идея. Примечание приложения: "+note+" ",note],["Идея. Примечание приложения: Другое примечание.",note],["Идея. Примечание приложения: "+note,undefined],["Идея. Примечание приложения: "+note,{}]]){
     const data=result({alternatives:[option(45,{stops:[{...stop(),user_description,availability_note,description_origin:"local-model-with-note"}]})]});
     const h=harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});await h.submit();const content=h.elements["walk-stops"].children[0].children[0];assert(!content.children.some(el=>el.className==="stop-description-origin"));assert.equal(content.children.find(el=>el.className==="stop-description").textContent,user_description);assert(!h.elements["walk-result"].hidden);
+  }
+});
+
+
+const amenityNotice="Нет мест с подтверждёнными розетками, но эти кафе могут подойти. Наличие розеток нужно уточнить.";
+const amenityStopNote="Розетки не подтверждены источником; уточните перед посещением.";
+function amenityOption(minutes=45, extra={}) {
+  return option(minutes, {amenity_fallback:{applied:true,unconfirmed:["socket"],notice:amenityNotice},
+    stops:[{...stop(),id:"own-cafe",features:{socket:"unknown"},unconfirmed_amenities:["socket"],
+      amenity_note:amenityStopNote,why_text:"Собственный тип кафе и пеший бюджет проверены."}],...extra});
+}
+function fixtureResult(data) {
+  return harness({fetch:(req,r)=>r(req.url==="/api/context"?{resolved_context:context()}:req.url==="/api/unified/recommend"?data:{},req.url!=="/api/unified/map")});
+}
+test("all result evidence shares one initially closed disclosure without nested summaries",()=>{
+  const article=html.match(/<article[^>]*id="walk-result"[^>]*>([\s\S]*?)<\/article>/)[1];
+  assert.equal((article.match(/<details\b/g)||[]).length,1);assert.equal((article.match(/<summary\b/g)||[]).length,1);
+  const evidence=article.match(/<details[^>]*id="walk-explanation"[^>]*>([\s\S]*?)<\/details>/)[1];
+  for(const id of ["walk-answer","google-sources","google-original-text","google-original-sources","source-receipts","other-sources"])assert(evidence.includes('id="'+id+'"'));
+  assert(!/<details[^>]*id="walk-explanation"[^>]*\bopen\b/.test(article));
+  assert(!article.includes("Пояснение ИИ и источники Google"));assert(!article.includes("Подробности поиска по источникам"));
+  assert(article.indexOf('id="amenity-fallback-note"')<article.indexOf('id="walk-explanation"'));
+});
+test("stop reason and own evidence share a single closed disclosure",async()=>{
+  const data=result({alternatives:[option(45,{stops:[{...stop(),why_text:"Причина по источнику."}]})]});
+  const h=fixtureResult(data);await h.submit();const content=h.elements["walk-stops"].children[0].children[0];
+  const details=content.children.filter(el=>el.tagName==="DETAILS");assert.equal(details.length,1);assert.notEqual(details[0].open,true);
+  assert(details[0].textContent.includes("Причина по источнику."));assert(!details[0].textContent.includes("Розетки: неизвестно"));
+  assert(!details[0].children.some(el=>el.tagName==="DETAILS"));
+});
+test("unconfirmed amenity notices stay visible beside selected visit and do not modify source facts",async()=>{
+  const data=result({alternatives:[amenityOption()]});const original=copy(data);const h=fixtureResult(data);await h.submit();
+  const notice=h.elements["amenity-fallback-note"];assert.equal(notice.hidden,false);assert.equal(notice.textContent,amenityNotice);assert.equal(notice.children.length,0);
+  const content=h.elements["walk-stops"].children[0].children[0],note=content.children.find(el=>el.className==="stop-amenity-note"),details=content.children.find(el=>el.className==="stop-details");
+  assert(note);assert.equal(note.parentNode,content);assert.equal(note.hidden,false);assert.equal(note.textContent,amenityStopNote);
+  assert(content.children.indexOf(note)<content.children.indexOf(details));assert.notEqual(details.open,true);assert(details.textContent.includes("Розетки: неизвестно"));
+  assert.equal(h.elements["google-original-text"].textContent,original.grounding.summary);assert.equal(h.elements["walk-answer"].textContent,original.answer.text);
+  assert.equal(h.elements["google-original-sources"].children.length,original.grounding.sources.length+1);assert.deepEqual(copy(h.run("state.result")),original);assert.deepEqual(data,original);
+});
+test("switching to strict and unbuilt options clears amenity notices without another search",async()=>{
+  const data=result({alternatives:[amenityOption(),option(60),option(120,{route_built:false,budget_status:"unverified",stops:[],map_ticket:null})]});
+  const h=fixtureResult(data);await h.submit();assert(!h.elements["amenity-fallback-note"].hidden);const originalGoogle=h.elements["google-original-text"].textContent;
+  for(const index of [1,2]){await h.elements["walk-variants"].children[index].emit("click");await flush();assert(h.elements["amenity-fallback-note"].hidden);assert.equal(h.elements["amenity-fallback-note"].textContent,"");assert(!h.elements["walk-stops"].textContent.includes(amenityStopNote));}
+  await h.elements["walk-variants"].children[0].emit("click");await flush();assert(!h.elements["amenity-fallback-note"].hidden);assert(h.elements["walk-stops"].textContent.includes(amenityStopNote));
+  assert.equal(h.calls("/api/unified/recommend").length,1);assert.equal(h.calls("/api/context").length,1);assert.equal(h.elements["google-original-text"].textContent,originalGoogle);
+  h.elements["walk-explanation"].open=true;await h.edit("Другой запрос");assert(h.elements["amenity-fallback-note"].hidden);assert.equal(h.elements["amenity-fallback-note"].textContent,"");assert.equal(h.elements["walk-stops"].textContent,"");assert.equal(h.elements["walk-explanation"].open,false);
+});
+test("amenity notices are literal text and cannot inject markup",async()=>{
+  const message='<img src=x onerror=alert(1)> Удобство не подтверждено.';
+  const opt=amenityOption();opt.amenity_fallback.notice=message;opt.stops[0].amenity_note=message;
+  const data=result({alternatives:[opt]});const h=fixtureResult(data);await h.submit();
+  assert.equal(h.elements["amenity-fallback-note"].textContent,message);assert.equal(h.elements["amenity-fallback-note"].children.length,0);
+  const note=h.elements["walk-stops"].children[0].children[0].children.find(el=>el.className==="stop-amenity-note");assert.equal(note.textContent,message);assert.equal(note.children.length,0);
+});
+test("malformed or contradictory amenity metadata is rejected before display",()=>{
+  const h=harness();
+  const mutations=[
+    opt=>{opt.amenity_fallback.unconfirmed=["wheelchair"];},opt=>{opt.amenity_fallback.unconfirmed=["socket","socket"];},
+    opt=>{opt.amenity_fallback.notice=" ";},opt=>{opt.amenity_fallback.notice="x".repeat(601);},opt=>{opt.amenity_fallback.applied=false;},
+    opt=>{opt.route_built=false;},opt=>{opt.stops[0].features.socket="no";},opt=>{opt.stops[0].features.socket="yes";},
+    opt=>{opt.stops[0].feature_evidence=[{property:"socket",provider:"osm",place_id:"own-cafe",value:"no"}];},
+    opt=>{opt.stops[0].unconfirmed_amenities=["wifi"];},opt=>{delete opt.stops[0].amenity_note;},
+    opt=>{delete opt.stops[0].unconfirmed_amenities;},opt=>{delete opt.amenity_fallback;}
+  ];
+  for(const mutate of mutations){const opt=amenityOption();mutate(opt);assert.throws(()=>h.run("validateResult("+JSON.stringify(result({alternatives:[opt]}))+")"));}
+});
+test("per-stop unconfirmed keys can differ while the option describes their union",async()=>{
+  const first={...stop(),id:"own-first",unconfirmed_amenities:["socket"],amenity_note:"Розетки не подтверждены."};
+  const second={...stop("dgis"),id:"own-second",unconfirmed_amenities:["wifi"],amenity_note:"Wi-Fi не подтверждён."};
+  const opt=amenityOption(45,{amenity_fallback:{applied:true,unconfirmed:["socket","wifi"],notice:"Для выбранных мест не все удобства подтверждены."},stops:[first,second]});
+  const h=fixtureResult(result({alternatives:[opt]}));await h.submit();assert(!h.elements["walk-result"].hidden);
+  assert(h.elements["walk-stops"].children[0].textContent.includes(first.amenity_note));assert(!h.elements["walk-stops"].children[0].textContent.includes(second.amenity_note));
+  assert(h.elements["walk-stops"].children[1].textContent.includes(second.amenity_note));
+});
+test("Wi-Fi evidence is shown only for the stop own provider and identifier",async()=>{
+  for(const [provider,place_id,value,expected]of [["osm","own-cafe","yes","указано в источнике"],["osm","own-cafe","no","в источнике указано отсутствие"],["google","other-cafe","yes","неизвестно"]]){
+    const own={...stop(),id:"own-cafe",requested_features:["wifi"],feature_evidence:[{property:"wifi",provider,place_id,value}]};const h=fixtureResult(result({alternatives:[option(45,{stops:[own]})]}));await h.submit();
+    const details=h.elements["walk-stops"].children[0].children[0].children.find(el=>el.className==="stop-details");assert(details.textContent.includes("Wi-Fi: "+expected));
+  }
+});
+test("split source counts distinguish confirmation from alternatives inside unified evidence",async()=>{
+  const data=result();data.source_receipt.osm={status:"searched",candidate_count:3,selected_count:1,strict_candidate_count:0,alternative_candidate_count:3};
+  const h=fixtureResult(data);await h.submit();assert(h.elements["source-receipts"].textContent.includes("С подтверждением: 0 · без подтверждения: 3 · в плане: 1"));assert(h.elements["source-receipts"].textContent.includes("Подходит: 2"));
+});
+
+
+test("invalid split counts do not make unsupported confirmation claims",async()=>{
+  for(const split of [{strict_candidate_count:2,alternative_candidate_count:4},{strict_candidate_count:-1,alternative_candidate_count:4},{strict_candidate_count:0,alternative_candidate_count:"3"}]){
+    const data=result();Object.assign(data.source_receipt.osm,split);const h=fixtureResult(data);await h.submit();
+    const receipt=h.elements["source-receipts"].children[0].textContent;assert(receipt.includes("Подходит: 3"));assert(!receipt.includes("С подтверждением:"));
+  }
+});
+
+
+test("Wi-Fi request shows only requested unknown facts and preserves unrelated known facts",async()=>{
+  const own={...stop(),id:"own-cafe",requested_features:["wifi"],feature_evidence:[
+    {property:"socket",provider:"osm",place_id:"own-cafe",value:"yes"},
+    {property:"quiet",provider:"osm",place_id:"own-cafe",value:"no"},
+    {property:"wheelchair",provider:"osm",place_id:"own-cafe",value:"unknown"}]};
+  const h=fixtureResult(result({alternatives:[option(45,{stops:[own]})]}));await h.submit();
+  const content=h.elements["walk-stops"].textContent;assert(content.includes("Wi-Fi: неизвестно"));assert(content.includes("Розетки: указано в источнике"));
+  assert(content.includes("Тишина: в источнике указано отсутствие"));assert(!content.includes("Доступный вход:"));
+});
+test("unrequested unknown sockets and quiet do not clutter a Wi-Fi request",async()=>{
+  const own={...stop(),id:"own-cafe",requested_features:["wifi"],feature_evidence:[
+    {property:"socket",provider:"osm",place_id:"own-cafe",value:"unknown"},
+    {property:"quiet",provider:"osm",place_id:"own-cafe",value:"unknown"}]};
+  const h=fixtureResult(result({alternatives:[option(45,{stops:[own]})]}));await h.submit();const text=h.elements["walk-stops"].textContent;
+  assert(text.includes("Wi-Fi: неизвестно"));for(const label of ["Розетки:","Тишина:","Доступный вход:"])assert(!text.includes(label));
+});
+test("each stop displays only its own requested unknown property on variant switches",async()=>{
+  const first={...stop(),id:"first",requested_features:["socket"]};const second={...stop("dgis"),id:"second",requested_features:["wifi"]};
+  const h=fixtureResult(result({alternatives:[option(45,{stops:[first]}),option(60,{stops:[second]})]}));await h.submit();
+  assert(h.elements["walk-stops"].textContent.includes("Розетки: неизвестно"));assert(!h.elements["walk-stops"].textContent.includes("Wi-Fi:"));
+  await h.elements["walk-variants"].children[1].emit("click");await flush();assert(h.elements["walk-stops"].textContent.includes("Wi-Fi: неизвестно"));
+  assert(!h.elements["walk-stops"].textContent.includes("Розетки:"));assert.equal(h.calls("/api/unified/recommend").length,1);
+});
+test("legacy missing or empty requested list hides unknown facts without inferring from the query",async()=>{
+  for(const requested_features of [undefined,[]]){
+    const own={...stop(),id:"own",requested_features,feature_evidence:[{property:"wifi",provider:"osm",place_id:"own",value:"unknown"}]};
+    const h=fixtureResult(result({alternatives:[option(45,{stops:[own]})]}));await h.submit("Хочу Wi-Fi и розетки у Mega на 45 минут");
+    for(const label of ["Розетки:","Wi-Fi:","Тишина:","Доступный вход:"])assert(!h.elements["walk-stops"].textContent.includes(label));
+    assert(!h.elements["walk-stops"].children[0].children[0].children.some(el=>el.className==="stop-details"));
+  }
+});
+test("legacy unconfirmed metadata keeps its own unknown property visible",async()=>{
+  const h=fixtureResult(result({alternatives:[amenityOption()]}));await h.submit();const text=h.elements["walk-stops"].textContent;
+  assert(text.includes("Розетки: неизвестно"));assert(!text.includes("Wi-Fi:"));assert(!text.includes("Тишина:"));assert(!text.includes("Доступный вход:"));
+});
+test("unknown accessible entry appears only when requested and never promises route access",async()=>{
+  const h=fixtureResult(result({alternatives:[option(45,{stops:[{...stop(),requested_features:["wheelchair"]}]})]}));await h.submit();
+  assert(h.elements["walk-stops"].textContent.includes("Доступный вход: неизвестно"));assert(!h.elements["walk-stops"].textContent.includes("Розетки:"));
+  assert(!h.elements["walk-stops"].textContent.includes("доступен весь маршрут"));
+});
+test("requested properties cannot make foreign evidence a known fact",async()=>{
+  const own={...stop(),id:"own",requested_features:["wifi"],features:{wifi:"yes"},feature_evidence:[
+    {property:"wifi",provider:"dgis",place_id:"own",value:"yes"},{property:"wifi",provider:"osm",place_id:"other",value:"yes"}]};
+  const h=fixtureResult(result({alternatives:[option(45,{stops:[own]})]}));await h.submit();
+  assert(h.elements["walk-stops"].textContent.includes("Wi-Fi: неизвестно"));assert(!h.elements["walk-stops"].textContent.includes("Wi-Fi: указано в источнике"));
+});
+test("malformed requested-property metadata fails closed",()=>{
+  const h=harness();for(const requested_features of [null,"wifi",["wifi","wifi"],["opening_hours"],["wifi","socket","quiet","wheelchair","other"]]){
+    const data=result({alternatives:[option(45,{stops:[{...stop(),requested_features}]})]});assert.throws(()=>h.run("validateResult("+JSON.stringify(data)+")"));
   }
 });
 

@@ -19,6 +19,8 @@ from .dgis_live import (_LiveClient, _NoRedirect, DGISLiveError, ASTANA_BBOX,
                         _state_error)
 from .retrieval import detect_intent, distance_m, source_goal_evidence
 from .activity_intent import parse_search_intent
+from .amenity_fallback import relax_amenities, unconfirmed_amenities
+from .semantic_intent import deterministic_plan
 from .category_catalog import CATEGORY_CATALOG
 from scripts.collect_2gis import CollectionError, normalize_items, response_items
 
@@ -145,8 +147,12 @@ class UnifiedDGIS:
                 return b"".join(chunks)
             chunks.append(chunk)
 
-    def search(self, query, origin, radius, *, intent_plan=None, deadline=None):
+    def search(self, query, origin, radius, *, intent_plan=None, deadline=None, include_amenity_fallback=False):
+        if type(include_amenity_fallback) is not bool:
+            raise _invalid()
         categories, excluded = _selection(query, intent_plan=intent_plan)
+        fallback_plan = (intent_plan or deterministic_plan(query)) if include_amenity_fallback else None
+        relaxed = relax_amenities(fallback_plan) if fallback_plan is not None else None
         projected_intent = detect_intent(query, intent_plan=intent_plan)
         category = categories[0] if categories else "unknown"
         child = projected_intent["child"]
@@ -186,7 +192,7 @@ class UnifiedDGIS:
                 items = response_items(payload)
                 stamp = datetime.fromtimestamp(self.clock(), timezone.utc).isoformat(timespec="seconds")
                 normalized = normalize_items(items[:PAGE_SIZE], stamp, bbox, allow_unmapped=intent_plan is not None)
-                places = []
+                places, fallback_places = [], []
                 for place in normalized:
                     actual = set(place["source_categories"])
                     if (distance_m(origin, place) > radius or actual & excluded
@@ -194,13 +200,17 @@ class UnifiedDGIS:
                         continue
                     # The query chooses among explicit rubric-backed types; it
                     # never establishes a type from a brand or search relevance.
-                    if intent_plan is not None and not source_goal_evidence(place, intent_plan):
-                        continue
                     projected = next((source for requested in categories
                                       for source in CATEGORY_CATALOG[requested]["source_categories"]
                                       if source in actual), None)
+                    record = {**place, "category": projected or place["category"]}
+                    if relaxed is not None and unconfirmed_amenities(record, fallback_plan):
+                        fallback_places.append(record)
+                    selection_plan = intent_plan or fallback_plan
+                    if selection_plan is not None and not source_goal_evidence(record, selection_plan):
+                        continue
                     if projected is not None or intent_plan is not None:
-                        places.append({**place, "category": projected or place["category"]})
+                        places.append(record)
             except DGISLiveError as error:
                 error.quota = quota
                 raise
@@ -215,7 +225,7 @@ class UnifiedDGIS:
                                     code="provider_timeout" if timed_out else "provider_unavailable", http_status=504 if timed_out else 502, quota=quota) from None
             except (CollectionError, ValueError, UnicodeError, TypeError, OverflowError, RecursionError, AttributeError):
                 raise DGISLiveError("2ГИС не подтвердил корректный ответ поиска.", code="provider_invalid_response", http_status=502, quota=quota) from None
-            return {"places": places, "attribution": dict(ATTRIBUTION), "quota": quota, "category": category, "categories": categories, "fetched_at": stamp,
+            return {"places": places, **({"fallback_places": fallback_places} if include_amenity_fallback else {}), "attribution": dict(ATTRIBUTION), "quota": quota, "category": category, "categories": categories, "fetched_at": stamp,
                     "search_scope": {"radius_meters": radius, "returned_count": len(items[:PAGE_SIZE]), "filtered_count": len(items[:PAGE_SIZE]) - len(places)},
                     "warnings": ["Живой поиск 2ГИС: одна страница до 10 объектов в ограниченной области, не полный каталог.",
                                  "Сведения не проверены на месте; неизвестные часы и свойства не являются подтверждением."]}

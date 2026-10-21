@@ -79,7 +79,8 @@ function clearResult() {
   $("walk-budget").textContent = "";
   show("walk-warnings", false);
   $("walk-explanation").open = false;
-  $("source-receipt-details").open = false;
+  $("amenity-fallback-note").textContent = "";
+  show("amenity-fallback-note", false);
 }
 function cancelFlow(message = "Сообщение изменилось. Подбор можно запустить снова.") {
   state.requestId += 1;
@@ -201,6 +202,42 @@ function requestLocation(id, sig) {
     } catch (_) { finish({status: "unavailable"}); }
   });
 }
+function unconfirmedAmenities(value, allowEmpty = false) {
+  return Array.isArray(value) && (allowEmpty || value.length > 0) && value.length <= 3
+    && new Set(value).size === value.length && value.every(key => ["socket", "wifi", "quiet"].includes(key));
+}
+function amenityText(value) {
+  return typeof value === "string" && value.trim() && value.length <= 600;
+}
+function validateAmenityFallback(option) {
+  const fallback = option.amenity_fallback;
+  if (fallback !== undefined && (!fallback || fallback.applied !== true || !option.route_built
+      || !unconfirmedAmenities(fallback.unconfirmed) || !amenityText(fallback.notice))) {
+    throw new Error("Не подтверждено примечание о дополнительных пожеланиях.");
+  }
+  const observed = new Set();
+  for (const stop of option.stops) {
+    const keys = stop && stop.unconfirmed_amenities;
+    const requested = stop && stop.requested_features;
+    if (requested !== undefined && (!Array.isArray(requested) || requested.length > 4
+        || new Set(requested).size !== requested.length
+        || requested.some(key => !["socket", "wifi", "quiet", "wheelchair"].includes(key)))) throw new Error("Некорректные запрошенные свойства места.");
+    if (keys !== undefined && !unconfirmedAmenities(keys, true)) throw new Error("Некорректные неподтверждённые свойства места.");
+    if (stop && stop.amenity_note !== undefined && !amenityText(stop.amenity_note)) throw new Error("Некорректное примечание о свойствах места.");
+    if (keys && keys.length) {
+      if (!fallback || !amenityText(stop.amenity_note) || keys.some(key => !fallback.unconfirmed.includes(key))) throw new Error("Не подтверждён выбор без дополнительного условия.");
+      for (const key of keys) {
+        const feature = stop.features && stop.features[key];
+        const evidence = Array.isArray(stop.feature_evidence) && stop.feature_evidence.find(item => item
+          && item.property === key && item.provider === stop.provider && item.place_id === stop.id
+          && ["yes", "no"].includes(item.value));
+        if (["yes", "no", true, false].includes(feature) || evidence) throw new Error("Свойство места не является неизвестным.");
+        observed.add(key);
+      }
+    } else if (stop && stop.amenity_note !== undefined) throw new Error("Примечание не связано с неподтверждённым свойством.");
+  }
+  if (fallback && fallback.unconfirmed.some(key => !observed.has(key))) throw new Error("Примечание не связано с выбранными местами.");
+}
 function validateResult(data) {
   if (!data || !["llm-grounded-unified", "grounding-only"].includes(data.mode) || !startKnown(data.resolved_context)) throw new Error("Ответ не соответствует протоколу подбора.");
   if (!data.grounding || typeof data.grounding.summary !== "string" || !Array.isArray(data.grounding.sources)) throw new Error("В ответе отсутствуют источники Google.");
@@ -228,6 +265,7 @@ function validateResult(data) {
   for (const option of data.alternatives) {
     if (!option || typeof option.id !== "string" || !option.id || ids.has(option.id) || !Number.isInteger(option.budget_minutes) || option.budget_minutes < 10 || option.budget_minutes > 480 || !Array.isArray(option.stops) || option.stops.length > 3 || typeof option.route_built !== "boolean") throw new Error("Некорректный вариант прогулки.");
     ids.add(option.id);
+    validateAmenityFallback(option);
     if (option.stops.some(stop => stop && data.source_receipt[stop.provider] && data.source_receipt[stop.provider].status === "unavailable")) throw new Error("Место получено из недоступного источника.");
     if (option.route_built) {
       const plan = option.plan;
@@ -269,7 +307,14 @@ function renderReceipts(receipts) {
     const receipt = receipts[provider];
     const item = node("div", null, "source-receipt");
     item.append(node("strong", PROVIDERS[provider]));
-    item.append(node("span", receipt.status === "unavailable" ? (receipt.attempted ? "Источник не ответил" : "Источник недоступен") : receipt.status === "no_data" ? "Подходящих данных нет" : "Подходит: " + receipt.candidate_count + " · в плане: " + receipt.selected_count));
+    const hasSplit = receipt.status !== "unavailable"
+      && Number.isInteger(receipt.strict_candidate_count) && receipt.strict_candidate_count >= 0
+      && Number.isInteger(receipt.alternative_candidate_count) && receipt.alternative_candidate_count >= 0
+      && receipt.strict_candidate_count + receipt.alternative_candidate_count === receipt.candidate_count;
+    item.append(node("span", receipt.status === "unavailable" ? (receipt.attempted ? "Источник не ответил" : "Источник недоступен")
+      : receipt.status === "no_data" ? "Подходящих данных нет"
+      : hasSplit ? "С подтверждением: " + receipt.strict_candidate_count + " · без подтверждения: " + receipt.alternative_candidate_count + " · в плане: " + receipt.selected_count
+      : "Подходит: " + receipt.candidate_count + " · в плане: " + receipt.selected_count));
     host.append(item);
   }
 }
@@ -432,6 +477,10 @@ function selectOption(id) {
   $("walk-route-note").textContent = option.route_built
     ? "Возвращение к старту включено: " + plan.return_walk_minutes + " мин. Пеший путь рассчитан Google; время посещения и запас предложены приложением."
     : "Подходящих остановок или подтверждённого времени недостаточно. Это результат проверки источников, а не готовая рекомендация.";
+  const fallback = option.route_built && option.amenity_fallback && option.amenity_fallback.applied === true
+    ? option.amenity_fallback : null;
+  $("amenity-fallback-note").textContent = fallback ? fallback.notice : "";
+  show("amenity-fallback-note", Boolean(fallback));
   renderRouteAttributions(plan.route_attributions);
   const host = $("walk-stops");
   host.replaceChildren();
@@ -461,20 +510,23 @@ function selectOption(id) {
       content.append(node("p", displayDescription, "stop-description"));
     }
     if (availabilityNote) content.append(node("p", availabilityNote, "stop-availability-note"));
-    if (typeof stop.why_text === "string" && stop.why_text.trim()) {
-      const why = node("details", null, "stop-why-details");
-      why.append(node("summary", "Почему выбрано"), node("p", stop.why_text, "stop-why"));
-      content.append(why);
+    if (Array.isArray(stop.unconfirmed_amenities) && stop.unconfirmed_amenities.length && amenityText(stop.amenity_note)) {
+      content.append(node("p", stop.amenity_note, "stop-amenity-note"));
     }
-    const facts = node("details", null, "stop-source-facts");
-    facts.append(node("summary", "Данные места"));
-    const propertyLabels = {socket:"Розетки", quiet:"Тишина", wheelchair:"Доступный вход"};
+    const details = node("details", null, "stop-details");
+    details.append(node("summary", "Почему выбрано и данные места"));
+    if (typeof stop.why_text === "string" && stop.why_text.trim()) details.append(node("p", stop.why_text, "stop-why"));
+    const facts = node("div", null, "stop-source-facts");
+    const propertyLabels = {socket:"Розетки", wifi:"Wi-Fi", quiet:"Тишина", wheelchair:"Доступный вход"};
     const values = {yes:"указано в источнике", no:"в источнике указано отсутствие", unknown:"неизвестно"};
+    const requested = new Set([...(Array.isArray(stop.requested_features) ? stop.requested_features : []),
+      ...(Array.isArray(stop.unconfirmed_amenities) ? stop.unconfirmed_amenities : [])]);
     for (const [key, label] of Object.entries(propertyLabels)) {
       const evidence = Array.isArray(stop.feature_evidence) && stop.feature_evidence.find(item => item
         && item.property === key && item.provider === stop.provider && item.place_id === stop.id
         && ["yes", "no", "unknown"].includes(item.value));
-      facts.append(node("p", label + ": " + (evidence ? values[evidence.value] : "неизвестно")));
+      const value = evidence ? evidence.value : "unknown";
+      if (value !== "unknown" || requested.has(key)) facts.append(node("p", label + ": " + values[value]));
     }
     if (typeof stop.opening_hours === "string" && stop.opening_hours.length <= 512 && stop.opening_hours.trim()) facts.append(node("p", "Расписание источника: " + stop.opening_hours));
     if (stop.opening_status && stop.opening_status.source === "source-reported") {
@@ -484,7 +536,8 @@ function selectOption(id) {
     }
     if (typeof stop.source_observed_at === "string" && /^\d{4}-\d{2}-\d{2}T/.test(stop.source_observed_at)) facts.append(node("p", "Данные получены: " + stop.source_observed_at.slice(0,10) + ". Актуальность на месте не проверена."));
     if (stop.features && stop.features.wheelchair === "yes") facts.append(node("p", "Сведения о входе не подтверждают доступность всего маршрута."));
-    content.append(facts);
+    if (facts.children.length) details.append(facts);
+    if (details.children.length > 1) content.append(details);
     content.append(node("p", PROVIDERS[stop.provider] + (finite(stop.visit_minutes) ? " · посещение " + stop.visit_minutes + " мин" : "")));
     content.append(link("Источник места ↗", stop.source_url, stop.provider));
     item.append(content);

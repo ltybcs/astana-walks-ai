@@ -18,7 +18,7 @@ from typing import Any
 from itertools import permutations
 from urllib.parse import urlparse
 
-from .activity_intent import parse_search_intent, _negated
+from .activity_intent import parse_search_intent, _negated, WIFI_PATTERN
 from .category_catalog import CATEGORY_CATALOG
 
 
@@ -163,6 +163,8 @@ def detect_intent(query: str, time_of_day: str = "day", *, intent_plan=None) -> 
     return {
         "coffee": "cafe" in requested,
         "socket": _wanted(query, r"розет\w*|заряд\w*|socket|power outlet"),
+        "wifi": any(not _negated(query, match.start(), match.end())
+                    for match in re.finditer(r"(?<!\w)(?:" + WIFI_PATTERN + r")(?!\w)", query)),
         "quiet": _wanted(query, r"тих\w*|спокой\w*|quiet|тыныш"),
         "strict_quiet": _wanted(query, r"тих\w*|quiet|тыныш") and bool(re.search(r"(?:только|обязательно|only|must).{0,20}(?:тих|quiet|тыныш)", query)),
         "child": _wanted(query, r"ребен\w*|деть\w*|дети|детск\w*|семь[яеюи]\w*|семейн\w*|family|child\w*|kids|бала\w*|отбасы"),
@@ -240,50 +242,50 @@ def _planned_architecture_evidence(place, actual):
                {"", "no", "unknown", "none"} for key in ("building:architecture", "architectural_style"))
 
 
-def source_goal_evidence(place, plan_or_intent):
-    """Return bool: structured source evidence satisfies the plan's venue goal.
+def matched_goal_indices(place, plan_or_intent):
+    """Return original goal indices whose own type AND effective conditions match.
 
     Use before route/model calls. Unknown mandatory activity, equipment, stock
     or price is not established by a venue category, even when that type fits.
     No raw provider body is retained and no source field is rewritten here.
     """
     if not isinstance(place, dict):
-        return False
+        return ()
     intent = plan_or_intent if isinstance(plan_or_intent, dict) else _planned_intent(plan_or_intent)
     global_required = set(intent.get("required_keys", ()))
-    for key, flag in (("socket", "socket"), ("accessible", "accessible"), ("quiet", "strict_quiet")):
+    for key, flag in (("socket", "socket"), ("wifi", "wifi"), ("accessible", "accessible"), ("quiet", "strict_quiet")):
         if intent.get(flag):
             global_required.add(key)
 
     def conditions(keys):
         if keys & {"activity", "equipment", "inventory", "price"}:
-            return False  # No affirmative structured service proof is imported.
+            return ()  # No affirmative structured service proof is imported.
         return all(feature(place, field) == "yes" for key, field in
-                   (("socket", "socket"), ("quiet", "quiet"), ("accessible", "wheelchair")) if key in keys)
+                   (("socket", "socket"), ("wifi", "wifi"), ("quiet", "quiet"), ("accessible", "wheelchair")) if key in keys)
 
     if not conditions(global_required):
-        return False
+        return ()
     semantic = intent.get("semantic_goal")
     if not isinstance(semantic, dict):
-        return True  # Legacy eligibility remains owned by its existing filters.
+        return (0,)  # Legacy eligibility remains owned by its existing filters.
     goals = semantic.get("goals", [])
     if not isinstance(goals, list) or not 1 <= len(goals) <= 3:
-        return False
+        return ()
     policy = semantic.get("goal_policy")
     if policy not in {"primary", "any", "walk_mix"}:
-        return False
+        return ()
     branch_required = [set(global_required) for _ in goals]
     records = semantic.get("requirements", [])
     if not isinstance(records, list):
-        return False
+        return ()
     for item in records:
         if (not isinstance(item, dict) or not isinstance(item.get("key"), str) or item.get("key") not in
-                {"socket", "quiet", "accessible", "activity", "equipment", "inventory", "price"}
+                {"socket", "wifi", "quiet", "accessible", "activity", "equipment", "inventory", "price"}
                 or type(item.get("required")) is not bool):
-            return False
+            return ()
         index = item.get("goal_index")
         if index is not None and (type(index) is not int or not 0 <= index < len(goals)):
-            return False
+            return ()
         if item["required"]:
             for position, required in enumerate(branch_required):
                 if index is None or position == index:
@@ -307,41 +309,44 @@ def source_goal_evidence(place, plan_or_intent):
     if isinstance(tags, dict):
         labels.update(_source_label(tags.get(key)) for key in ("amenity", "leisure", "tourism", "shop", "sport"))
     labels.discard(())
+    matched = []
     for index in active:
         goal = goals[index]
         if not isinstance(goal, dict):
             continue
-        # Extra activity never follows from type, even in legacy sanitized plans.
         if goal.get("fulfilment") == "specific_activity" or not conditions(branch_required[index]):
             continue
         category = goal.get("category_hint")
         if category is not None and (not isinstance(category, str) or category not in CATEGORY_CATALOG):
             continue
+        matches = False
         if category == "walk" or goal.get("fulfilment") == "generic_walk" and category is None:
             allowed = set(CATEGORY_CATALOG["walk"]["source_categories"])
             if intent.get("tourist"):
                 allowed = allowed - {"playground"} | {"museum"}
-            if actual.intersection(allowed):
-                return True
-            # Upstream Google validation permits an untyped, located preview
-            # ONLY for a broad walk. This preserves that path without making
-            # an untyped result evidence of any venue/service/outdoor property.
-            if (place.get("provider") == "google" and place.get("category") == "unknown"
+            matches = bool(actual.intersection(allowed))
+            # This untyped Google preview already passed the upstream broad
+            # source path. It cannot establish a requested type or amenity.
+            matches = matches or bool(place.get("provider") == "google" and place.get("category") == "unknown"
                     and isinstance(place.get("id"), str) and place.get("stop_id") == "google:" + place["id"]
                     and isinstance(place.get("source_id"), str) and re.fullmatch(r"g\d+", place["source_id"])
                     and not intent.get("child") and not intent.get("night")
-                    and not intent.get("require_confirmed_hours") and not intent.get("excluded_categories")):
-                return True
+                    and not intent.get("require_confirmed_hours") and not intent.get("excluded_categories"))
         elif category == "architecture":
-            if (actual.intersection(CATEGORY_CATALOG[category]["source_categories"])
-                    and _planned_architecture_evidence(place, actual)):
-                return True
+            matches = bool(actual.intersection(CATEGORY_CATALOG[category]["source_categories"])
+                           and _planned_architecture_evidence(place, actual))
         elif category in CATEGORY_CATALOG:
-            if actual.intersection(CATEGORY_CATALOG[category]["source_categories"]):
-                return True
-        elif any(_labels_match(_source_label(goal.get("text")), label) for label in labels):
-            return True
-    return False
+            matches = bool(actual.intersection(CATEGORY_CATALOG[category]["source_categories"]))
+        else:
+            matches = any(_labels_match(_source_label(goal.get("text")), label) for label in labels)
+        if matches:
+            matched.append(index)
+    return tuple(matched)
+
+
+def source_goal_evidence(place, plan_or_intent):
+    """Strict bool compatibility wrapper; alternative relaxation is explicit elsewhere."""
+    return bool(matched_goal_indices(place, plan_or_intent))
 
 
 def _source_categories(identifiers):
@@ -539,6 +544,9 @@ class Retriever:
             if intent["socket"] and feature(poi, "socket") != "yes":
                 filtered["socket"] += 1
                 continue
+            if intent.get("wifi") and feature(poi, "wifi") != "yes":
+                filtered["wifi"] += 1
+                continue
             if intent["accessible"] and feature(poi, "wheelchair") != "yes":
                 filtered["accessible"] += 1
                 continue
@@ -577,7 +585,7 @@ class Retriever:
             semantic = 2 * lexical / (1 + lexical)
             score = semantic + preference + 2 / (1 + walking / 12)
             candidates.append({"poi": poi, "score": score, "lexical_score": lexical, "visit_minutes": visit})
-        relevant_intent = any(intent[key] for key in ("coffee", "socket", "quiet", "child", "tourist", "night", "accessible", "outdoor", "general_suggestion")) or bool(preferred)
+        relevant_intent = any(intent[key] for key in ("coffee", "socket", "wifi", "quiet", "child", "tourist", "night", "accessible", "outdoor", "general_suggestion")) or bool(preferred)
         if candidates and not relevant_intent and not any(item["lexical_score"] > 0 for item in candidates):
             filtered["no_text_match"] = len(candidates)
             candidates = []
