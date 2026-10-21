@@ -83,9 +83,9 @@ _END_TAIL = re.compile(r"\s+(?=за\s+(?:\d|час|полчас|полтора|�
     r"на\s+(?:\d|час|полчас|полтора|пару)|в\s+течение\b|"
     r"хочу\b|хочется\b|интересует\b|покажи\b|посоветуй\w*\b|что\b|"
     r"where\b|want\b|for\s+(?:\d|an?\s+hour)|within\b|пешком\b|walking\b|"
-    r"walk\b|on\s+foot\b|без\s+машин\w*\b|есть\s+(?:лишн|дополнительн)|"
+    r"walk\b|on\s+foot\b|без\s+машин\w*\b|есть\s+(?:лишн|дополнительн|доп(?=\s+врем))|"
     r"(?:лишн|дополнительн)\w*\b)")
-_EXTRA_MARKER = r"(?:дополнительн\w*|лишн\w*|extra|additional)"
+_EXTRA_MARKER = r"(?:дополнительн\w*|лишн\w*|доп|extra|additional)"
 _DURATION = (r"(?:\d+(?:[.,]\d+)?\s*(?:[-–—]|до)\s*\d+(?:[.,]\d+)?\s*"
     r"(?:минут(?:а|ы)?|мин\.?|час(?:а|ов)?|hours?|minutes?)|"
     r"(?:\d+(?:[.,]\d+)?|один|два|две|три|четыре|пять|пару)\s*"
@@ -93,35 +93,46 @@ _DURATION = (r"(?:\d+(?:[.,]\d+)?\s*(?:[-–—]|до)\s*\d+(?:[.,]\d+)?\s*"
 
 
 def _budget_mode(query):
-    """Only explicitly additional time changes the meaning of the budget."""
+    """Positive extra TIME only; amount-less time gets labeled app defaults."""
     from .activity_intent import _negated
-    from .lab_context import _time_options
-    markers = [m for m in re.finditer(r"(?<!\w)"+_EXTRA_MARKER+r"(?!\w)",query)
-               if not _negated(query,m.start(),m.end())]
-    if not markers:
-        return "total", None
-    if len(markers) != 1:
-        raise GoogleError("route_budget_ambiguous","Указано несколько дополнительных бюджетов; маршрут не рассчитывался.",422)
+    from .lab_context import _time_options,DEFAULT_BUDGETS
+    markers=[]
+    for marker in re.finditer(r"(?<!\w)"+_EXTRA_MARKER+r"(?!\w)",query):
+        if _negated(query,marker.start(),marker.end()):continue
+        after=query[marker.end():]
+        before=query[:marker.start()]
+        # 'дополнительный парк/интерес' is not a time-budget declaration.
+        if (re.match(r"\s*(?:время|времени|time|\d|один|два|две|три|четыре|пять|пару|пол\s*часа|полтора\s*часа|an?\s+hour)(?![a-zа-я])",after)
+                or re.search(r"\d+(?:[.,]\d+)?\s*$",before)
+                and re.match(r"\s*(?:минут\w*|час\w*|hours?|minutes?)(?!\w)",after)):
+            markers.append(marker)
+    if not markers:return 'total',None,False
+    if len(markers)!=1:raise GoogleError('route_budget_ambiguous','Указано несколько дополнительных бюджетов; маршрут не рассчитывался.',422)
     marker=markers[0]
-    after=re.match(r"\s*(?:времени\s+)?(?P<duration>"+_DURATION+r")(?!\w)",query[marker.end():])
+    after=re.match(r"\s*(?:(?:время|времени|time)\s+)?(?P<duration>"+_DURATION+r")(?!\w)",query[marker.end():])
     before=re.search(r"(?P<number>\d+(?:[.,]\d+)?)\s*$",query[:marker.start()])
     unit=re.match(r"\s*(минут(?:а|ы)?|мин\.?|час(?:а|ов)?|hours?|minutes?)(?!\w)",query[marker.end():])
+    default=False
     if after:
         duration=after['duration'];begin,end=marker.start(),marker.end()+after.end()
     elif before and unit:
         duration=before['number']+' '+unit[1];begin,end=before.start(),marker.end()+unit.end()
     else:
-        raise GoogleError("route_budget_ambiguous","Дополнительное время не определено однозначно; маршрут не рассчитывался.",422)
-    if re.fullmatch(r"an?\s+hour",duration):duration='60 minutes'
+        label=re.match(r"\s*(?:время|времени|time)(?!\w)",query[marker.end():])
+        if not label or re.match(r"\s*\d",query[marker.end()+label.end():]):
+            raise GoogleError('route_budget_ambiguous','Дополнительное время не определено однозначно; маршрут не рассчитывался.',422)
+        default=True;duration=None;begin,end=marker.start(),marker.end()+label.end()
     try:
-        options,source,_,_= _time_options(duration,None)
-        remainder=query[:begin]+' '+query[end:]
-        _,other,_,_=_time_options(remainder,None)
+        if default:options,source=list(DEFAULT_BUDGETS),'default_options'
+        else:
+            if re.fullmatch(r"an?\s+hour",duration):duration='60 minutes'
+            options,source,_,_=_time_options(duration,None)
+        _,other,_,_=_time_options(query[:begin]+' '+query[end:],None)
     except ValueError:
-        raise GoogleError("route_budget_out_of_range","Дополнительный бюджет должен быть от 10 до 480 минут; маршрут не рассчитывался.",422) from None
-    if source not in {"query","query_range"} or other not in {"default_options"}:
-        raise GoogleError("route_budget_ambiguous","Общий и дополнительный бюджеты противоречат друг другу; маршрут не рассчитывался.",422)
-    return "extra", options
+        raise GoogleError('route_budget_out_of_range','Дополнительный бюджет должен быть от 10 до 480 минут; маршрут не рассчитывался.',422) from None
+    if source not in {'query','query_range','default_options'} or other!='default_options':
+        raise GoogleError('route_budget_ambiguous','Общий и дополнительный бюджеты противоречат друг другу; маршрут не рассчитывался.',422)
+    return 'extra',options,default
 
 
 def _endpoint(quote, *, origin=False):
@@ -142,9 +153,9 @@ def _endpoint(quote, *, origin=False):
     return {'kind':'named','quote':quote,'public_id':None}
 
 
-def _descriptor(first,last,mode,extra):
+def _descriptor(first,last,mode,extra,default=False):
     result={'route_kind':'point_to_point','origin_spec':first,'destination_spec':last,
-            'budget_mode':mode,'extra_budget_options':extra}
+            'budget_mode':mode,'extra_budget_options':extra,'extra_budget_default':default}
     for prefix,spec in (('origin',first),('destination',last)):
         identifier=spec['public_id']
         result.update({prefix:deepcopy(PUBLIC_ORIGINS[identifier]) if identifier else None,
@@ -213,11 +224,11 @@ def validate_walking_request(query,budget_options):
     if len(pairs)!=1:raise _unsupported()
     first,last=pairs[0]
     if first['kind']==last['kind']=='public' and first['public_id']==last['public_id']:return None
-    mode,extra=_budget_mode(text)
+    mode,extra,default=_budget_mode(text)
     if mode=='total' and first['kind']==last['kind']=='public':
         if distance_m(PUBLIC_ORIGINS[first['public_id']],PUBLIC_ORIGINS[last['public_id']])>max(budget_options)*150:
             raise GoogleError('route_does_not_fit',f'Пеший маршрут между указанными точками не помещается в {max(budget_options)} мин; дополнительные остановки не подбирались.',422)
-    return _descriptor(first,last,mode,extra)
+    return _descriptor(first,last,mode,extra,default)
 
 
 def _walking_binding(context,prefix):
@@ -286,6 +297,13 @@ def attach_walking_baseline(resolved,descriptor,response):
         context.update(extra_budget_options=deepcopy(descriptor['extra_budget_options']),budget_options=budgets,
                        minutes=budgets[0],minutes_source='query_extra',budget_source='query_extra',requested_range=None)
         result['minutes']=budgets[0]
+        if descriptor.get('extra_budget_default') is True:
+            context['extra_budget_default']=True
+            notice='Дополнительное время не указано числом; предложены ещё 60, 120 и 240 минут сверх прямого пути, включая запас 5 минут.'
+            assumptions=[item for item in context.get('assumptions',[])
+                         if item!='Время не указано; показаны варианты на 1, 2 и 4 часа.']
+            if notice not in assumptions:assumptions.append(notice)
+            context['assumptions']=assumptions
     first,last=walking_bindings(context)
     result.update(origin=deepcopy(context['origin']),needs_geolocation=False)
     if 'needs_place_resolution'in result:result.update(needs_place_resolution=False,unresolved_start_quote=None)
