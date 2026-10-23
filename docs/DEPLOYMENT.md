@@ -1,6 +1,12 @@
 # Запуск основного единого помощника и откат
 
-## Повторное восстановление 23 октября 2026
+## Третье восстановление 23 октября 2026
+
+Текущий временный адрес — [building-turns-expects-hello.trycloudflare.com](https://building-turns-expects-hello.trycloudflare.com/); постоянная ссылка — [ltybcs.com/demo](https://ltybcs.com/demo). Модель, приложение и туннель повторно запущены через WMI от текущего пользователя из той же закреплённой версии `8009259`. Владелец обновил iframe, его новый адрес проверен. Через постоянную ссылку завершён один реальный подбор: 45 минут = 10 минут ходьбы + 30 минут предложенного посещения + 5 минут запаса, включая обратный путь 5 минут. Показаны одно кафе 2ГИС и одна загруженная Google-карта; ошибка «Failed to fetch» не повторилась. Итоговый текст модели не принят, видна пометка шаблона по источнику. Сохранённые ограничения существующего ключа повторно открыты в Google Cloud: только Maps Embed API, четыре локальных адреса и один текущий публичный referrer. Границы этого восстановления записаны в [отдельной квитанции](../qa/runtime-recovery-2026-10-23-power.json). Исходники приложения, ключи и общие счётчики не меняются.
+
+Пользователь сообщил об отключении питания. Наблюдаемое время загрузки Windows осталось `2026-10-23 10:00:44 UTC`; этим наблюдением новая загрузка не подтверждена. Причина остановки не установлена. Устойчивость после фактического закрытия Codex, выхода из Windows или отключения питания не подтверждена. Автозапуск Windows, службы и задания планировщика не добавлялись.
+
+## Второе восстановление 23 октября 2026 — история
 
 Текущий временный адрес — [character-urgent-productivity-battery.trycloudflare.com](https://character-urgent-productivity-battery.trycloudflare.com/); постоянная ссылка — [ltybcs.com/demo](https://ltybcs.com/demo). Владелец обновил iframe; новый домен согласован с приложением и существующим ключом Maps Embed. Проверены здоровье служб, байты оболочки и один реальный подбор через постоянную ссылку: маршрут на45минут и загруженная карта. Итоговый текст модели не принят; показан шаблон по источнику. Исходники по-прежнему закреплены на `8009259`, ключи и общие счётчики сохранены. Полные границы проверки — [отдельная квитанция](../qa/runtime-recovery-2026-10-23-second.json).
 
@@ -56,7 +62,7 @@ $env:LLM_MODEL = 'astana-local'
 $env:LLM_JSON_MODE = 'schema'
 $env:LLM_TOKEN_PARAMETER = 'max_tokens'
 $env:LLM_TIMEOUT_SECONDS = '120'
-python -B -m app.google_lab --host 127.0.0.1 --port 8000 --llm --google --google-config $taskGoogleConfig --dgis-root $taskPrimary --map-config $taskEmbedConfig --public-origin https://character-urgent-productivity-battery.trycloudflare.com --frame-parent-origin https://ltybcs.com
+python -B -m app.google_lab --host 127.0.0.1 --port 8000 --llm --google --google-config $taskGoogleConfig --dgis-root $taskPrimary --map-config $taskEmbedConfig --public-origin https://building-turns-expects-hello.trycloudflare.com --frame-parent-origin https://ltybcs.com
 ```
 
 Перед запуском завершите только прежний процесс приложения на 8000. Порт 8081 должен уже обслуживать закреплённую локальную модель. Не запускайте `run_demo.py`: он относится к старому приложению и может создать второй процесс модели. Туннель продолжает направлять тот же публичный адрес на loopback 8000.
@@ -70,7 +76,7 @@ http://127.0.0.1:8000/*
 http://localhost:8000/*
 http://127.0.0.1:8003/*
 http://localhost:8003/*
-https://character-urgent-productivity-battery.trycloudflare.com/*
+https://building-turns-expects-hello.trycloudflare.com/*
 ```
 
 Backend Places/GML key в iframe запрещён. `--public-origin` разрешает только указанный HTTPS origin в проверках Host/Origin; это не wildcard для Cloudflare и не отключение проверки POST. Слушатель остаётся loopback. Iframe передаёт только origin страницы как referrer; пользовательский запрос и GPS в referrer не включаются.
