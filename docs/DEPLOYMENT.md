@@ -1,8 +1,14 @@
 # Запуск основного единого помощника и откат
 
+## Восстановление после остановки 23 октября 2026
+
+Приложение и закреплённая модель восстановлены на портах8000/8081 из той же версии `8009259`. Новый временный адрес — [payday-frederick-heard-principal.trycloudflare.com](https://payday-frederick-heard-principal.trycloudflare.com/); постоянная ссылка остаётся [ltybcs.com/demo](https://ltybcs.com/demo). Старый journey-tank-arrive-overcome больше не используется. Владелец обновил адрес iframe; в runtime-конфигурации приложения и существующем ключе Maps Embed заменён только публичный домен, остальные ограничения сохранены.
+
+На этой машине игнорируемый `.local/deployment/Recover-Cold.ps1` проверяет файлы модели/runtime и запускает именно текущий candidate, если порты приложения и модели пусты. Обычный `deploy` требует уже работающего приложения; `rollback` намеренно выбирает предыдущую версию и не является холодным запуском текущей. Recovery helper не запускает предпросмотр, QA-модель или туннель. После создания нового временного туннеля его домен отдельно согласуется с приложением, Maps Embed и постоянной ссылкой. Настройки и операторские файлы остаются локальными; их не следует копировать с ключами или создавать новые счётчики. Автозапуск Windows не устанавливался.
+
 ## Обновление маршрутов 21 октября 2026
 
-Публичное [демо](https://ltybcs.com/demo) использует проверенную версию из [PR №28](https://github.com/ltybcs/astana-walks-ai/pull/28), закреплённую на `8009259710df33ead24198bcae29db7b7cf73705` в отдельном чистом production checkout. В неё входят маршруты A→B, дополнительное время по пути, последовательность занятий, исключение названных посещённых мест и подтверждение старта Arujan mall. Локальный предпросмотр остаётся на порту8003. Развёртывание не требует слияния PR в main; в рамках этого переноса main не менялся.
+Публичное [демо](https://ltybcs.com/demo) использует проверенную версию из [PR №28](https://github.com/ltybcs/astana-walks-ai/pull/28), закреплённую на `8009259710df33ead24198bcae29db7b7cf73705` в отдельном чистом production checkout. В неё входят маршруты A→B, дополнительное время по пути, последовательность занятий, исключение названных посещённых мест и подтверждение старта Arujan mall. Порт локального предпросмотра —8003; после восстановления он не запускался, как и QA-модель8082. Развёртывание не требует слияния PR в main; в рамках этого переноса main не менялся.
 
 Предыдущая публичная версия `2bdfb123944efdd920f9165fa79b037d14af4693` сохранена отдельной чистой рабочей папкой и [меткой checkpoint/before-routes-demo-2026-10-21](https://github.com/ltybcs/astana-walks-ai/tree/checkpoint/before-routes-demo-2026-10-21). Именно она теперь является быстрым откатом. Более ранние `c1f1a26` и `checkpoint/before-audit-demo-2026-10-21` также сохранены как историческая точка восстановления.
 
@@ -42,7 +48,7 @@ $env:LLM_MODEL = 'astana-local'
 $env:LLM_JSON_MODE = 'schema'
 $env:LLM_TOKEN_PARAMETER = 'max_tokens'
 $env:LLM_TIMEOUT_SECONDS = '120'
-python -B -m app.google_lab --host 127.0.0.1 --port 8000 --llm --google --google-config $taskGoogleConfig --dgis-root $taskPrimary --map-config $taskEmbedConfig --public-origin https://journey-tank-arrive-overcome.trycloudflare.com --frame-parent-origin https://ltybcs.com
+python -B -m app.google_lab --host 127.0.0.1 --port 8000 --llm --google --google-config $taskGoogleConfig --dgis-root $taskPrimary --map-config $taskEmbedConfig --public-origin https://payday-frederick-heard-principal.trycloudflare.com --frame-parent-origin https://ltybcs.com
 ```
 
 Перед запуском завершите только прежний процесс приложения на 8000. Порт 8081 должен уже обслуживать закреплённую локальную модель. Не запускайте `run_demo.py`: он относится к старому приложению и может создать второй процесс модели. Туннель продолжает направлять тот же публичный адрес на loopback 8000.
@@ -56,7 +62,7 @@ http://127.0.0.1:8000/*
 http://localhost:8000/*
 http://127.0.0.1:8003/*
 http://localhost:8003/*
-https://journey-tank-arrive-overcome.trycloudflare.com/*
+https://payday-frederick-heard-principal.trycloudflare.com/*
 ```
 
 Backend Places/GML key в iframe запрещён. `--public-origin` разрешает только указанный HTTPS origin в проверках Host/Origin; это не wildcard для Cloudflare и не отключение проверки POST. Слушатель остаётся loopback. Iframe передаёт только origin страницы как referrer; пользовательский запрос и GPS в referrer не включаются.
