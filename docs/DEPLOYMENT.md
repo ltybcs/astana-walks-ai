@@ -1,6 +1,14 @@
 # Запуск основного единого помощника и откат
 
-## Восстановление после остановки 23 октября 2026
+## Повторное восстановление 23 октября 2026
+
+Текущий временный адрес — [character-urgent-productivity-battery.trycloudflare.com](https://character-urgent-productivity-battery.trycloudflare.com/); постоянная ссылка — [ltybcs.com/demo](https://ltybcs.com/demo). Владелец обновил iframe; новый домен согласован с приложением и существующим ключом Maps Embed. Проверены здоровье служб, байты оболочки и один реальный подбор через постоянную ссылку: маршрут на45минут и загруженная карта. Итоговый текст модели не принят; показан шаблон по источнику. Исходники по-прежнему закреплены на `8009259`, ключи и общие счётчики сохранены. Полные границы проверки — [отдельная квитанция](../qa/runtime-recovery-2026-10-23-second.json).
+
+Пользователь сообщил, что между остановками закрывал Codex; перезагрузки Windows не было. Модель, приложение и туннель повторно запущены через WMI от текущего пользователя. Метаданные PID и WMI-родитель проверены; процессы входят в Windows Job. Причина остановки и сохранение работы после фактического закрытия и повторного открытия Codex пока не доказаны. Автозапуск Windows, службы, задания планировщика и изменения прав не добавлялись.
+
+На этой машине локальный `Запуск_демо.cmd` вызывает игнорируемый `Start-Independent.ps1`. Он проверяет владельца и точные файлы, блокирует повторный запуск, затем проверяет модель, запускает одну модель и приложение текущего релиза, создаёт временный туннель и согласует origin приложения. Используется подготовленный проверенный snapshot операторских файлов. После следующей смены домена цепочку проверочных хешей нужно обновить; автоматическое согласование Google Cloud и внешнего iframe этим файлом не выполняется. Это локальная процедура восстановления, не переносимый установщик и не автозапуск после перезагрузки. Результат записывается без пользовательских запросов в `.local/deployment/independent-status.json`; PID и даты создания перед проверкой закрытия сохранены локально в `before-codex-close.json`.
+
+## Первое восстановление 23 октября 2026 — история
 
 Приложение и закреплённая модель восстановлены на портах8000/8081 из той же версии `8009259`. Новый временный адрес — [payday-frederick-heard-principal.trycloudflare.com](https://payday-frederick-heard-principal.trycloudflare.com/); постоянная ссылка остаётся [ltybcs.com/demo](https://ltybcs.com/demo). Старый journey-tank-arrive-overcome больше не используется. Владелец обновил адрес iframe; в runtime-конфигурации приложения и существующем ключе Maps Embed заменён только публичный домен, остальные ограничения сохранены.
 
@@ -48,7 +56,7 @@ $env:LLM_MODEL = 'astana-local'
 $env:LLM_JSON_MODE = 'schema'
 $env:LLM_TOKEN_PARAMETER = 'max_tokens'
 $env:LLM_TIMEOUT_SECONDS = '120'
-python -B -m app.google_lab --host 127.0.0.1 --port 8000 --llm --google --google-config $taskGoogleConfig --dgis-root $taskPrimary --map-config $taskEmbedConfig --public-origin https://payday-frederick-heard-principal.trycloudflare.com --frame-parent-origin https://ltybcs.com
+python -B -m app.google_lab --host 127.0.0.1 --port 8000 --llm --google --google-config $taskGoogleConfig --dgis-root $taskPrimary --map-config $taskEmbedConfig --public-origin https://character-urgent-productivity-battery.trycloudflare.com --frame-parent-origin https://ltybcs.com
 ```
 
 Перед запуском завершите только прежний процесс приложения на 8000. Порт 8081 должен уже обслуживать закреплённую локальную модель. Не запускайте `run_demo.py`: он относится к старому приложению и может создать второй процесс модели. Туннель продолжает направлять тот же публичный адрес на loopback 8000.
@@ -62,7 +70,7 @@ http://127.0.0.1:8000/*
 http://localhost:8000/*
 http://127.0.0.1:8003/*
 http://localhost:8003/*
-https://payday-frederick-heard-principal.trycloudflare.com/*
+https://character-urgent-productivity-battery.trycloudflare.com/*
 ```
 
 Backend Places/GML key в iframe запрещён. `--public-origin` разрешает только указанный HTTPS origin в проверках Host/Origin; это не wildcard для Cloudflare и не отключение проверки POST. Слушатель остаётся loopback. Iframe передаёт только origin страницы как referrer; пользовательский запрос и GPS в referrer не включаются.

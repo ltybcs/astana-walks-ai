@@ -1,0 +1,132 @@
+{
+  "kind": "second-runtime-recovery",
+  "observed_at_utc": "2026-10-23T11:40:03.556548+00:00",
+  "source_commit": "8009259710df33ead24198bcae29db7b7cf73705",
+  "application_source_changed": false,
+  "main_merged": false,
+  "user_report": {
+    "codex_closed_between_recoveries": true,
+    "windows_reboot_between_recoveries": false
+  },
+  "initial_failure": {
+    "app_and_model_unavailable": true,
+    "no_cloudflared_process": true,
+    "previous_quick_tunnel_nxdomain": true,
+    "root_cause_established": false
+  },
+  "restored": {
+    "public_origin": "https://character-urgent-productivity-battery.trycloudflare.com",
+    "owner_entry": "https://ltybcs.com/demo",
+    "owner_target_updated_by_user": true,
+    "owner_iframe_visually_verified": true,
+    "pids": {
+      "launcher": 23340,
+      "app": 9540,
+      "model": 36468,
+      "tunnel": 516
+    },
+    "processes": [
+      {
+        "ProcessId": 23340,
+        "ParentProcessId": 38344,
+        "Name": "python.exe",
+        "created_at_utc": "2026-10-23T11:31:23.3138950Z"
+      },
+      {
+        "ProcessId": 36468,
+        "ParentProcessId": 33044,
+        "Name": "llama-server.exe",
+        "created_at_utc": "2026-10-23T11:31:31.6348140Z"
+      },
+      {
+        "ProcessId": 516,
+        "ParentProcessId": 21784,
+        "Name": "cloudflared-windows-amd64.exe",
+        "created_at_utc": "2026-10-23T11:31:41.2067570Z"
+      },
+      {
+        "ProcessId": 9540,
+        "ParentProcessId": 30388,
+        "Name": "python.exe",
+        "created_at_utc": "2026-10-23T11:31:56.7264990Z"
+      }
+    ],
+    "qa_model_or_preview_started": false,
+    "windows_autostart_added": false
+  },
+  "process_lifetime": {
+    "launcher_parent": "WmiPrvSE",
+    "windows_job_membership": {
+      "launcher": true,
+      "model": true,
+      "app": true,
+      "tunnel": true
+    },
+    "codex_close_reopen_survival_tested": false,
+    "windows_autostart_added": false,
+    "current_user_owner_checked": true,
+    "wmi_parent_name_checked": true,
+    "system_parent_image_path_readable": false,
+    "root_cause_established": false,
+    "warning": "WMI parent and Windows Job metadata do not prove survival after closing Codex."
+  },
+  "verification": {
+    "health": {
+      "application": "ok",
+      "model": "ok",
+      "public": "ok"
+    },
+    "public_static_matches_pinned_source": true,
+    "owner_entry_http": 200,
+    "owner_frame_policy_preserved": true,
+    "weights_and_runtime_verified_before_launch": true,
+    "installed_runtime_files_checked": 51,
+    "downloads": 0
+  },
+  "configuration": {
+    "same_api_keys_ledgers_and_limits": true,
+    "google_limit": 750,
+    "dgis_rolling30d_limit": 500,
+    "embed_existing_key_api_restriction": "Maps Embed API only",
+    "embed_website_restrictions": 5,
+    "embed_public_referrer_replaced_not_added": true,
+    "embed_saved_value_reopened_and_verified": true,
+    "model_exposed": false,
+    "security_or_job_limits_changed": false,
+    "rollback_commit_preserved": "2bdfb123944efdd920f9165fa79b037d14af4693"
+  },
+  "live_owner_browser": {
+    "case": "public-named cafe request",
+    "completed": true,
+    "budget": 45,
+    "used": 45,
+    "walking": 10,
+    "proposed_visit": 30,
+    "reserve": 5,
+    "return_walk": 5,
+    "stops": 1,
+    "place_source": "2GIS",
+    "map_count": 1,
+    "map_loaded": true,
+    "failed_to_fetch_reproduced": false,
+    "final_narration": "not_accepted_source_template_used"
+  },
+  "next_cold_start_snapshot": {
+    "reviewed": true,
+    "sha256": {
+      "Recover-Cold.ps1": "a857f42cff238480be55a5f5120f19cdc9297ad4aff0745b566f3e2ecd65ec0d",
+      "Retarget-PersistentApp.ps1": "6ecdbff96b37cef5d5ab63546ae1975e928b6b2da538d409dc3d4e7dbafbfc40",
+      "Run-Demo-Independent.py": "547a93f19301771ce46dcc7d48bb1c7607b0689052c89b205975b68d7dabbf96",
+      "Start-Independent.ps1": "2831d5ef5e7561a2c8f6229e0fe33b1d322ab4f70f4ad9d30885451c3e3ab328"
+    },
+    "scope": "Prepared snapshot only. After another generated-domain retarget the pin chain needs a reviewed refresh.",
+    "active_launcher_was_not_restarted_for_snapshot_refresh": true
+  },
+  "limits": [
+    "No controlled Codex close/reopen or reboot survival check has yet occurred.",
+    "One bounded browser case; no field or physical-phone validation.",
+    "Model health does not imply accepted final narration.",
+    "No application-suite rerun for unchanged pinned source; previous source checks remain separate."
+  ],
+  "privacy": "Metadata only: no raw query, private address, user GPS, provider body, key value or account credential."
+}
