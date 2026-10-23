@@ -12,7 +12,7 @@ from urllib.request import Request
 
 from .google_client import json_bytes, strict_json
 from .category_catalog import CATEGORY_IDS, CATEGORY_CATALOG
-from .retrieval import detect_intent, source_goal_evidence
+from .retrieval import detect_intent, source_goal_evidence, matched_goal_indices
 from .google_grounded import (
     _contains_private_origin, _local_config, _model_source_previews,
     intent_action_instruction, intent_action_rejection, open_local_model,
@@ -23,7 +23,8 @@ _PROVIDERS = {"osm", "dgis", "google"}
 _CATEGORIES = CATEGORY_IDS
 _PREFERENCES = {"quiet", "socket", "wifi", "accessible"}
 _PLAN_FIELDS = ("budget_minutes", "total_minutes", "walk_minutes", "visit_minutes",
-                "buffer_minutes", "return_walk_minutes", "verified", "returns_to_origin")
+                "buffer_minutes", "return_walk_minutes", "verified", "returns_to_origin",
+                "final_walk_minutes", "reaches_destination", "direct_only")
 _NUMERIC_WORDS = (
     r"\b(?:ноль|нуль|один|одна|одно|одну|одного|одной|два|две|двух|двум\w*|"
     r"три|тр[её]х|тр[её]м\w*|четыр\w*|пят\w*|шест\w*|семь|семи|восем\w*|"
@@ -119,7 +120,67 @@ def _narration_scopes(facts, intent):
     return scopes
 
 
-def _plans(alternatives, selected_ids):
+def _point_plan_valid(option, context, ordered):
+    """P2P recommendation proof stays separate from the circular plan guard."""
+    plan = option["plan"]
+    own_context = option.get("resolved_context", {})
+    if (not isinstance(context, dict) or context.get("route_kind") != "point_to_point"
+            or own_context.get("route_kind") != "point_to_point"
+            or own_context.get("origin") != context.get("origin")
+            or own_context.get("destination") != context.get("destination")
+            or plan.get("destination") != context.get("destination")
+            or context.get("origin") == context.get("destination")
+            or plan.get("route_kind") != "point_to_point"
+            or plan.get("reaches_destination") is not True
+            or plan.get("returns_to_origin") is not False
+            or plan.get("direct_only") is not False or not 1 <= len(ordered) <= 2
+            or len(ordered) == 2 and not (context.get("ordered_goal_groups") and plan.get("ordered_goals_covered") is True)
+            or type(context.get("direct_walk_minutes")) is not int
+            or context["direct_walk_minutes"] + 5 > option.get("budget_minutes", 0)):
+        return False
+    # Validate canonical endpoints, but do not forward their coordinates to LLM.
+    try:
+        from .route_request import walking_waypoints
+        walking_waypoints(context)
+    except (ValueError, TypeError, KeyError):
+        return False
+    chain = ["origin", *ordered, "destination"]
+    legs = plan.get("legs")
+    if not isinstance(legs, list) or len(legs) != len(chain) - 1:
+        return False
+    for index, leg in enumerate(legs):
+        if (not isinstance(leg, dict) or leg.get("from_ref") != chain[index]
+                or leg.get("to_ref") != chain[index + 1]
+                or type(leg.get("minutes")) is not int or leg["minutes"] < 0
+                or leg.get("error_code") is not None):
+            return False
+    walking, visit, buffer = (plan.get(key) for key in ("walk_minutes", "visit_minutes", "buffer_minutes"))
+    return (all(type(value) is int for value in (walking, visit, buffer))
+            and walking == sum(leg["minutes"] for leg in legs) and buffer == 5
+            and plan.get("final_walk_minutes") == legs[-1]["minutes"]
+            and plan.get("total_minutes") == walking + visit + buffer
+            and sum(stop.get("visit_minutes", 0) for stop in option["stops"]) == visit)
+
+
+def _ordered_plan_valid(option, context, intent_plan):
+    groups = (context or {}).get("ordered_goal_groups")
+    if not groups:
+        return True
+    stops = option.get("stops", [])
+    if (intent_plan is None or not isinstance(groups, (tuple, list)) or len(groups) != 2
+            or len(stops) != 2 or option["plan"].get("ordered_goals_covered") is not True):
+        return False
+    seen = set()
+    for stop, group in zip(stops, groups):
+        if (not isinstance(group, (tuple, list)) or not group
+                or any(type(index) is not int or not 0 <= index < len(intent_plan.goals) for index in group)
+                or set(group) & seen or not set(matched_goal_indices(stop, intent_plan)) & set(group)):
+            return False
+        seen.update(group)
+    return True
+
+
+def _plans(alternatives, selected_ids, context=None, intent_plan=None):
     if not isinstance(alternatives, list) or not 1 <= len(alternatives) <= 3:
         raise ValueError("Invalid alternatives")
     result, any_fit, all_fit = [], False, True
@@ -139,9 +200,15 @@ def _plans(alternatives, selected_ids):
             if stop_id not in selected_ids or stop_id in ordered:
                 raise ValueError("Invalid plan stop")
             ordered.append(stop_id)
+        safe_plan["route_kind"] = plan.get("route_kind", "round_trip")
         budget, total, visit = plan.get("budget_minutes"), plan.get("total_minutes"), plan.get("visit_minutes")
+        directed = plan.get("route_kind") == "point_to_point"
+        direction_verified = (_point_plan_valid(option, context, ordered) if directed else
+            (context or {}).get("route_kind") != "point_to_point"
+            and plan.get("route_kind") in {None, "round_trip"} and plan.get("returns_to_origin") is True)
         fit = (option.get("route_built") is True and option.get("budget_status") == "fits"
-               and plan.get("verified") is True and plan.get("returns_to_origin") is True
+               and plan.get("verified") is True
+               and direction_verified and _ordered_plan_valid(option, context, intent_plan)
                and type(budget) is int and type(total) is int and type(visit) is int
                and budget > 0 and 0 <= total <= budget and visit >= 5 and bool(ordered))
         any_fit, all_fit = any_fit or fit, all_fit and fit
@@ -403,6 +470,17 @@ def _description_rejection(answer, facts, stop_ids, previews, intent, all_fit):
     return None
 
 
+def _contains_private_endpoint(text, context):
+    if not context.get("sensitive_origin"):
+        return False
+    for endpoint in ("origin", "destination"):
+        if endpoint not in context or context.get(endpoint + "_source") in {"query_landmark", "explicit_landmark"}:
+            continue
+        if _contains_private_origin(text, {**context, "origin": context[endpoint]}):
+            return True
+    return False
+
+
 def narrate(grounding, stops, alternatives, context, intent, config, *, http_open=None, intent_plan=None):
     """Return one complete answer or a sanitized failure reason, with one call."""
     if not _local_config(config):
@@ -411,7 +489,7 @@ def narrate(grounding, stops, alternatives, context, intent, config, *, http_ope
         facts, stop_ids, source_ids = _stop_facts(stops)
         if intent_plan is not None and any(not source_goal_evidence(stop, intent_plan) for stop in stops):
             return None, "no_verified_match"
-        plans, any_fit, all_fit = _plans(alternatives, stop_ids)
+        plans, any_fit, all_fit = _plans(alternatives, stop_ids, context, intent_plan)
         if not any_fit:
             return None, "route_not_budget_verified"
         if (not isinstance(grounding, dict) or not isinstance(grounding.get("summary"), str)
@@ -432,7 +510,9 @@ def narrate(grounding, stops, alternatives, context, intent, config, *, http_ope
         # Narration only needs each ready composition, not numbers it may copy.
         narrative_plans = [{"budget_status": item["budget_status"], "stop_ids": item["stop_ids"],
                             "verified": item["plan"]["verified"] is True,
-                            "returns_to_origin": item["plan"]["returns_to_origin"] is True}
+                            "returns_to_origin": item["plan"]["returns_to_origin"] is True,
+                            **({"route_kind": "point_to_point", "reaches_destination": item["plan"]["reaches_destination"] is True}
+                               if item["plan"]["route_kind"] == "point_to_point" else {})}
                            for item in plans]
         full_context = {"grounding_lite_summary": grounding["summary"],
                         "all_google_source_previews": previews,
@@ -447,7 +527,7 @@ def narrate(grounding, stops, alternatives, context, intent, config, *, http_ope
         encoded = json_bytes(full_context)
         if len(encoded) > 60000:
             return None, "context_exceeds_local_bound"
-        if context.get("sensitive_origin") and _contains_private_origin(encoded.decode("utf-8"), context):
+        if _contains_private_endpoint(encoded.decode("utf-8"), context):
             return None, "sensitive_origin_in_model_context"
     except (KeyError, TypeError, ValueError, AttributeError, OverflowError):
         return None, "invalid_narration_context"
@@ -514,7 +594,7 @@ def narrate(grounding, stops, alternatives, context, intent, config, *, http_ope
             reason = _description_rejection(answer, facts, stop_ids, previews, safe_intent, all_fit)
         if reason is None and context.get("sensitive_origin"):
             texts = [answer["text"]] + [item["text"] for item in answer.get("venue_descriptions", [])]
-            if any(_contains_private_origin(text, context) for text in texts):
+            if any(_contains_private_endpoint(text, context) for text in texts):
                 reason = "sensitive_origin_in_model_output"
         return (None, reason) if reason else (answer, "validated_structure_sources_and_known_claims")
     except Exception:

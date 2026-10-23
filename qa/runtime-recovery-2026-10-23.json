@@ -1,0 +1,83 @@
+{
+  "kind": "runtime-recovery",
+  "observed_at_utc": "2026-10-23T10:25:06.370996+00:00",
+  "source_commit": "8009259710df33ead24198bcae29db7b7cf73705",
+  "application_source_changed": false,
+  "main_merged": false,
+  "initial_failure": {
+    "app8000_unreachable": true,
+    "model8081_unreachable": true,
+    "old_public_hostname_unreachable": true,
+    "no_cloudflared_process_confirmed": true,
+    "shutdown_cause_established": false
+  },
+  "restored": {
+    "app_pid": 19628,
+    "app_port": 8000,
+    "model_pid": 20012,
+    "model_port": 8081,
+    "tunnel_pid": 14116,
+    "public_origin": "https://payday-frederick-heard-principal.trycloudflare.com",
+    "owner_entry": "https://ltybcs.com/demo",
+    "owner_target_updated_by_user": true,
+    "owner_iframe_visually_verified": true,
+    "qa_model_or_preview_started": false,
+    "windows_autostart_added": false
+  },
+  "verification": {
+    "pinned_model_weights_sha256": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+    "pinned_runtime_archive_sha256": "b1e0a14abdb4665c1b821b377ba063b221cec62882c373065cf8fb672988d3ff",
+    "installed_runtime_files_checked": 51,
+    "downloads": 0,
+    "tunnel_runtime_sha256": "86aee4017b26625cee8484c113558f48effa4cd47f7aa05fcf425604e5d2b23c",
+    "public_static_matches_pin": true,
+    "owner_entry_http": 200,
+    "owner_frame_policy_preserved": true,
+    "public_static_sha256": {
+      "/": "2bbee78d11a681c45739c80707fe881e01bc575baf2dc5085d65bcaa892b4c28",
+      "/lab.js": "4ef7a5686839f0cad8063995b8f6e4c46afdafb071c0b1f779cb85c7213d4658",
+      "/sw.js": "f2de280a219cb310c244f9ef32a25cba4803439f39a9b2611448f8573cb21862"
+    }
+  },
+  "configuration": {
+    "same_api_keys_ledgers_and_limits": true,
+    "model_exposed": false,
+    "embed_key_api_restriction": "Maps Embed API only",
+    "embed_website_restrictions": 5,
+    "embed_public_referrer_replaced_not_added": true,
+    "embed_console_save_confirmed": true,
+    "switch_helper_sha256": "940489a141bdafdf0652ab10a2d55541ce94c31c97a248269cd12de4ea3c92b9",
+    "switch_helper_change": "Exact obsolete public origin replaced; function bodies unchanged.",
+    "rollback_commit_preserved": "2bdfb123944efdd920f9165fa79b037d14af4693",
+    "descriptor_and_helpers_backed_up": true
+  },
+  "live_owner_browser": {
+    "case": "public-named cafe request",
+    "completed": true,
+    "budget": 45,
+    "used": 45,
+    "walking": 10,
+    "proposed_visit": 30,
+    "reserve": 5,
+    "return_walk": 5,
+    "stops": 1,
+    "place_source": "2GIS",
+    "map_count": 1,
+    "map_loaded": true,
+    "failed_to_fetch_reproduced": false,
+    "final_narration": "not_accepted_source_template_used"
+  },
+  "operator_review": {
+    "cold_recovery": "approved_after_isolated_python_environment_fix",
+    "tunnel": "approved_after_duplicate_name_guard_fix",
+    "retarget": "approved_after_stop_recovery_and_explicit_atomic_backup_fixes",
+    "actual_recovery_observed": "One native File.Replace null-path failure restored the same candidate before a corrected domain-only switch succeeded; no previous-version rollback."
+  },
+  "limits": [
+    "One bounded owner-iframe browser case; no physical-device or field certification.",
+    "Model availability and final narration acceptance are separate; no accepted-model-prose claim for this case.",
+    "Application tests were not rerun for an unchanged pinned application; prior source validation remains separate.",
+    "The reason the original processes stopped was not diagnosed."
+  ],
+  "privacy": "Metadata only: no raw request, private address, user GPS, provider response, key value or account credential."
+}

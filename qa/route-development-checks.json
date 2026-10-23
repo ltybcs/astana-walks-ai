@@ -1,0 +1,131 @@
+{
+  "kind": "development-route-validation",
+  "date": "2026-10-21",
+  "branch": "codex/point-to-point-walks",
+  "source_commit": "05366d010c40f96fb6c4dbeaab1491e05b01f626",
+  "base_commit": "4d7c8f0728b71888e2aa22f7341e4d03318e0759",
+  "source_sha256": {
+    "app/route_request.py": "0c48c5b0dd70c1e1aba5efd7dd0bf2545d19ace06fd66ac65cb177e8ff5b4ff6",
+    "app/request_preparation.py": "ee4b7a1badae0c0a9371772bc9368a20143442b41d83133934a37d858d619c52",
+    "app/semantic_intent.py": "f5d09e71e5cdbea8111ddf64bc2dcd94f98dc1eeff45706a1e2bd2ac631ece81",
+    "app/unified_walks.py": "2b4d888948d239ea04fcc6f81cac181b286af013980534c1d7d5188fa3ea6773",
+    "app/unified_narration.py": "88fbc92b2d53ac29cb3aec70d92102fc38b5c5967fe6872a57c1f5db7b9cdc87",
+    "app/ordered_goals.py": "ab604c5b9f512d3652e9682948d3b56e6f7e166e985702a6ab887f9e76f5bb67",
+    "app/place_exclusions.py": "0a269829f694a595398c83ca185732ad1384f9e6ac460a5106963b75fefe5965",
+    "app/amenity_fallback.py": "b9c0a4f1396b066239f46db11a10008b362ee1b9e77cc89806bf97382b45104c",
+    "app/route_map.py": "7a8b7177394038545c2757f1b0af63c1d2daa03a2cfee4c35fd0382d43fa057f",
+    "web/google-lab/lab.js": "4ef7a5686839f0cad8063995b8f6e4c46afdafb071c0b1f779cb85c7213d4658",
+    "web/google-lab/sw.js": "f2de280a219cb310c244f9ef32a25cba4803439f39a9b2611448f8573cb21862"
+  },
+  "offline": {
+    "unittest": {
+      "methods": 805,
+      "passed": 803,
+      "skipped_windows_symlinks": 2,
+      "elapsed_seconds": 28.965
+    },
+    "backend_to_frontend_synthetic": {
+      "cases": 5,
+      "passed": 5,
+      "network_calls": 0
+    }
+  },
+  "reviews": {
+    "endpoint_preparation": "approved",
+    "ordered_activity_and_exclusions": "approved",
+    "stage_scoped_amenities": "approved",
+    "endpoint_privacy": "approved",
+    "frontend_map_contract": "approved",
+    "default_extra_time": "approved"
+  },
+  "live_private_preview": [
+    {
+      "case": "public-named Arujan start",
+      "result": "circular_plan",
+      "budget": 120,
+      "used": 116,
+      "walk": 51,
+      "proposed_visit": 60,
+      "reserve": 5,
+      "stops": 3,
+      "gps_requested": false,
+      "map_loaded": true,
+      "local_final_narration": "not_accepted_source_template_used"
+    },
+    {
+      "case": "public EXPO to airport total-time guard",
+      "result": "measured_route_does_not_fit",
+      "budget": 60,
+      "direct_walk": 125,
+      "reserve": 5,
+      "extra_stop_search_started": false,
+      "intent_model_started": false
+    },
+    {
+      "case": "public Baiterek to AbuDhabi additional-time cafe detour",
+      "result": "point_to_point_plan",
+      "direct_walk": 14,
+      "extra_budget": 30,
+      "total_budget": 44,
+      "used": 44,
+      "walk": 18,
+      "proposed_visit": 21,
+      "reserve": 5,
+      "final_walk": 13,
+      "stops": 1,
+      "map_loaded": true,
+      "local_final_narration": "whole_answer_accepted"
+    },
+    {
+      "case": "public Baiterek cafe then outdoor sequence",
+      "result": "ordered_circular_plans",
+      "variants": [
+        {
+          "budget": 60,
+          "used": 43,
+          "walk": 8,
+          "proposed_visit": 30,
+          "reserve": 5,
+          "composition": "A"
+        },
+        {
+          "budget": 120,
+          "used": 76,
+          "walk": 11,
+          "proposed_visit": 60,
+          "reserve": 5,
+          "composition": "B"
+        },
+        {
+          "budget": 240,
+          "used": 133,
+          "walk": 8,
+          "proposed_visit": 120,
+          "reserve": 5,
+          "composition": "A",
+          "repeated_route_notice": true
+        }
+      ],
+      "stops_per_variant": 2,
+      "map_loaded": true,
+      "variant_switch_new_source_search": false,
+      "local_final_narration": "not_accepted_source_template_used"
+    }
+  ],
+  "release": {
+    "public_deployed_commit": "2bdfb123944efdd920f9165fa79b037d14af4693",
+    "rollback_commit": "c1f1a26116d8e22a34c77134a727a34e1274ed18",
+    "public_runtime_changed": false,
+    "main_merged": false,
+    "presentation_changed": false,
+    "published_video_changed": false
+  },
+  "limits": [
+    "Public named-location browser checks are bounded examples, not field or physical-phone validation.",
+    "Synthetic providers verify contracts, not current place availability.",
+    "Rejected final narration remains visibly source-template based; the exact rejection cause in the two live cases is unproven.",
+    "A shared request deadline can leave less time for final narration after earlier stages.",
+    "Unknown home/work endpoints require an explicit resolvable destination; they are never guessed."
+  ],
+  "privacy": "Metadata only: no raw requests, private addresses, user GPS, provider bodies or credentials."
+}

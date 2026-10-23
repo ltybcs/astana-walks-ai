@@ -1,0 +1,70 @@
+{
+  "kind": "public-route-rollout",
+  "observed_at_utc": "2026-10-21T11:43:30.109722+00:00",
+  "source_commit": "8009259710df33ead24198bcae29db7b7cf73705",
+  "source_checkout": "separate clean pinned production worktree",
+  "pr": "https://github.com/ltybcs/astana-walks-ai/pull/28",
+  "main_merged": false,
+  "public_url": "https://journey-tank-arrive-overcome.trycloudflare.com/",
+  "owner_entry": "https://ltybcs.com/demo",
+  "checkpoint": {
+    "tag": "checkpoint/before-routes-demo-2026-10-21",
+    "commit": "2bdfb123944efdd920f9165fa79b037d14af4693",
+    "pushed": true,
+    "clean_checkout_preserved": true
+  },
+  "historical_checkpoint_preserved": "checkpoint/before-audit-demo-2026-10-21",
+  "operator": {
+    "helper_sha256": "64cc576299f5388cddd1972a8985f8fcd7eddb94a04e24e339c57c785b86f91f",
+    "helper_changed": false,
+    "descriptor_backup_created": true,
+    "previous_staged_8004": true,
+    "candidate_staged_8004": true,
+    "public_readiness_passed": true,
+    "public_app_previous_pid": 17888,
+    "public_app_new_pid": 8724,
+    "production_model_pid_preserved": 31020,
+    "preview_app_pid_preserved": 16744,
+    "qa_model_pid_preserved": 5064,
+    "tunnel_restarted": false,
+    "config_keys_and_shared_ledgers_preserved": true,
+    "actual_rollback_rehearsed": false
+  },
+  "static": {
+    "public_static_equals_source": true,
+    "owner_entry_http": 200,
+    "owner_frame_policy": true,
+    "sha256": {
+      "/": "2bbee78d11a681c45739c80707fe881e01bc575baf2dc5085d65bcaa892b4c28",
+      "/lab.js": "4ef7a5686839f0cad8063995b8f6e4c46afdafb071c0b1f779cb85c7213d4658",
+      "/sw.js": "f2de280a219cb310c244f9ef32a25cba4803439f39a9b2611448f8573cb21862"
+    }
+  },
+  "offline_source_validation": "qa/route-development-checks.json",
+  "live_public_browser": {
+    "case": "public Baiterek to AbuDhabi cafe detour with additional time",
+    "result": "point_to_point_plan",
+    "direct_walk": 14,
+    "extra_budget": 30,
+    "total_budget": 44,
+    "used": 44,
+    "walking": 18,
+    "proposed_visit": 21,
+    "reserve": 5,
+    "final_walk": 13,
+    "stops": 1,
+    "map_count": 1,
+    "map_loaded": true,
+    "returns_to_origin": false,
+    "local_final_narration": "not_accepted_source_template_used"
+  },
+  "limits": [
+    "One bounded live public example, not field or physical-phone validation.",
+    "Public final narration was not accepted; source-template provenance remained visible. Exact rejection cause is not established.",
+    "Private preview live examples remain separate from this public check.",
+    "The existing recovery helper was reused unchanged; no actual failure or rollback rehearsal was performed."
+  ],
+  "privacy": "Metadata only; no raw request, private address, user GPS, provider response or credential.",
+  "presentation_changed": false,
+  "published_video_changed": false
+}

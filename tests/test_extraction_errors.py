@@ -220,7 +220,7 @@ class PreparationFailureTests(unittest.TestCase):
     def test_point_to_point_requests_stop_before_model_or_places(self):
         cases = [
             ('У меня 10 минут до полёта, покажи что можно по пути посмотреть от экспо до аэропорта', 'route_does_not_fit'),
-            ('Хочу прогулку от Байтерека до Абу Даби на 2 часа', 'unsupported_point_to_point')]
+            ('Хочу прогулку от неизвестного отеля до Абу Даби на 2 часа', 'route_endpoints_unresolved')]
         for query, code in cases:
             with self.subTest(code=code):
                 prep, gateway, google = self.build('invalid_intent')
